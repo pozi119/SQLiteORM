@@ -14,7 +14,8 @@ Pod::Spec.new do |s|
 
   s.ios.deployment_target = '10.0'
   s.default_subspec = 'system'
-  
+  s.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
+
   s.subspec 'system' do |ss|
       ss.dependency 'SQLiteORM/common'
       ss.libraries = 'sqlite3'
@@ -35,6 +36,5 @@ Pod::Spec.new do |s|
       ss.public_header_files = 'SQLiteORM/Classes/**/*.h'
       ss.resource = ['SQLiteORM/Assets/Jieba.bundle','SQLiteORM/Assets/PinYin.bundle']
       ss.dependency 'Runtime'
-      ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   end
 end
