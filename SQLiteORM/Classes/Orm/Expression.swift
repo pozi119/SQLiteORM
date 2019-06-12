@@ -172,11 +172,11 @@ public extension Where {
     }
 
     func `in`<T: Binding>(_ array: Array<T>) -> Where {
-        return Where(quoted + " IN " + array.sqlJoined)
+        return Where(quoted + " IN (" + array.sqlJoined + ")")
     }
 
     func notIn<T: Binding>(_ array: Array<T>) -> Where {
-        return Where(quoted + " NOT IN " + array.sqlJoined)
+        return Where(quoted + " NOT IN (" + array.sqlJoined + ")")
     }
 }
 

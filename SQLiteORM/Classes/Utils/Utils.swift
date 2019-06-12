@@ -201,7 +201,7 @@ public extension Array where Element: Hashable {
 
 public extension Array where Element: Binding {
     var sqlJoined: String {
-        return map { "\($0)".sqlValue }.joined(separator: "\"")
+        return map { $0.sqlValue }.joined(separator: ",")
     }
 }
 

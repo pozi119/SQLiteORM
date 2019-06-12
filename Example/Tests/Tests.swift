@@ -79,11 +79,11 @@ extension SQLiteORMTests {
         let w5 = w4 && W("name") == "lisi"
         let w6 = w5 || W("age") == 20
         XCTAssertEqual(w1.sql, "\"name\" == \"zhangsan\"")
-        XCTAssertEqual(w2.sql, "\"age\" == \"22\"")
-        XCTAssertEqual(w3.sql, "(\"name\" == \"zhangsan\") AND (\"age\" == \"22\")")
-        XCTAssertEqual(w4.sql, "((\"name\" == \"zhangsan\") AND (\"age\" == \"22\")) OR (\"age\" == \"21\")")
-        XCTAssertEqual(w5.sql, "(((\"name\" == \"zhangsan\") AND (\"age\" == \"22\")) OR (\"age\" == \"21\")) AND (\"name\" == \"lisi\")")
-        XCTAssertEqual(w6.sql, "((((\"name\" == \"zhangsan\") AND (\"age\" == \"22\")) OR (\"age\" == \"21\")) AND (\"name\" == \"lisi\")) OR (\"age\" == \"20\")")
+        XCTAssertEqual(w2.sql, "\"age\" == 22")
+        XCTAssertEqual(w3.sql, "(\"name\" == \"zhangsan\") AND (\"age\" == 22)")
+        XCTAssertEqual(w4.sql, "((\"name\" == \"zhangsan\") AND (\"age\" == 22)) OR (\"age\" == 21)")
+        XCTAssertEqual(w5.sql, "(((\"name\" == \"zhangsan\") AND (\"age\" == 22)) OR (\"age\" == 21)) AND (\"name\" == \"lisi\")")
+        XCTAssertEqual(w6.sql, "((((\"name\" == \"zhangsan\") AND (\"age\" == 22)) OR (\"age\" == 21)) AND (\"name\" == \"lisi\")) OR (\"age\" == 20)")
     }
 
     func testWhereOpreator() {
@@ -95,14 +95,14 @@ extension SQLiteORMTests {
         let x6 = W("age") < 22
         let x7 = W("age") <= 22
         let x8 = W("age") !< 22
-        XCTAssertEqual(x1.sql, "\"age\" != \"22\"")
-        XCTAssertEqual(x2.sql, "\"age\" <> \"22\"")
-        XCTAssertEqual(x3.sql, "\"age\" > \"22\"")
-        XCTAssertEqual(x4.sql, "\"age\" >= \"22\"")
-        XCTAssertEqual(x5.sql, "\"age\" !> \"22\"")
-        XCTAssertEqual(x6.sql, "\"age\" < \"22\"")
-        XCTAssertEqual(x7.sql, "\"age\" <= \"22\"")
-        XCTAssertEqual(x8.sql, "\"age\" !< \"22\"")
+        XCTAssertEqual(x1.sql, "\"age\" != 22")
+        XCTAssertEqual(x2.sql, "\"age\" <> 22")
+        XCTAssertEqual(x3.sql, "\"age\" > 22")
+        XCTAssertEqual(x4.sql, "\"age\" >= 22")
+        XCTAssertEqual(x5.sql, "\"age\" !> 22")
+        XCTAssertEqual(x6.sql, "\"age\" < 22")
+        XCTAssertEqual(x7.sql, "\"age\" <= 22")
+        XCTAssertEqual(x8.sql, "\"age\" !< 22")
     }
 
     func testWhereExp() {
@@ -120,27 +120,27 @@ extension SQLiteORMTests {
         let v12 = W("age").notBetween((20, 30))
         let v13 = W("age").in([21, 22, 25, 28])
         let v14 = W("age").notIn([21, 22, 25, 28])
-        XCTAssertEqual(v1.sql, "\"age\" LIKE \"22\"")
-        XCTAssertEqual(v2.sql, "\"age\" NOT LIKE \"22\"")
-        XCTAssertEqual(v3.sql, "\"age\" MATCH \"22\"")
-        XCTAssertEqual(v4.sql, "\"age\" GLOB \"22\"")
-        XCTAssertEqual(v5.sql, "\"age\" NOT GLOB \"22\"")
-        XCTAssertEqual(v6.sql, "\"age\" IS \"22\"")
-        XCTAssertEqual(v7.sql, "\"age\" IS NOT \"22\"")
-        XCTAssertEqual(v8.sql, "\"age\" EXISTS \"22\"")
-        XCTAssertEqual(v9.sql, "\"age\" NOT EXISTS \"22\"")
+        XCTAssertEqual(v1.sql, "\"age\" LIKE 22")
+        XCTAssertEqual(v2.sql, "\"age\" NOT LIKE 22")
+        XCTAssertEqual(v3.sql, "\"age\" MATCH 22")
+        XCTAssertEqual(v4.sql, "\"age\" GLOB 22")
+        XCTAssertEqual(v5.sql, "\"age\" NOT GLOB 22")
+        XCTAssertEqual(v6.sql, "\"age\" IS 22")
+        XCTAssertEqual(v7.sql, "\"age\" IS NOT 22")
+        XCTAssertEqual(v8.sql, "\"age\" EXISTS 22")
+        XCTAssertEqual(v9.sql, "\"age\" NOT EXISTS 22")
         XCTAssertEqual(v10.sql, "\"age\" IS NULL")
-        XCTAssertEqual(v11.sql, "\"age\" BETWEEN \"20\" AND \"30\"")
-        XCTAssertEqual(v12.sql, "\"age\" NOT BETWEEN \"20\" AND \"30\"")
-        XCTAssertEqual(v13.sql, "\"age\" IN (\"21\",\"22\",\"25\",\"28\")")
-        XCTAssertEqual(v14.sql, "\"age\" NOT IN (\"21\",\"22\",\"25\",\"28\")")
+        XCTAssertEqual(v11.sql, "\"age\" BETWEEN 20 AND 30")
+        XCTAssertEqual(v12.sql, "\"age\" NOT BETWEEN 20 AND 30")
+        XCTAssertEqual(v13.sql, "\"age\" IN (21,22,25,28)")
+        XCTAssertEqual(v14.sql, "\"age\" NOT IN (21,22,25,28)")
     }
 
     func testWhereArrayOrDictionary() {
         let w1 = W(["age": 22, "name": "lisi"])
         let w2 = W([["age": 22], ["name": "lisi"]])
-        XCTAssert(w1.sql == "(\"age\" == \"22\") AND (\"name\" == \"lisi\")" || w1.sql == "(\"name\" == \"lisi\") AND (\"age\" == \"22\")")
-        XCTAssert(w2.sql == "((\"age\" == \"22\")) OR ((\"name\" == \"lisi\"))")
+        XCTAssert(w1.sql == "(\"age\" == 22) AND (\"name\" == \"lisi\")" || w1.sql == "(\"name\" == \"lisi\") AND (\"age\" == 22)")
+        XCTAssert(w2.sql == "((\"age\" == 22)) OR ((\"name\" == \"lisi\"))")
     }
 
     func testOrderBy() {
