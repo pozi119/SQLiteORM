@@ -354,6 +354,16 @@ static inline BOOL check(int resultCode)
     }
 }
 
+static NSMutableDictionary * enumerators()
+{
+    static NSMutableDictionary *_enumerators;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _enumerators = [NSMutableDictionary dictionaryWithCapacity:0];
+    });
+    return _enumerators;
+}
+
 BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, SQLiteORMXEnumerator enumerator, NSString *tokenizerName)
 {
     char *name = (char *)tokenizerName.UTF8String;
@@ -387,6 +397,10 @@ BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, SQLiteORMXEnumerator enumerator, N
                                 tokenizer,
                                 0);
     ret = check(rc);
+    if (ret) {
+        NSMutableDictionary *dic = enumerators();
+        dic[tokenizerName] = [NSString stringWithFormat:@"%p", enumerator];
+    }
     return ret;
 }
 
@@ -400,6 +414,12 @@ SQLiteORMXEnumerator SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerNam
     tokenizer = (fts5_tokenizer *)sqlite3_malloc(sizeof(*tokenizer));
     int rc = pApi->xFindTokenizer(pApi, tokenizerName.UTF8String, &pUserdata, tokenizer);
     if (rc != SQLITE_OK) return nil;
+
+    NSMutableDictionary *dic = enumerators();
+    NSString *addr = [NSString stringWithFormat:@"%p", pUserdata];
+    NSString *mapped = dic[tokenizerName];
+    if (![addr isEqualToString:mapped]) return nil;
+
     return (SQLiteORMXEnumerator)pUserdata;
 }
 
@@ -435,6 +455,19 @@ static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLit
 {
     const char *pText = source.UTF8String;
     int nText = (int)strlen(pText);
+    
+    if (nText == 0) {
+        return @[];
+    }
+    
+    if (!enumerator) {
+        SQLiteORMToken *ormToken = [SQLiteORMToken new];
+        ormToken.token = pText;
+        ormToken.len = nText;
+        ormToken.start = 0;
+        ormToken.end = nText;
+        return @[ormToken];
+    }
 
     __block NSMutableArray<SQLiteORMToken *> *results = [NSMutableArray arrayWithCapacity:0];
 
@@ -442,12 +475,12 @@ static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLit
         char *_token = (char *)malloc(len + 1);
         memcpy(_token, token, len);
         _token[len] = 0;
-        SQLiteORMToken *vvToken = [SQLiteORMToken new];
-        vvToken.token = _token;
-        vvToken.len = len;
-        vvToken.start = start;
-        vvToken.end = end;
-        [results addObject:vvToken];
+        SQLiteORMToken *ormToken = [SQLiteORMToken new];
+        ormToken.token = _token;
+        ormToken.len = len;
+        ormToken.start = start;
+        ormToken.end = end;
+        [results addObject:ormToken];
         return YES;
     };
     enumerator(pText, nText, "", pinyin, handler);
@@ -463,7 +496,11 @@ static NSAttributedString * highlightOne(NSString *source,
     const char *pText = source.UTF8String;
     int nText = (int)strlen(pText);
 
-    if (!enumerator || nText == 0) {
+    if (nText == 0) {
+        return [[NSAttributedString alloc] init];
+    }
+
+    if (!enumerator) {
         return [[NSAttributedString alloc] initWithString:source];
     }
 
