@@ -124,6 +124,10 @@ public extension String {
         return replacingOccurrences(of: " +", with: " ", options: .regularExpression)
     }
 
+    var quoted: String {
+        return quote()
+    }
+
     func quote(_ mark: Character? = "\"") -> String {
         guard mark != nil else {
             return self
@@ -196,8 +200,8 @@ public extension Array where Element: Hashable {
 }
 
 public extension Array where Element: Binding {
-    func quoteJoined(separator: String = "", quote mark: Character? = nil) -> String {
-        return map { "\($0)".quote(mark) }.joined(separator: separator)
+    var sqlJoined: String {
+        return map { "\($0)".sqlValue }.joined(separator: "\"")
     }
 }
 

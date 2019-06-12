@@ -259,14 +259,7 @@ extension Cursor: Sequence {
             case let newValue as Bool:
                 sqlite3_bind_int(handle, index, newValue ? 1 : 0)
             case let newValue as String:
-                let len = newValue.utf8.count
-                if len < INT8_MAX {
-                    sqlite3_bind_text(handle, index, newValue, Int32(len), SQLITE_TRANSIENT)
-                } else if len < INT16_MAX {
-                    sqlite3_bind_text16(handle, index, newValue, Int32(len), SQLITE_TRANSIENT)
-                } else {
-                    sqlite3_bind_text64(handle, index, newValue, sqlite3_uint64(len), SQLITE_TRANSIENT, UInt8(SQLITE_UTF8))
-                }
+                sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
             default:
                 fatalError("tried to bind unexpected value \(newValue ?? "")")
             }

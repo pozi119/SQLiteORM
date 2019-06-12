@@ -320,7 +320,7 @@ public final class Database {
     /// - Parameter table: 表名
     /// - Returns: 是否存在
     public func exists(_ table: String) -> Bool {
-        let value = ((try? scalar("SELECT count(*) as 'count' FROM sqlite_master WHERE type ='table' and tbl_name = \"\(table)\"")) as Binding??)
+        let value = ((try? scalar("SELECT count(*) as 'count' FROM sqlite_master WHERE type ='table' and tbl_name = \(table.quoted)")) as Binding??)
         guard let count = value as? Int64 else {
             return false
         }
@@ -332,7 +332,7 @@ public final class Database {
     /// - Parameter table: 表名
     /// - Returns: 是否FTS数据表
     public func isFts(_ table: String) -> Bool {
-        let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \"\(table)\" AND type = \"table\""
+        let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
         let array = query(sql)
         guard array.count == 1 else { return false }
         let dic = array.first

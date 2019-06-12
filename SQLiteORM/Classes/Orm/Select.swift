@@ -42,19 +42,31 @@ public final class Select {
     /// 生成具体查询语句
     var sql: String {
         assert(table.count > 0, "set table or orm first!")
+
         let distinctClause = distinct ? " DISTINCT " : ""
+
         let fieldsClause = fields.sql
+
         let tableClause = " FROM " + table
+
         var whereClause = `where`.sql
         whereClause = whereClause.count > 0 ? " WHERE \(whereClause)" : ""
+
         var orderByClause = orderBy.sql
         orderByClause = orderByClause.count > 0 ? " ORDER BY \(orderByClause)" : ""
+
         var groupByClause = groupBy.sql
         groupByClause = groupByClause.count > 0 ? " GROUP BY \(groupByClause)" : ""
+
         var havingClause = having.sql
         havingClause = havingClause.count > 0 ? " HAVING \(havingClause)" : ""
+
+        if offset > 0 && limit <= 0 { limit = Int64.max }
+
         let limitClause = limit > 0 ? " LIMIT \(limit)" : ""
+
         let offsetClause = offset > 0 ? " OFFSET \(offset)" : ""
+
         let str = "SELECT " + distinctClause + fieldsClause + tableClause + whereClause + groupByClause + havingClause + orderByClause + limitClause + offsetClause
         return str
     }

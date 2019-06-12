@@ -21,6 +21,9 @@ extension Orm {
         var dic = bindings
         switch config {
         case let config as GeneralConfig:
+            if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
+                dic.removeValues(forKeys: config.primaries)
+            }
             if config.logAt {
                 let now = NSDate().timeIntervalSince1970
                 if type != .update {
@@ -36,14 +39,14 @@ extension Orm {
         let values = fields.map { dic[$0] } as! [Binding]
         switch type {
         case .insert, .upsert:
-            let keys = fields.map { $0.quote() }.joined(separator: ",")
+            let keys = fields.map { $0.quoted }.joined(separator: ",")
             let marks = Array(repeating: "?", count: dic.count).joined(separator: ",")
-            sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \"\(table)\" (\(keys)) VALUES (\(marks))"
+            sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keys)) VALUES (\(marks))"
         case .update:
-            let sets = fields.map { $0.quote() + "=?" }.joined(separator: ",")
+            let sets = fields.map { $0.quoted + "=?" }.joined(separator: ",")
             var whereClause = condition.sql
             whereClause = whereClause.count > 0 ? "WHERE \(whereClause)" : ""
-            sql = "UPDATE \"\(table)\" SET \(sets) \(whereClause)"
+            sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
         }
         do {
             try db.prepare(sql, values).run()
@@ -303,11 +306,9 @@ public extension Orm {
     /// - Attention: 删除表后,若需重新访问,请重新生成Orm.请慎用
     /// - Returns: 是否删除成功
     @discardableResult func drop() -> Bool {
-        let sql = "DROP TABLE IF EXISTS \"\(table)\""
+        let sql = "DROP TABLE IF EXISTS \(table.quoted)"
         do {
-            try db.transaction {
-                try db.execute(sql)
-            }
+            try db.run(sql)
         } catch _ {
             return false
         }
@@ -350,9 +351,9 @@ public extension Orm {
     /// - Returns: 是否删除成功
     @discardableResult func delete(where condition: Where = Where("")) -> Bool {
         let clause = condition.sql
-        let sql = "DELETE FROM \"\(table)\"" + (clause.count > 0 ? " WHERE \(clause)" : "")
+        let sql = "DELETE FROM \(table.quoted)" + (clause.count > 0 ? " WHERE \(clause)" : "")
         do {
-            try db.execute(sql)
+            try db.run(sql)
         } catch _ {
             return false
         }

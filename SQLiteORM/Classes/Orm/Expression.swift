@@ -41,14 +41,14 @@ public struct Where: SQLable, Conditional {
         case let expr as Array<String> where expr.count > 0:
             _expr = expr.map { "(\($0))" }.joined(separator: " OR ")
         case let expr as Dictionary<String, Binding> where expr.count > 0:
-            _expr = expr.map { "(" + "\($0.key)".quote() + " == " + "\($0.value)".quote() + ")" }.joined(separator: " AND ")
+            _expr = expr.map { "(" + $0.key.quoted + " == " + $0.value.sqlValue + ")" }.joined(separator: " AND ")
         default:
             _expr = "\(expr)"
         }
     }
 
     public var quoted: String {
-        return _expr.quote()
+        return _expr.quoted
     }
 
     public var sql: String {
@@ -69,7 +69,7 @@ infix operator <>: ComparisonPrecedence
 // MARK: comparison
 
 fileprivate func _operator(_ op: String, lhs: Where, value: Binding) -> Where {
-    return Where(lhs.quoted + " " + op + " " + "\(value)".quote())
+    return Where(lhs.quoted + " " + op + " " + value.sqlValue)
 }
 
 public func == (lhs: Where, value: Binding) -> Where {
@@ -120,7 +120,7 @@ public func || (lhs: Where, rhs: Where) -> Where {
 
 public extension Where {
     fileprivate func _logic(_ logic: String, value: Binding) -> Where {
-        return Where(quoted + " " + logic + " " + "\(value)".quote())
+        return Where(quoted + " " + logic + " " + value.sqlValue)
     }
 
     func match(_ value: Binding) -> Where {
@@ -164,19 +164,47 @@ public extension Where {
     }
 
     func between(_ turple: (start: Binding, end: Binding)) -> Where {
-        return Where("\(quoted) BETWEEN " + "\(turple.start)".quote() + " AND " + "\(turple.end)".quote())
+        return Where(quoted + " BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
     func notBetween(_ turple: (start: Binding, end: Binding)) -> Where {
-        return Where("\(quoted) NOT BETWEEN " + "\(turple.start)".quote() + " AND " + "\(turple.end)".quote())
+        return Where(quoted + " NOT BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
     func `in`<T: Binding>(_ array: Array<T>) -> Where {
-        return Where("\(quoted) IN (\(array.quoteJoined(separator: ",", quote: "\"")))")
+        return Where(quoted + " IN " + array.sqlJoined)
     }
 
     func notIn<T: Binding>(_ array: Array<T>) -> Where {
-        return Where("\(quoted) NOT IN (\(array.quoteJoined(separator: ",", quote: "\"")))")
+        return Where(quoted + " NOT IN " + array.sqlJoined)
+    }
+}
+
+// MARK: - table
+
+public extension String {
+    func innerJoin(_ other: String) -> String {
+        return quoted + " JOIN " + other.quoted
+    }
+
+    func outerJoin(_ other: String) -> String {
+        return quoted + " LEFT OUTER JOIN " + other.quoted
+    }
+
+    func crossJoin(_ other: String) -> String {
+        return quoted + " CROSS JOIN " + other.quoted
+    }
+
+    func column(_ column: String) -> String {
+        return self + "." + column
+    }
+    
+    func on(_ condition: Where) -> String{
+        return self + " ON " + condition.sql
+    }
+
+    func concat(_ concat: String, value: Binding) -> String{
+        return self + " " + concat + " " + value.sqlValue
     }
 }
 
@@ -190,7 +218,7 @@ public struct OrderBy: SQLable, Filtrable {
         var str: String
         switch expr {
         case let expr as String where expr.count > 0:
-            str = expr.quote()
+            str = expr.quoted
         case let expr as Array<String> where expr.count > 0:
             let filtered = expr.filter({ $0.count > 0 })
             if filtered.count == 0 {
@@ -199,9 +227,9 @@ public struct OrderBy: SQLable, Filtrable {
             }
             let ordered = filtered.filter({ $0.match(regular) })
             if ordered.count == 0 {
-                str = filtered.quoteJoined(separator: ",", quote: "\"")
+                str = filtered.sqlJoined
             } else {
-                str = filtered.map { $0.match(regular) ? $0 : ($0.quote() + " ASC") }.joined(separator: ",")
+                str = filtered.map { $0.match(regular) ? $0 : ($0.quoted + " ASC") }.joined(separator: ",")
             }
         default:
             str = ""
@@ -226,9 +254,9 @@ public struct GroupBy: SQLable, Filtrable {
     public init(_ expr: Conditional) {
         switch expr {
         case let expr as Array<String> where expr.count > 0:
-            _expr = expr.quoteJoined(separator: ",", quote: "\"")
+            _expr = expr.sqlJoined
         case let expr as String where expr.count > 0:
-            _expr = expr.quote()
+            _expr = expr.quoted
         default:
             _expr = ""
         }
@@ -251,7 +279,7 @@ public struct Fields: SQLable, Filtrable {
     public init(_ expr: Conditional) {
         switch expr {
         case let expr as Array<String> where expr.count > 0:
-            _expr = expr.quoteJoined(separator: ",", quote: "\"")
+            _expr = expr.sqlJoined
         case let expr as String where expr.count > 0:
             _expr = expr
         default:

@@ -51,6 +51,7 @@ public extension Orm {
         guard let cfg = config as? FtsConfig else {
             fatalError("invalid orm!")
         }
+        assert(cfg.tokenizer.count > 0, "Invalid orm!")
         let tokenizer = cfg.tokenizer.components(separatedBy: " ").first!
         guard let enumerator = db.enumerator(for: tokenizer) else {
             fatalError("invalid orm!")

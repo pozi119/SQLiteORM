@@ -142,7 +142,7 @@ public final class GeneralConfig: Config {
         var defaultValues = [String: Binding]()
 
         // 获取表配置
-        let tableInfoSql = "PRAGMA table_info(\"\(table)\");"
+        let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
         let infos = db.query(tableInfoSql)
         for dic in infos {
             let name = dic["name"] as? String ?? ""
@@ -159,13 +159,13 @@ public final class GeneralConfig: Config {
         }
 
         // 获取索引配置
-        let indexListSql = "PRAGMA index_list(\"\(table)\");"
+        let indexListSql = "PRAGMA index_list(\(table.quoted));"
         let indexList = db.query(indexListSql)
         for dic in indexList {
             let idxname = dic["name"] as? String ?? ""
             let unique = (dic["unique"] as? Int64 ?? 0) > 0
 
-            let indexInfoSql = "PRAGMA index_info(\"\(idxname)\");"
+            let indexInfoSql = "PRAGMA index_info(\(idxname.quoted));"
             let indexInfos = db.query(indexInfoSql)
             for idxinfo in indexInfos {
                 let name = idxinfo["name"] as? String ?? ""
@@ -180,7 +180,7 @@ public final class GeneralConfig: Config {
         // 获取主键配置
         var pkAutoInc = false
         if primaries.count > 0 {
-            let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \"\(table)\" AND type = \"table\""
+            let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
             let cols = db.query(sql)
             let tableSql = cols.first?["sql"] as? String ?? ""
             if tableSql.match("AUTOINCREMENT") { pkAutoInc = true }
@@ -205,8 +205,8 @@ public final class GeneralConfig: Config {
         super.treate()
         primaries = Array(Set(primaries).intersection(columns))
         notnulls = Array(Set(notnulls).intersection(columns).subtracting(primaries))
-        uniques = Array(Set(uniques).intersection(columns))
-        indexes = Array(Set(indexes).subtracting(uniques))
+        uniques = Array(Set(uniques).intersection(columns).subtracting(primaries))
+        indexes = Array(Set(indexes).subtracting(uniques).subtracting(primaries))
     }
 
     /// 比较两个配置的索引
@@ -232,7 +232,7 @@ public final class GeneralConfig: Config {
         let uniqueString = uniques.contains(column) ? " UNIQUE" : ""
         let defaultValue = defaultValues[column]
         let dfltString = defaultValue != nil ? " DEFAULT(\(String(describing: defaultValue)))" : ""
-        return "\"\(column)\" " + typeString + pkString + nullString + uniqueString + dfltString
+        return "\(column.quoted) " + typeString + pkString + nullString + uniqueString + dfltString
     }
 
     /// 生成完整的普通表创建语句
@@ -241,15 +241,17 @@ public final class GeneralConfig: Config {
     /// - Returns: SQL语句
     public override func createSQL(with table: String) -> String {
         treate()
-        var sql = ""
-        for column in columns {
-            sql += createSQL(of: column) + ","
+        var array = columns.map { createSQL(of: $0) }
+        if primaries.count > 1 {
+            array.append("PRIMARY KEY (" + primaries.joined(separator: ",") + ")")
         }
+        
+        let sql = array.joined(separator: ",")
         guard sql.count > 0 else {
             return sql
         }
-        sql.removeLast()
-        return "CREATE TABLE IF NOT EXISTS \"\(table)\" (\(sql))".strip
+
+        return "CREATE TABLE IF NOT EXISTS \(table.quoted) (\(sql))".strip
     }
 }
 
@@ -288,7 +290,7 @@ public final class FtsConfig: Config {
     override init(table: String, db: Database) {
         super.init(table: table, db: db)
 
-        let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \"\(table)\" AND type = \"table\""
+        let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
         let cols = db.query(sql)
         let tableSql = cols.first?["sql"] as? String ?? ""
         let options: NSString.CompareOptions = [.regularExpression, .caseInsensitive]
@@ -323,11 +325,11 @@ public final class FtsConfig: Config {
             }
         }
         // 获取表配置
-        let tableInfoSql = "PRAGMA table_info(\"\(table)\");"
+        let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
         let infos = db.query(tableInfoSql)
         for dic in infos {
             let name = dic["name"] as? String ?? ""
-            let regex = version == 5 ? "\"\(name)\" +UNINDEXED" : "notindexed *= *\"\(name)\""
+            let regex = version == 5 ? "\(name.quoted) +UNINDEXED" : "notindexed *= *\(name.quoted)"
             if !tableSql.match(regex) {
                 indexes.append(name)
             }
@@ -348,14 +350,14 @@ public final class FtsConfig: Config {
         let notindexeds = Set(columns).subtracting(indexes)
         var sql = ""
         for column in columns {
-            sql += ", \"\(column)\""
+            sql += ", \(column.quoted)"
             if notindexeds.contains(column) && version >= 5 {
                 sql += " UNINDEXED"
             }
         }
         if version == 4 && notindexeds.count > 0 {
             for column in notindexeds {
-                sql += ", notindexed=\"\(column)\""
+                sql += ", notindexed=\(column.quoted)"
             }
         }
         guard sql.count > 2 else {
@@ -364,7 +366,7 @@ public final class FtsConfig: Config {
         sql.removeFirst(2)
 
         let tokenize = tokenizer.count == 0 ? "" : (version < 5 ? ", tokenize=\(tokenizer)" : ", tokenize = '\(tokenizer)'")
-        return "CREATE VIRTUAL TABLE IF NOT EXISTS \"\(table)\" USING \(module)(\(sql) \(tokenize))".strip
+        return "CREATE VIRTUAL TABLE IF NOT EXISTS \(table.quoted) USING \(module)(\(sql) \(tokenize))".strip
     }
 }
 

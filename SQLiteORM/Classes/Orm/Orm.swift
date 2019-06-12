@@ -125,7 +125,7 @@ public final class Orm {
             // NOTE: FTS表请手动迁移数据
             try migrationData(from: tempTable)
         }
-        if general && indexChanged {
+        if general && (indexChanged || !exist) {
             try rebuildIndex()
         }
     }
@@ -135,10 +135,8 @@ public final class Orm {
     /// - Parameter tempTable: 临时表名
     /// - Throws: 重命名过程中的错误
     func rename(to tempTable: String) throws {
-        let sql = "ALTER TABLE \"\(table)\" RENAME TO \"\(tempTable)\""
-        try db.transaction(.immediate, block: {
-            try db.execute(sql)
-        })
+        let sql = "ALTER TABLE \(table.quoted) RENAME TO \(tempTable.quoted)"
+        try db.execute(sql)
     }
 
     /// 创建表
@@ -146,9 +144,7 @@ public final class Orm {
     /// - Throws: 创建表过程中的错误
     func createTable() throws {
         let sql = config.createSQL(with: table)
-        try db.transaction(.immediate, block: {
-            try db.execute(sql)
-        })
+        try db.execute(sql)
     }
 
     /// 从旧表迁移数据至新表
@@ -161,12 +157,10 @@ public final class Orm {
         guard fields.count > 0 else {
             return
         }
-        let sql = "INSERT INTO \"\(table)\" (\(fields)) SELECT \(fields) FROM \"\(tempTable)\""
-        let drop = "DROP TABLE IF EXISTS \"\(tempTable)\""
-        try db.transaction(.immediate, block: {
-            try db.execute(sql)
-            try db.execute(drop)
-        })
+        let sql = "INSERT INTO \(table.quoted) (\(fields)) SELECT \(fields) FROM \(tempTable.quoted)"
+        let drop = "DROP TABLE IF EXISTS \(tempTable.quoted)"
+        try db.execute(sql)
+        try db.execute(drop)
     }
 
     /// 重建索引
@@ -178,27 +172,25 @@ public final class Orm {
         }
         // 删除旧索引
         var dropIdxSQL = ""
-        let indexesSQL = "SELECT name FROM sqlite_master WHERE type ='index' and tbl_name = \"\(table)\""
+        let indexesSQL = "SELECT name FROM sqlite_master WHERE type ='index' and tbl_name = \(table.quoted)"
         let array = db.query(indexesSQL)
         for dic in array {
             let name = (dic["name"] as? String) ?? ""
             if !name.hasPrefix("sqlite_autoindex_") {
-                dropIdxSQL += "DROP INDEX IF EXISTS \"\(name)\";"
+                dropIdxSQL += "DROP INDEX IF EXISTS \(name.quoted);"
             }
         }
         // 建立新索引
         let indexName = "sqlite_orm_index_\(table)"
         let indexesString = config.indexes.joined(separator: ",")
-        let createSQL = indexesSQL.count > 0 ? "CREATE INDEX \"\(indexName)\" on \"\(table)\" (\(indexesString));" : ""
+        let createSQL = indexesSQL.count > 0 ? "CREATE INDEX \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""
         if indexesSQL.count > 0 {
-            try db.transaction(.immediate, block: {
-                if dropIdxSQL.count > 0 {
-                    try db.execute(dropIdxSQL)
-                }
-                if createSQL.count > 0 {
-                    try db.execute(createSQL)
-                }
-            })
+            if dropIdxSQL.count > 0 {
+                try db.execute(dropIdxSQL)
+            }
+            if createSQL.count > 0 {
+                try db.execute(createSQL)
+            }
         }
     }
 

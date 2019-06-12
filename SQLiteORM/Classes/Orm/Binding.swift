@@ -31,6 +31,20 @@ extension Data: Binding {
     }
 }
 
+extension Binding{
+    public var sqlValue:String{
+        let type = Self.self
+        switch type {
+        case is String.Type:
+            return "\(self)".quoted
+        case is Data.Type:
+            return "\(self)".quoted
+        default:
+            return "\(self)"
+        }
+    }
+}
+
 /// 获取sqlite存储类型
 ///
 /// - Parameter type: 数据类型
