@@ -454,12 +454,12 @@ NSArray<NSAttributedString *> * SQLiteORMHighlight(NSArray *objects,
 static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLiteORMXEnumerator enumerator)
 {
     const char *pText = source.UTF8String;
-    int nText = (int)strlen(pText);
     
-    if (nText == 0) {
+    if (!pText) {
         return @[];
     }
     
+    int nText = (int)strlen(pText);
     if (!enumerator) {
         SQLiteORMToken *ormToken = [SQLiteORMToken new];
         ormToken.token = pText;
@@ -494,9 +494,8 @@ static NSAttributedString * highlightOne(NSString *source,
                                          NSDictionary<NSAttributedStringKey, id> *attributes)
 {
     const char *pText = source.UTF8String;
-    int nText = (int)strlen(pText);
 
-    if (nText == 0) {
+    if (!pText) {
         return [[NSAttributedString alloc] init];
     }
 
@@ -504,6 +503,7 @@ static NSAttributedString * highlightOne(NSString *source,
         return [[NSAttributedString alloc] initWithString:source];
     }
 
+    int nText = (int)strlen(pText);
     __block char *tokenized = (char *)malloc(nText + 1);
     memset(tokenized, 0x0, nText + 1);
 

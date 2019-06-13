@@ -102,6 +102,7 @@ public extension String {
         guard polyphones.count > 0 else { return [pinyins] }
         let chineseCount = pinyins.count
         var results: [[String]] = []
+        results.append(pinyins)
         for (idx, value) in polyphones {
             if idx >= chineseCount || value.count == 0 { continue }
             for item in value {
