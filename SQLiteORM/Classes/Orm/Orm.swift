@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Runtime
 
 public final class Orm {
     /// 配置

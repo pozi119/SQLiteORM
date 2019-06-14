@@ -321,20 +321,12 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
-			inputFileListPaths = (
-			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SQLiteORM_Example/Pods-SQLiteORM_Example-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/CRuntime/CRuntime.framework",
-				"${BUILT_PRODUCTS_DIR}/Runtime/Runtime.framework",
 				"${BUILT_PRODUCTS_DIR}/SQLiteORM/SQLiteORM.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-			);
 			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/CRuntime.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Runtime.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SQLiteORM.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
