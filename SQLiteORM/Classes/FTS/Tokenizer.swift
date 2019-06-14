@@ -13,7 +13,7 @@ import NaturalLanguage
 public struct NLFtsTokenizer: FtsTokenizer {
     public static var enumerator: SQLiteORMXEnumerator {
         return { pText, nText, locale, pinyin, handler in
-            if #available(iOS 12.0, *) {
+            if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
                 let source = NSString(utf8String: pText) as String? ?? ""
                 let loc = NSString(utf8String: locale) as String? ?? ""
 

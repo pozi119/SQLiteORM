@@ -362,7 +362,7 @@ public final class Database {
     fileprivate typealias Trace = (UInt32, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Int32
     fileprivate var trace: Trace? {
         didSet {
-            if #available(iOS 10.0, *) {
+            if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
                 if trace != nil {
                     sqlite3_trace_v2(handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                 } else {
