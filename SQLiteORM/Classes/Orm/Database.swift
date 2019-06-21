@@ -68,9 +68,6 @@ public final class Database {
         return _cache!
     }()
 
-    /// sqlite3 statement缓存
-    lazy var stmtCache: Cache<String, Any> = Cache<String, Any>()
-
     /// 初始化数据库
     ///
     /// - Parameters:
@@ -170,15 +167,7 @@ public final class Database {
     /// - Returns: 准备好的sqlite3 statement
     /// - Throws: 准备过程中出现的错误
     public func prepare(_ statement: String) throws -> Statement {
-        var stmt = stmtCache.object(forKey: statement) as? Statement
-        guard stmt == nil else {
-            stmt!.reset()
-            return stmt!
-        }
-
-        stmt = try Statement(self, statement)
-        stmtCache.setObject(stmt!, forKey: statement)
-        return stmt!
+        return try Statement(self, statement)
     }
 
     /// 准备statement

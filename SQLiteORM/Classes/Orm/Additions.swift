@@ -29,11 +29,18 @@ extension Database {
 }
 
 extension Database {
-    private static let _queueContext: Int = unsafeBitCast(Database.self, to: Int.self)
-    private static let _queueKey = DispatchSpecificKey<Int>()
-    private static let _queue: DispatchQueue = {
-        var queue = DispatchQueue(label: "SQLite.ORM", attributes: [])
-        queue.setSpecific(key: Database._queueKey, value: Database._queueContext)
+    private static let serialVal = "com.valo.sqliteorm.serial"
+    private static let concurrentVal = "com.valo.sqliteorm.concurrent"
+    private static let queueKey = DispatchSpecificKey<String>()
+    private static let serialQueue: DispatchQueue = {
+        var queue = DispatchQueue(label: Database.serialVal, attributes: [])
+        queue.setSpecific(key: Database.queueKey, value: Database.serialVal)
+        return queue
+    }()
+
+    private static let concurrentQueue: DispatchQueue = {
+        var queue = DispatchQueue(label: Database.concurrentVal, attributes: [])
+        queue.setSpecific(key: Database.queueKey, value: Database.concurrentVal)
         return queue
     }()
 
@@ -43,10 +50,10 @@ extension Database {
     /// - Returns: 是否操作成功
     /// - Throws: 操作中出现的错误
     public class func sync<T>(_ block: () throws -> T) rethrows -> T {
-        if DispatchQueue.getSpecific(key: Database._queueKey) == Database._queueContext {
+        if DispatchQueue.getSpecific(key: Database.queueKey) == Database.serialVal {
             return try block()
         } else {
-            return try Database._queue.sync(execute: block)
+            return try Database.serialQueue.sync(execute: block)
         }
     }
 
@@ -55,11 +62,8 @@ extension Database {
     /// - Parameter block: 具体操作
     /// - Returns: 是否操作成功
     /// - Throws: 操作中出现的错误
-    public class func async(_ block: @escaping () -> Void) {
-        if DispatchQueue.getSpecific(key: Database._queueKey) == Database._queueContext {
-            block()
-        } else {
-            Database._queue.async(execute: block)
-        }
+    public class func async(serial: Bool, block: @escaping () -> Void) {
+        let queue = serial ? Database.serialQueue : Database.concurrentQueue;
+        queue.async(execute: block)
     }
 }
