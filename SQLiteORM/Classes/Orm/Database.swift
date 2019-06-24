@@ -247,9 +247,11 @@ public final class Database {
     /// 执行语句
     ///
     /// - Parameter statement: sql语句
-    /// - Returns: 准备好后的sqlite3 statement
     /// - Throws: 准备过程中的错误
-    @discardableResult public func run(_ statement: String) throws -> Statement {
+    public func run(_ statement: String) throws {
+        guard !merge(statement, values: []) else {
+            return
+        }
         return try prepare(statement).run()
     }
 
@@ -258,9 +260,11 @@ public final class Database {
     /// - Parameters:
     ///   - statement: sql语句
     ///   - bindings: 绑定的数据,需和sql语句对应
-    /// - Returns: 准备好的sqlite3 statement
     /// - Throws: 准备过程中出现的错误
-    @discardableResult public func run(_ statement: String, _ bindings: [Binding]) throws -> Statement {
+    public func run(_ statement: String, _ bindings: [Binding]) throws {
+        guard !merge(statement, values: bindings) else {
+            return
+        }
         return try prepare(statement).run(bindings)
     }
 
@@ -314,12 +318,12 @@ public final class Database {
     ///   - rollback: 回滚事务的sql语句
     /// - Throws: 事务操作过程中的错误
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
-        try run(begin)
+        try prepare(begin).run()
         do {
             try block()
-            try run(commit)
+            try prepare(commit).run()
         } catch {
-            try run(rollback)
+            try prepare(rollback).run()
             throw error
         }
     }

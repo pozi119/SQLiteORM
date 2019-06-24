@@ -135,7 +135,7 @@ public final class Orm {
     /// - Throws: 重命名过程中的错误
     func rename(to tempTable: String) throws {
         let sql = "ALTER TABLE \(table.quoted) RENAME TO \(tempTable.quoted)"
-        try db.execute(sql)
+        try db.run(sql)
     }
 
     /// 创建表
@@ -143,7 +143,7 @@ public final class Orm {
     /// - Throws: 创建表过程中的错误
     func createTable() throws {
         let sql = config.createSQL(with: table)
-        try db.execute(sql)
+        try db.run(sql)
     }
 
     /// 从旧表迁移数据至新表
@@ -158,8 +158,8 @@ public final class Orm {
         }
         let sql = "INSERT INTO \(table.quoted) (\(fields)) SELECT \(fields) FROM \(tempTable.quoted)"
         let drop = "DROP TABLE IF EXISTS \(tempTable.quoted)"
-        try db.execute(sql)
-        try db.execute(drop)
+        try db.run(sql)
+        try db.run(drop)
     }
 
     /// 重建索引
@@ -188,10 +188,10 @@ public final class Orm {
         let createSQL = indexesSQL.count > 0 ? "CREATE INDEX \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""
         if indexesSQL.count > 0 {
             if dropIdxSQL.count > 0 {
-                try db.execute(dropIdxSQL)
+                try db.run(dropIdxSQL)
             }
             if createSQL.count > 0 {
-                try db.execute(createSQL)
+                try db.run(createSQL)
             }
         }
     }

@@ -70,7 +70,7 @@ public final class Statement {
         for idx in 0 ..< count { cursor[idx] = values[idx] }
         return self
     }
-    
+
     /// 查询数据
     ///
     /// - Returns: 查询结果
@@ -106,18 +106,16 @@ public final class Statement {
     ///
     /// - Returns: 执行sql语句后的statment
     /// - Throws: 执行过程中的错误
-    @discardableResult public func run() throws -> Statement {
+    public func run() throws {
         reset(clear: false)
         repeat {} while try step()
-        return self
     }
 
     /// 执行sql语句
     ///
     /// - Parameter bindings: [数据]数组,和sql语句对应
-    /// - Returns: 执行sql语句后的statment
     /// - Throws: 执行过程中的错误
-    @discardableResult public func run(_ bindings: [Binding]) throws -> Statement {
+    public func run(_ bindings: [Binding]) throws {
         return try bind(bindings).run()
     }
 

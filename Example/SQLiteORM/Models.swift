@@ -51,6 +51,7 @@ struct Item {
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
         ftsDb.register(JiebaFtsTokenizer.self, for: "jieba")
+        ftsDb.updateInterval = 1.0
         ftsOrm = Orm(config: ftsConfig, db: ftsDb, table: tableName, setup: true)
     }
 }
