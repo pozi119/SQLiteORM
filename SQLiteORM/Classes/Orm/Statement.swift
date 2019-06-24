@@ -70,19 +70,7 @@ public final class Statement {
         for idx in 0 ..< count { cursor[idx] = values[idx] }
         return self
     }
-
-    /// 绑定数据,防SQL注入
-    ///
-    /// - Parameter values: [字段:数据]字典,和sql语句对应
-    /// - Returns: 绑定后的statement
-    public func bind(_ values: [String: Binding]) -> Statement {
-        reset()
-        for (name, value) in values {
-            cursor[name] = value
-        }
-        return self
-    }
-
+    
     /// 查询数据
     ///
     /// - Returns: 查询结果
@@ -133,15 +121,6 @@ public final class Statement {
         return try bind(bindings).run()
     }
 
-    /// 执行sql语句
-    ///
-    /// - Parameter bindings: [字段:数据]字典,和sql语句对应
-    /// - Returns: 执行sql语句后的statment
-    /// - Throws: 执行过程中的错误
-    @discardableResult public func run(_ bindings: [String: Binding]) throws -> Statement {
-        return try bind(bindings).run()
-    }
-
     public func scalar() throws -> Binding? {
         reset(clear: false)
         _ = try step()
@@ -149,10 +128,6 @@ public final class Statement {
     }
 
     public func scalar(_ bindings: [Binding]) throws -> Binding? {
-        return try bind(bindings).scalar()
-    }
-
-    public func scalar(_ bindings: [String: Binding]) throws -> Binding? {
         return try bind(bindings).scalar()
     }
 

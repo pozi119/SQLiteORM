@@ -179,6 +179,9 @@ public final class Orm {
                 dropIdxSQL += "DROP INDEX IF EXISTS \(name.quoted);"
             }
         }
+        guard config.indexes.count > 0 else {
+            return
+        }
         // 建立新索引
         let indexName = "sqlite_orm_index_\(table)"
         let indexesString = config.indexes.joined(separator: ",")

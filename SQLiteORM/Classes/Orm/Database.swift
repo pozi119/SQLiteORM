@@ -181,15 +181,57 @@ public final class Database {
         return try prepare(statement).bind(bindings)
     }
 
-    /// 准备statement
-    ///
-    /// - Parameters:
-    ///   - statement: sql语句
-    ///   - bindings: 绑定的数据,需和sql语句对应
-    /// - Returns: 准备好的sqlite3 statement
-    /// - Throws: 准备过程中出现的错误
-    public func prepare(_ statement: String, _ bindings: [String: Binding]) throws -> Statement {
-        return try prepare(statement).bind(bindings)
+    // MARK: - Merge
+
+    public var updateInterval: CFAbsoluteTime = 0 {
+        willSet {
+            if newValue > 0 {
+                NotificationCenter.default.addObserver(self, selector: #selector(runMergeUpdates), name: UIApplication.willTerminateNotification, object: nil)
+            } else {
+                NotificationCenter.default.removeObserver(self, name: UIApplication.willTerminateNotification, object: nil)
+            }
+        }
+    }
+
+    private var updates: [(String, [Binding])] = []
+
+    private func merge(_ sql: String, values: [Binding]) -> Bool {
+        guard updateInterval > 0 else {
+            return false
+        }
+        if updates.count == 0 {
+            let deadline = DispatchTime.now() + updateInterval
+            Database.serialQueue.asyncAfter(deadline: deadline) {
+                self.runMergeUpdates()
+            }
+        }
+        updates.append((sql, values))
+        return true
+    }
+
+    @objc @discardableResult private func runMergeUpdates() -> Bool {
+        #if DEBUG
+            print("[SQLiteORM][Merge] now: \(CFAbsoluteTimeGetCurrent()), count: \(updates.count), db: \((_path as NSString).lastPathComponent)\n")
+        #endif
+
+        guard updates.count > 0 else {
+            return true
+        }
+
+        let array = updates
+        updates.removeAll()
+
+        do {
+            try transaction(.immediate) {
+                for (sql, values) in array {
+                    try prepare(sql, values).run()
+                }
+            }
+        } catch _ {
+            return false
+        }
+
+        return true
     }
 
     // MARK: - Run
@@ -222,17 +264,6 @@ public final class Database {
         return try prepare(statement).run(bindings)
     }
 
-    /// 执行语句
-    ///
-    /// - Parameters:
-    ///   - statement: sql语句
-    ///   - bindings: 绑定的数据,需和sql语句对应
-    /// - Returns: 准备好的sqlite3 statement
-    /// - Throws: 准备过程中出现的错误
-    @discardableResult public func run(_ statement: String, _ bindings: [String: Binding]) throws -> Statement {
-        return try prepare(statement).run(bindings)
-    }
-
     // MARK: - Scalar
 
     public func scalar(_ statement: String) throws -> Binding? {
@@ -240,10 +271,6 @@ public final class Database {
     }
 
     public func scalar(_ statement: String, _ bindings: [Binding]) throws -> Binding? {
-        return try prepare(statement).scalar(bindings)
-    }
-
-    public func scalar(_ statement: String, _ bindings: [String: Binding]) throws -> Binding? {
         return try prepare(statement).scalar(bindings)
     }
 
@@ -474,6 +501,9 @@ public enum Result: Error {
         guard !Result.successCodes.contains(errorCode) else { return nil }
 
         let message = String(cString: sqlite3_errmsg(db.handle))
+        #if DEBUG
+            print("[SQLiteORM][Error] code: \(errorCode), error: \(message), sql: \(String(describing: statement))\n")
+        #endif
         self = .error(message: message, code: errorCode, statement: statement)
     }
 }

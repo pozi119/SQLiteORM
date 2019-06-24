@@ -32,13 +32,16 @@ extension Database {
     private static let serialVal = "com.valo.sqliteorm.serial"
     private static let concurrentVal = "com.valo.sqliteorm.concurrent"
     private static let queueKey = DispatchSpecificKey<String>()
-    private static let serialQueue: DispatchQueue = {
+    
+    /// 串行队列
+    public static let serialQueue: DispatchQueue = {
         var queue = DispatchQueue(label: Database.serialVal, attributes: [])
         queue.setSpecific(key: Database.queueKey, value: Database.serialVal)
         return queue
     }()
 
-    private static let concurrentQueue: DispatchQueue = {
+    /// 并行队列
+    public static let concurrentQueue: DispatchQueue = {
         var queue = DispatchQueue(label: Database.concurrentVal, attributes: [])
         queue.setSpecific(key: Database.queueKey, value: Database.concurrentVal)
         return queue
