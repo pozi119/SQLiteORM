@@ -7,6 +7,7 @@
 
 import Dispatch
 import Foundation
+
 #if SQLITE_SWIFT_STANDALONE
     import sqlite3
 #elseif SQLITE_SWIFT_SQLCIPHER
@@ -185,10 +186,17 @@ public final class Database {
 
     public var updateInterval: CFAbsoluteTime = 0 {
         willSet {
+            #if os(iOS)
+                let name = UIApplication.willTerminateNotification
+            #elseif os(OSX)
+                let name = NSApplication.willTerminateNotification
+            #else
+                let name = "unsupported"
+            #endif
             if newValue > 0 {
-                NotificationCenter.default.addObserver(self, selector: #selector(runMergeUpdates), name: UIApplication.willTerminateNotification, object: nil)
+                NotificationCenter.default.addObserver(self, selector: #selector(runMergeUpdates), name: name, object: nil)
             } else {
-                NotificationCenter.default.removeObserver(self, name: UIApplication.willTerminateNotification, object: nil)
+                NotificationCenter.default.removeObserver(self, name: name, object: nil)
             }
         }
     }
