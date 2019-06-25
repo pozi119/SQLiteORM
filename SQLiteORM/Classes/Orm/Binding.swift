@@ -31,8 +31,8 @@ extension Data: Binding {
     }
 }
 
-extension Binding{
-    public var sqlValue:String{
+extension Binding {
+    public var sqlValue: String {
         let type = Self.self
         switch type {
         case is String.Type:
