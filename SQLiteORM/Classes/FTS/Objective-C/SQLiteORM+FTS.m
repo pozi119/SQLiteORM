@@ -250,7 +250,7 @@ static fts5_api * fts5_api_from_db(sqlite3 *db)
         sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "fts5_api_ptr", NULL);
         sqlite3_step(pStmt);
 #else
-        if (@available(iOS 12.0, *)) {
+        if (@available(macOS 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *)) {
             sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "fts5_api_ptr", NULL);
             sqlite3_step(pStmt);
         }
@@ -454,11 +454,11 @@ NSArray<NSAttributedString *> * SQLiteORMHighlight(NSArray *objects,
 static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLiteORMXEnumerator enumerator)
 {
     const char *pText = source.UTF8String;
-    
+
     if (!pText) {
         return @[];
     }
-    
+
     int nText = (int)strlen(pText);
     if (!enumerator) {
         SQLiteORMToken *ormToken = [SQLiteORMToken new];
