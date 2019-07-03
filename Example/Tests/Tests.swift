@@ -56,12 +56,13 @@ extension SQLiteORMTests {
 
             let dic1 = try OrmEncoder().encode(user)
             let decoded1 = try OrmDecoder().decode(type(of: user), from: dic1 as Any)
-            XCTAssertEqual(user, decoded1)
+            XCTAssert(user != nil && decoded1 != nil && user! == decoded1!)
 
             let array2 = [user, nil]
             let dic2 = try? OrmEncoder().encode(array2)
             let decoded2 = try? OrmDecoder().decode(type(of: array2), from: dic2 as Any)
-            XCTAssertEqual(array2, decoded2)
+            let user2 = decoded2?.first!
+            XCTAssert(decoded2 != nil && decoded2!.count == 2 && user! == user2!)
         } catch {
             XCTAssertThrowsError(error)
         }

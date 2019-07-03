@@ -7,34 +7,38 @@
 
 import Foundation
 
-struct Person:Codable,Equatable {
-    enum Sex:Int,Codable {
-        case male,female
+struct Person: Codable, Equatable {
+    enum Sex: Int, Codable {
+        case male, female
     }
-    var name:String
-    var age:Int
-    var id:Int64
-    var sex:Sex
-    var intro:String
+
+    var name: String
+    var age: Int
+    var id: Int64
+    var sex: Sex
+    var intro: String
 }
 
 struct Event {
-    var name:String
-    var id:Int64
+    var name: String
+    var id: Int64
 }
 
-class User: Codable,Equatable {
+class User: NSObject, Codable {
     static func == (lhs: User, rhs: User) -> Bool {
-        return lhs.id == rhs.id && lhs.name == rhs.name && lhs.password == rhs.password && lhs.person == rhs.person
+        return lhs.id == rhs.id
+            && lhs.name == rhs.name
+            && lhs.password == rhs.password
+            && lhs.person == rhs.person
     }
-    
-    var id:Int64
-    var name:String
-    var password:String? = nil
-    var person:Person? = nil
-    var list:[Int] = []
-    
-    init(id:Int64 = 0, name:String = "", password:String? = nil, person:Person? = nil) {
+
+    var id: Int64
+    var name: String
+    var password: String?
+    var person: Person?
+    var list: [Int] = []
+
+    init(id: Int64 = 0, name: String = "", password: String? = nil, person: Person? = nil) {
         self.id = id
         self.name = name
         self.password = password
