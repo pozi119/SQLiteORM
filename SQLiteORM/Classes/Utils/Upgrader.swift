@@ -7,97 +7,170 @@
 
 import Foundation
 
+fileprivate extension String {
+    private static let delimiterSet = CharacterSet(charactersIn: ".-_")
+
+    func versionCompare(_ other: String) -> ComparisonResult {
+        let array1 = components(separatedBy: String.delimiterSet)
+        let array2 = other.components(separatedBy: String.delimiterSet)
+        let count = min(array1.count, array2.count)
+        for i in 0 ..< count {
+            let str1 = array1[i]
+            let str2 = array2[i]
+            let ret = str1.versionCompare(str2)
+            guard ret == .orderedSame else { return ret }
+        }
+
+        return array1.count < array2.count ? .orderedAscending : array1.count == array2.count ? .orderedSame : .orderedDescending
+    }
+}
+
 public final class Upgrader {
-    public typealias Upgrade = (Progress?) -> Void
+    struct Item {
+        var target: NSObjectProtocol?
+        var action: Selector?
+        var handler: ((Progress) -> Void)?
+        var version: String = ""
+        var stage: UInt = 0
+        var progress: Progress = Progress(totalUnitCount: 100)
 
-    public var versions: [String] = []
-    private var upgrades: [String: Upgrade] = [:]
+        init() {}
 
-    public var lastVersionKey: String = "SQLiteORMLastVersionKey"
-    public var lastVersionSetter: (String, String) -> Void = { UserDefaults.standard.set($1, forKey: $0) }
-    public var lastVersionGetter: (String) -> String = { UserDefaults.standard.object(forKey: $0) as? String ?? "" }
-
-    public func upgrade(_ progress: Progress?) {
-        guard versions.count > 0 else { return }
-
-        let last = lastVersionGetter(lastVersionKey)
-        upgrade(progress, form: last)
-        lastVersionSetter(lastVersionKey, versions.last!)
-    }
-
-    public func upgrade(_ progress: Progress?, form version: String) {
-        guard versions.count > 0 else { return }
-
-        let ver = Version(version)
-        var prev = Version("")
-        var idx = 0
-        for i in 0 ..< versions.count {
-            let cur = Version(versions[i])
-            if ver >= prev && ver < cur {
-                idx = i
-                break
-            }
-            prev = cur
+        func compare(_ other: Item) -> ComparisonResult {
+            let result = version.versionCompare(other.version)
+            guard result != .orderedSame else { return result }
+            return stage < other.stage ? .orderedAscending : (stage == other.stage ? .orderedSame : .orderedDescending)
         }
 
-        var blocks: [Upgrade] = []
-        for i in idx ..< versions.count {
-            let block = upgrades[versions[i]]
-            if block == nil { continue }
-            blocks.append(block!)
+        static func < (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) == .orderedAscending
         }
 
-        for block in blocks {
-            var sub: Progress?
-            if progress != nil {
-                sub = Progress(totalUnitCount: 100, parent: progress!, pendingUnitCount: progress!.totalUnitCount / Int64(blocks.count))
-            }
-            block(sub)
+        static func > (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) == .orderedDescending
+        }
+
+        static func == (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) == .orderedSame
+        }
+
+        static func <= (lhs: Item, rhs: Item) -> Bool {
+            let result = lhs.compare(rhs)
+            return result == .orderedAscending || result == .orderedSame
+        }
+
+        static func >= (lhs: Item, rhs: Item) -> Bool {
+            let result = lhs.compare(rhs)
+            return result == .orderedDescending || result == .orderedSame
         }
     }
 
-    private struct Version {
-        private var value: String
+    var versionKey = "sqliteorm.upgrader.lastversion"
+    var progress = Progress(totalUnitCount: 100)
 
-        init(_ value: String) {
-            self.value = value
+    private var items: [Item] = []
+    private var stagesItems: [UInt: [Item]] = [:]
+    private var stages: [UInt] = []
+    private var pretreated = false
+
+    var needUpgrade: Bool {
+        pretreat()
+        return stagesItems.count > 0
+    }
+
+    init(versionKey: String) {
+        self.versionKey = versionKey
+    }
+
+    func add(target: NSObjectProtocol, action: Selector, for stage: UInt, version: String) {
+        var item = Item()
+        item.target = target
+        item.action = action
+        item.stage = stage
+        item.version = version
+        items.append(item)
+    }
+
+    func add(handler: @escaping (Progress) -> Void, for stage: UInt, version: String) {
+        var item = Item()
+        item.handler = handler
+        item.stage = stage
+        item.version = version
+        items.append(item)
+    }
+
+    func upgradeAll() {
+        pretreat()
+        for stage in stages {
+            upgrade(stage: stage)
         }
+    }
 
-        private static func compare(_ version1: String, _ version2: String) -> ComparisonResult {
-            let charset = CharacterSet(charactersIn: ".-_")
-            let array1 = version1.components(separatedBy: charset)
-            let array2 = version2.components(separatedBy: charset)
-            let count = min(array1.count, array2.count)
-            for i in 0 ..< count {
-                let str1 = array1[i]
-                let str2 = array2[i]
-                let ret = str1.compare(str2)
-                guard ret == .orderedSame else { return ret }
+    func upgrade(stage: UInt, from fromVersion: String = "", to toVersion: String = "") {
+        pretreat()
+
+        let subItems = stagesItems[stage] ?? []
+        var todos: [Item] = []
+        for item in subItems {
+            if (fromVersion.count > 0 && item.version.compare(fromVersion).rawValue < ComparisonResult.orderedSame.rawValue)
+                || (toVersion.count > 0 && item.version.compare(toVersion).rawValue > ComparisonResult.orderedSame.rawValue) {
+                continue
             }
-
-            return array1.count < array2.count ? .orderedAscending : array1.count == array2.count ? .orderedSame : .orderedDescending
+            todos.append(item)
         }
 
-        static func == (lhs: Version, rhs: Version) -> Bool {
-            return compare(lhs.value, rhs.value) == .orderedSame
+        guard todos.count > 0 else { return }
+
+        for item in todos {
+            if item.target != nil && item.action != nil {
+                if item.target!.responds(to: item.action!) {
+                    item.target!.perform(item.action!, with: item.progress)
+                }
+            } else if item.handler != nil {
+                item.handler!(item.progress)
+            }
+            item.progress.completedUnitCount = item.progress.totalUnitCount
         }
 
-        static func >= (lhs: Version, rhs: Version) -> Bool {
-            let ret = compare(lhs.value, rhs.value)
-            return ret == .orderedSame || ret == .orderedDescending
+        // record last version
+        if stage == stages.last! {
+            let last = stagesItems[stage]!.last!
+            if last == todos.last! {
+                progress.completedUnitCount = progress.totalUnitCount
+                UserDefaults.standard.set(last.version, forKey: versionKey)
+            }
+        }
+    }
+
+    private func pretreat() {
+        guard pretreated == false else { return }
+
+        let defaults = UserDefaults.standard
+        let lastVersion = defaults.object(forKey: versionKey) as? String ?? ""
+
+        items.sort { $0 < $1 }
+
+        var dic: [UInt: [Item]] = [:]
+        for item in items {
+            let result = item.version.versionCompare(lastVersion)
+            if result.rawValue <= ComparisonResult.orderedSame.rawValue { continue }
+            var sub = dic[item.stage] ?? [Item]()
+            sub.append(item)
+            dic[item.stage] = sub
         }
 
-        static func <= (lhs: Version, rhs: Version) -> Bool {
-            let ret = compare(lhs.value, rhs.value)
-            return ret == .orderedSame || ret == .orderedAscending
+        stagesItems = dic
+        stages = dic.keys.sorted { $0 < $1 }
+
+        for stage in stages {
+            let stageProgress = Progress(totalUnitCount: 100)
+            progress.addChild(stageProgress, withPendingUnitCount: Int64(100 / stages.count))
+            let subItems = dic[stage]!
+            for item in subItems {
+                stageProgress.addChild(item.progress, withPendingUnitCount: Int64(100 / subItems.count))
+            }
         }
 
-        static func > (lhs: Version, rhs: Version) -> Bool {
-            return compare(lhs.value, rhs.value) == .orderedDescending
-        }
-
-        static func < (lhs: Version, rhs: Version) -> Bool {
-            return compare(lhs.value, rhs.value) == .orderedAscending
-        }
+        pretreated = true
     }
 }
