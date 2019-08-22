@@ -54,7 +54,6 @@ class TableViewController: UITableViewController {
 
     func setup() {
         String.preloadingForPinyin()
-        SQLiteORMJieba.preloading()
 
         let dir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last!
         let tableName = "message"
@@ -232,8 +231,8 @@ class TableViewController: UITableViewController {
             let end = CFAbsoluteTimeGetCurrent()
             let str = "[query] fts: \(keyword), hit: \(messages.count), consumed: \(end - begin)"
             print(str)
-            let highlights = item.ftsOrm.highlight(messages, field: "info", keyword: keyword, attributes: [.foregroundColor: UIColor.red])
-            if highlights.count > 0 {}
+            // TODO: let highlights = item.ftsOrm.highlight(messages, field: "info", keyword: keyword, attributes: [.foregroundColor: UIColor.red])
+            // TODO: if highlights.count > 0 {}
             DispatchQueue.main.async {
                 self.updateUI(action: true, search: true, log: str)
             }

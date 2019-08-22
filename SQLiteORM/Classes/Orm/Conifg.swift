@@ -244,7 +244,7 @@ public final class GeneralConfig: Config {
         if primaries.count > 1 {
             array.append("PRIMARY KEY (" + primaries.joined(separator: ",") + ")")
         }
-        
+
         let sql = array.joined(separator: ",")
         guard sql.count > 0 else {
             return sql

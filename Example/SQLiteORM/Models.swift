@@ -50,7 +50,8 @@ struct Item {
         let ftsUrl = URL(fileURLWithPath: dir).appendingPathComponent(ftsDbName)
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
-        ftsDb.register(JiebaFtsTokenizer.self, for: "jieba")
+        //TODO: --
+//        ftsDb.register(JiebaFtsTokenizer.self, for: "jieba")
         ftsDb.updateInterval = 1.0
         ftsOrm = Orm(config: ftsConfig, db: ftsDb, table: tableName, setup: true)
     }

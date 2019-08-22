@@ -14,23 +14,38 @@
 #import <sqlite3.h>
 #endif
 
-static const char *kPinYinArg = "pinyin";
-
+extern NSString * simplifiedString(NSString *);
+extern NSString * traditionalString(NSString *);
+extern NSArray * swift_tokenize(NSString *, int);
+extern NSArray * swift_pinyinTokenize(NSString *, int, int);
+extern NSArray * swift_numberTokenize(NSString *);
 /**
  分词对象
  */
 @interface SQLiteORMToken : NSObject
-@property (nonatomic, assign) const char *token;  ///< 分词
+@property (nonatomic, copy) NSString *token;  ///< 分词
 @property (nonatomic, assign) int len;  ///< 分词长度
 @property (nonatomic, assign) int start; ///< 分词对应原始字符串的起始位置
 @property (nonatomic, assign) int end; ///< 分词对应原始字符串的结束位置
 @end
 
 @implementation SQLiteORMToken
-
-- (void)dealloc
++ (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
 {
-    free((void *)_token);
+    SQLiteORMToken *tk = [SQLiteORMToken new];
+    tk.token = token;
+    tk.start = start;
+    tk.len = len;
+    tk.end = end;
+    return tk;
+}
+
+- (NSString *)description {
+    return _token;
+}
+
+- (NSString *)debugDescription {
+    return [NSString stringWithFormat:@"'%@',%@,%@,%@", _token, @(_len), @(_start), @(_end)];
 }
 
 @end
@@ -63,7 +78,7 @@ struct sqlite3_tokenizer_module {
         );
     int (*xLanguageid)(sqlite3_tokenizer_cursor *pCsr, int iLangid);
     const char *xName;
-    SQLiteORMXEnumerator xEnumerator;
+    int xMethod;
 };
 
 struct sqlite3_tokenizer {
@@ -77,8 +92,9 @@ struct sqlite3_tokenizer_cursor {
 typedef struct vv_fts3_tokenizer {
     sqlite3_tokenizer base;
     char locale[16];
-    bool pinyin;
     int pinyinMaxLen;
+    bool tokenNum;
+    bool transfrom;
 } vv_fts3_tokenizer;
 
 typedef struct vv_fts3_tokenizer_cursor {
@@ -128,25 +144,20 @@ static int vv_fts3_create(
     memset(tok, 0, sizeof(*tok));
 
     memset(tok->locale, 0x0, 16);
-    tok->pinyin = false;
     tok->pinyinMaxLen = 0;
+    tok->tokenNum = false;
+    tok->transfrom = false;
 
-    int idx = -1;
-    for (int i = 0; i < MIN(3, argc); i++) {
+    for (int i = 0; i < MIN(2, argc); i++) {
         const char *arg = argv[i];
-        if (strcmp(arg, kPinYinArg) == 0) {
-            idx = i;
-            tok->pinyin = true;
+        uint32_t flag = (uint32_t)atol(arg);
+        if (flag > 0) {
+            tok->pinyinMaxLen = flag & EMFtsTokenParamPinyin;
+            tok->tokenNum = (flag & EMFtsTokenParamNumber) > 0;
+            tok->transfrom = (flag & EMFtsTokenParamTransform) > 0;
         } else {
-            if (tok->pinyin && i == idx + 1) {
-                tok->pinyinMaxLen = atoi(arg);
-            } else if (i == 0) {
-                strncpy(tok->locale, arg, 15);
-            }
+            strncpy(tok->locale, arg, 15);
         }
-    }
-    if (tok->pinyin && tok->pinyinMaxLen <= 0) {
-        tok->pinyinMaxLen = TOKEN_PINYIN_MAX_LENGTH;
     }
 
     *ppTokenizer = &tok->base;
@@ -173,31 +184,25 @@ static int vv_fts3_open(
     if (c == NULL) return SQLITE_NOMEM;
 
     const sqlite3_tokenizer_module *module = pTokenizer->pModule;
-    SQLiteORMXEnumerator enumerator = module->xEnumerator;
-    if (!enumerator) {
-        return SQLITE_ERROR;
-    }
-
+    int method = module->xMethod;
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
 
     vv_fts3_tokenizer *tok = (vv_fts3_tokenizer *)pTokenizer;
-    BOOL tokenPinyin = tok->pinyin && (nInput <= tok->pinyinMaxLen);
-    __block NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
 
-    SQLiteORMXTokenHandler handler = ^(const char *token, int len, int start, int end) {
-        char *_token = (char *)malloc(len + 1);
-        memcpy(_token, token, len);
-        _token[len] = 0;
-        SQLiteORMToken *t = [SQLiteORMToken new];
-        t.token = _token;
-        t.len = len;
-        t.start = start;
-        t.end = end;
-        [array addObject:t];
-        return YES;
-    };
+    NSString *ocString = [NSString stringWithUTF8String:pInput].lowercaseString;
+    if (tok->transfrom) {
+        ocString = simplifiedString(ocString);
+    }
 
-    enumerator(pInput, nBytes, tok->locale, tokenPinyin, handler);
+    NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
+    [array addObjectsFromArray:swift_tokenize(ocString, method)];
+
+    if (tok->tokenNum) {
+        [array addObjectsFromArray:swift_numberTokenize(ocString)];
+    }
+    if (tok->pinyinMaxLen > 0 && nInput < tok->pinyinMaxLen) {
+        [array addObjectsFromArray:swift_pinyinTokenize(ocString, 0, nInput)];
+    }
 
     c->pInput = pInput;
     c->nBytes = nInput;
@@ -230,7 +235,7 @@ static int vv_fts3_next(
     NSArray *array = (__bridge NSArray *)(c->tokens);
     if (array.count == 0 || c->iToken == array.count) return SQLITE_DONE;
     SQLiteORMToken *t = array[c->iToken];
-    *ppToken = t.token;
+    *ppToken = t.token.UTF8String;
     *pnBytes = t.len;
     *piStartOffset = t.start;
     *piEndOffset = t.end;
@@ -263,9 +268,10 @@ static fts5_api * fts5_api_from_db(sqlite3 *db)
 typedef struct Fts5VVTokenizer Fts5VVTokenizer;
 struct Fts5VVTokenizer {
     char locale[16];
-    bool pinyin;
     int pinyinMaxLen;
-    SQLiteORMXEnumerator enumerator;
+    bool tokenNum;
+    bool transfrom;
+    int method;
 };
 
 static void vv_fts5_xDelete(Fts5Tokenizer *p)
@@ -281,32 +287,26 @@ static int vv_fts5_xCreate(
 {
     Fts5VVTokenizer *tok = sqlite3_malloc(sizeof(Fts5VVTokenizer));
     if (!tok) return SQLITE_NOMEM;
-    memset(tok->locale, 0x0, 16);
-    tok->pinyin = false;
-    tok->pinyinMaxLen = 0;
 
-    int idx = -1;
-    for (int i = 0; i < MIN(3, nArg); i++) {
+    memset(tok->locale, 0x0, 16);
+    tok->pinyinMaxLen = 0;
+    tok->tokenNum = false;
+    tok->transfrom = false;
+
+    for (int i = 0; i < MIN(2, nArg); i++) {
         const char *arg = azArg[i];
-        if (strcmp(arg, kPinYinArg) == 0) {
-            idx = i;
-            tok->pinyin = true;
+        uint32_t flag = (uint32_t)atol(arg);
+        if (flag > 0) {
+            tok->pinyinMaxLen = flag & EMFtsTokenParamPinyin;
+            tok->tokenNum = (flag & EMFtsTokenParamNumber) > 0;
+            tok->transfrom = (flag & EMFtsTokenParamTransform) > 0;
         } else {
-            if (tok->pinyin && i == idx + 1) {
-                tok->pinyinMaxLen = atoi(arg);
-            } else if (i == 0) {
-                strncpy(tok->locale, arg, 15);
-            }
+            strncpy(tok->locale, arg, 15);
         }
     }
-    if (tok->pinyin && tok->pinyinMaxLen <= 0) {
-        tok->pinyinMaxLen = TOKEN_PINYIN_MAX_LENGTH;
-    }
 
-    SQLiteORMXEnumerator enumerator = (SQLiteORMXEnumerator)pUnused;
-    if (!enumerator) return SQLITE_ERROR;
-
-    tok->enumerator = enumerator;
+    int method = *(int *)pUnused;
+    tok->method = method;
     *ppOut = (Fts5Tokenizer *)tok;
     return SQLITE_OK;
 }
@@ -326,15 +326,22 @@ static int vv_fts5_xTokenize(
     __block int rc = SQLITE_OK;
     Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
     int nInput = (pText == 0) ? 0 : (nText < 0 ? (int)strlen(pText) : nText);
-    BOOL tokenPinyin = tok->pinyin && (nInput <= tok->pinyinMaxLen) && (iUnused & FTS5_TOKENIZE_DOCUMENT);
 
-    SQLiteORMXEnumerator enumerator = tok->enumerator;
-    SQLiteORMXTokenHandler handler = ^(const char *token, int len, int start, int end) {
-        rc = xToken(pCtx, iUnused, token, len, start, end);
-        return (BOOL)(rc == SQLITE_OK || rc == SQLITE_ROW || rc == SQLITE_DONE);
-    };
+    NSString *ocString = [NSString stringWithUTF8String:pText].lowercaseString;
+    if (tok->transfrom) {
+        ocString = simplifiedString(ocString);
+    }
+    int method = tok->method;
 
-    enumerator(pText, nText, tok->locale, tokenPinyin, handler);
+    NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
+    [array addObjectsFromArray:swift_tokenize(ocString, method)];
+
+    if (tok->tokenNum) {
+        [array addObjectsFromArray:swift_numberTokenize(ocString)];
+    }
+    if (tok->pinyinMaxLen > 0 && nInput < tok->pinyinMaxLen) {
+        [array addObjectsFromArray:swift_pinyinTokenize(ocString, 0, nInput)];
+    }
 
     if (rc == SQLITE_DONE) rc = SQLITE_OK;
     return rc;
@@ -354,17 +361,7 @@ static inline BOOL check(int resultCode)
     }
 }
 
-static NSMutableDictionary * enumerators()
-{
-    static NSMutableDictionary *_enumerators;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        _enumerators = [NSMutableDictionary dictionaryWithCapacity:0];
-    });
-    return _enumerators;
-}
-
-BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, SQLiteORMXEnumerator enumerator, NSString *tokenizerName)
+BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, int method, NSString *tokenizerName)
 {
     char *name = (char *)tokenizerName.UTF8String;
 
@@ -377,7 +374,7 @@ BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, SQLiteORMXEnumerator enumerator, N
     module->xClose = vv_fts3_close;
     module->xNext = vv_fts3_next;
     module->xName = name;
-    module->xEnumerator = enumerator;
+    module->xMethod = method;
     int rc = fts3_register_tokenizer(db, name, module);
 
     BOOL ret =  check(rc);
@@ -391,38 +388,32 @@ BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, SQLiteORMXEnumerator enumerator, N
     tokenizer->xDelete = vv_fts5_xDelete;
     tokenizer->xTokenize = vv_fts5_xTokenize;
 
+    int *context = malloc(sizeof(int));
+    *context = (int)method;
+
     rc = pApi->xCreateTokenizer(pApi,
                                 name,
-                                (void *)enumerator,
+                                (void *)context,
                                 tokenizer,
                                 0);
-    ret = check(rc);
-    if (ret) {
-        NSMutableDictionary *dic = enumerators();
-        dic[tokenizerName] = [NSString stringWithFormat:@"%p", enumerator];
-    }
-    return ret;
+    return check(rc);
 }
 
-SQLiteORMXEnumerator SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerName)
+int SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerName)
 {
     fts5_api *pApi = fts5_api_from_db(db);
-    if (!pApi) return nil;
+    if (!pApi) return 0xFFFFFFFF;
 
     void *pUserdata = 0;
     fts5_tokenizer *tokenizer;
     tokenizer = (fts5_tokenizer *)sqlite3_malloc(sizeof(*tokenizer));
     int rc = pApi->xFindTokenizer(pApi, tokenizerName.UTF8String, &pUserdata, tokenizer);
-    if (rc != SQLITE_OK) return nil;
+    if (rc != SQLITE_OK) return 0xFFFFFFFF;
 
-    NSMutableDictionary *dic = enumerators();
-    NSString *addr = [NSString stringWithFormat:@"%p", pUserdata];
-    NSString *mapped = dic[tokenizerName];
-    if (![addr isEqualToString:mapped]) return nil;
-
-    return (SQLiteORMXEnumerator)pUserdata;
+    return *(int *)pUserdata;
 }
 
+/*
 // MARK: -
 static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLiteORMXEnumerator enumerator);
 
@@ -453,33 +444,23 @@ NSArray<NSAttributedString *> * SQLiteORMHighlight(NSArray *objects,
 
 static NSArray<SQLiteORMToken *> * tokenize(NSString *source, BOOL pinyin, SQLiteORMXEnumerator enumerator)
 {
-    const char *pText = source.UTF8String;
+    const char *pText = source.UTF8String ? : "";
+    int nText = (int)strlen(pText);
 
-    if (!pText) {
+    if (nText == 0) {
         return @[];
     }
 
-    int nText = (int)strlen(pText);
     if (!enumerator) {
-        SQLiteORMToken *ormToken = [SQLiteORMToken new];
-        ormToken.token = pText;
-        ormToken.len = nText;
-        ormToken.start = 0;
-        ormToken.end = nText;
+        SQLiteORMToken *ormToken = [SQLiteORMToken token:source len:nText start:0 end:nText];
         return @[ormToken];
     }
 
     __block NSMutableArray<SQLiteORMToken *> *results = [NSMutableArray arrayWithCapacity:0];
 
     SQLiteORMXTokenHandler handler = ^(const char *token, int len, int start, int end) {
-        char *_token = (char *)malloc(len + 1);
-        memcpy(_token, token, len);
-        _token[len] = 0;
-        SQLiteORMToken *ormToken = [SQLiteORMToken new];
-        ormToken.token = _token;
-        ormToken.len = len;
-        ormToken.start = start;
-        ormToken.end = end;
+        NSString *string = [[NSString alloc] initWithBytes:token length:len encoding:NSUTF8StringEncoding];
+        SQLiteORMToken *ormToken = [SQLiteORMToken token:string len:len start:start end:end];
         [results addObject:ormToken];
         return YES;
     };
@@ -509,7 +490,7 @@ static NSAttributedString * highlightOne(NSString *source,
 
     SQLiteORMXTokenHandler handler = ^(const char *token, int len, int start, int end) {
         for (SQLiteORMToken *kwToken in keywordTokens) {
-            if (strncmp(token, kwToken.token, kwToken.len) != 0) continue;
+            if (strncmp(token, kwToken.token.UTF8String, kwToken.len) != 0) continue;
             memcpy(tokenized + start, pText + start, end - start);
         }
         return YES;
@@ -539,6 +520,8 @@ static NSAttributedString * highlightOne(NSString *source,
         }
     }
     free(remained);
+    free(tokenized);
 
     return attrText;
 }
+ */

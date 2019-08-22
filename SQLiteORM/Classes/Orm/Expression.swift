@@ -198,12 +198,12 @@ public extension String {
     func column(_ column: String) -> String {
         return self + "." + column
     }
-    
-    func on(_ condition: Where) -> String{
+
+    func on(_ condition: Where) -> String {
         return self + " ON " + condition.sql
     }
 
-    func concat(_ concat: String, value: Binding) -> String{
+    func concat(_ concat: String, value: Binding) -> String {
         return self + " " + concat + " " + value.sqlValue
     }
 }
