@@ -19,15 +19,6 @@ extern NSString * traditionalString(NSString *);
 extern NSArray * swift_tokenize(NSString *, int);
 extern NSArray * swift_pinyinTokenize(NSString *, int, int);
 extern NSArray * swift_numberTokenize(NSString *);
-/**
- 分词对象
- */
-@interface SQLiteORMToken : NSObject
-@property (nonatomic, copy) NSString *token;  ///< 分词
-@property (nonatomic, assign) int len;  ///< 分词长度
-@property (nonatomic, assign) int start; ///< 分词对应原始字符串的起始位置
-@property (nonatomic, assign) int end; ///< 分词对应原始字符串的结束位置
-@end
 
 @implementation SQLiteORMToken
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
@@ -152,9 +143,9 @@ static int vv_fts3_create(
         const char *arg = argv[i];
         uint32_t flag = (uint32_t)atol(arg);
         if (flag > 0) {
-            tok->pinyinMaxLen = flag & EMFtsTokenParamPinyin;
-            tok->tokenNum = (flag & EMFtsTokenParamNumber) > 0;
-            tok->transfrom = (flag & EMFtsTokenParamTransform) > 0;
+            tok->pinyinMaxLen = flag & TokenizerParamPinyin;
+            tok->tokenNum = (flag & TokenizerParamNumber) > 0;
+            tok->transfrom = (flag & TokenizerParamTransform) > 0;
         } else {
             strncpy(tok->locale, arg, 15);
         }
@@ -297,9 +288,9 @@ static int vv_fts5_xCreate(
         const char *arg = azArg[i];
         uint32_t flag = (uint32_t)atol(arg);
         if (flag > 0) {
-            tok->pinyinMaxLen = flag & EMFtsTokenParamPinyin;
-            tok->tokenNum = (flag & EMFtsTokenParamNumber) > 0;
-            tok->transfrom = (flag & EMFtsTokenParamTransform) > 0;
+            tok->pinyinMaxLen = flag & TokenizerParamPinyin;
+            tok->tokenNum = (flag & TokenizerParamNumber) > 0;
+            tok->transfrom = (flag & TokenizerParamTransform) > 0;
         } else {
             strncpy(tok->locale, arg, 15);
         }
@@ -341,6 +332,11 @@ static int vv_fts5_xTokenize(
     }
     if (tok->pinyinMaxLen > 0 && nInput < tok->pinyinMaxLen) {
         [array addObjectsFromArray:swift_pinyinTokenize(ocString, 0, nInput)];
+    }
+
+    for (SQLiteORMToken *tk in array) {
+        rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);
+        if (rc != SQLITE_OK) break;
     }
 
     if (rc == SQLITE_DONE) rc = SQLITE_OK;

@@ -8,13 +8,13 @@
 import Foundation
 
 @_silgen_name("simplifiedString")
-func simplifiedString(_ string: String) -> String {
-    return string.simplified
+func simplifiedString(_ string: NSString) -> NSString {
+    return (string as String).simplified as NSString
 }
 
 @_silgen_name("traditionalString")
-func traditionalString(_ string: String) -> String {
-    return string.traditional
+func traditionalString(_ string: NSString) -> NSString {
+    return (string as String).traditional as NSString
 }
 
 /// 拼音相关

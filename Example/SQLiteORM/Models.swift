@@ -37,9 +37,10 @@ struct Item {
         let config = GeneralConfig(Message.self)
         config.primaries = ["message_id"]
 
+        let param = TokenizerParamNumber | TokenizerParamTransform
         let ftsConfig = FtsConfig(Message.self)
         ftsConfig.module = "fts5"
-        ftsConfig.tokenizer = "jieba zh_CN pinyin 9"
+        ftsConfig.tokenizer = "sqliteorm \(param)"
         ftsConfig.indexes = ["info"]
 
         let url = URL(fileURLWithPath: dir).appendingPathComponent(dbName)
@@ -50,8 +51,7 @@ struct Item {
         let ftsUrl = URL(fileURLWithPath: dir).appendingPathComponent(ftsDbName)
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
-        //TODO: --
-//        ftsDb.register(JiebaFtsTokenizer.self, for: "jieba")
+        ftsDb.register(.sqliteorm, for: "sqliteorm")
         ftsDb.updateInterval = 1.0
         ftsOrm = Orm(config: ftsConfig, db: ftsDb, table: tableName, setup: true)
     }

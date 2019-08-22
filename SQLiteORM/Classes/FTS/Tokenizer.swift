@@ -8,19 +8,6 @@
 import Foundation
 import NaturalLanguage
 
-public struct Token {
-    var token: String = ""
-    var len: Int = 0
-    var start: Int = 0
-    var end: Int = 0
-}
-
-extension Token: CustomStringConvertible {
-    public var description: String {
-        return token + ",\(len),\(start),\(end)"
-    }
-}
-
 public enum TokenMethod: Int {
     case apple, natural, sqliteorm
     case unknown = 0xFFFFFFFF
@@ -38,7 +25,11 @@ struct TokenCursor {
 }
 
 @_silgen_name("swift_tokenize")
-public func tokenize(_ source: String, _ method: TokenMethod = .unknown) -> [Token] {
+public func swift_tokenize(_ source: NSString, _ method: Int) -> NSArray {
+    return tokenize(source as String, TokenMethod(rawValue: method) ?? .unknown) as NSArray
+}
+
+public func tokenize(_ source: String, _ method: TokenMethod = .unknown) -> [SQLiteORMToken] {
     switch method {
     case .apple: return appleTokenize(source)
     case .natural: return naturalTokenize(source)
@@ -48,10 +39,10 @@ public func tokenize(_ source: String, _ method: TokenMethod = .unknown) -> [Tok
 }
 
 /// 自然语言处理分词
-func naturalTokenize(_ source: String, locale: String = "") -> [Token] {
+func naturalTokenize(_ source: String, locale: String = "") -> [SQLiteORMToken] {
     guard source.count > 0 else { return [] }
 
-    var results: [Token] = []
+    var results: [SQLiteORMToken] = []
     if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
         let tokenizer = NLTokenizer(unit: .word)
         tokenizer.string = source
@@ -65,7 +56,7 @@ func naturalTokenize(_ source: String, locale: String = "") -> [Token] {
             let text = tk.utf8
             let start = pre.utf8.count
             let len = text.count
-            let token = Token(token: String(tk), len: len, start: start, end: start + len)
+            let token = SQLiteORMToken(String(tk), len: Int32(len), start: Int32(start), end: Int32(start + len))
             results.append(token)
             return true
         }
@@ -74,10 +65,10 @@ func naturalTokenize(_ source: String, locale: String = "") -> [Token] {
 }
 
 /// CoreFundation分词
-func appleTokenize(_ source: String, locale: String = "") -> [Token] {
+func appleTokenize(_ source: String, locale: String = "") -> [SQLiteORMToken] {
     guard source.count > 0 else { return [] }
 
-    var results: [Token] = []
+    var results: [SQLiteORMToken] = []
     let cfText = source as CFString
     let cfRange = CFRangeMake(0, source.count)
     let cfLocale = locale.count > 0 ? Locale(identifier: locale) as CFLocale : CFLocaleCopyCurrent()
@@ -97,7 +88,7 @@ func appleTokenize(_ source: String, locale: String = "") -> [Token] {
         let pre = source[startBound ..< lowerBound]
         let len = tk.utf8.count
         let start = pre.utf8.count
-        let token = Token(token: String(tk), len: len, start: start, end: start + len)
+        let token = SQLiteORMToken(String(tk), len: Int32(len), start: Int32(start), end: Int32(start + len))
         results.append(token)
         tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
     }
@@ -120,8 +111,8 @@ func isSymbol(_ ch: unichar) -> Bool {
 }
 
 /// SQLiteORM分词
-func ormTokenize(_ source: String) -> [Token] {
-    let cSource = source.utf8CString.map { UInt8($0) }
+func ormTokenize(_ source: String) -> [SQLiteORMToken] {
+    let cSource = source.utf8.map { UInt8($0) }
     let sourceLen = cSource.count
     guard sourceLen > 0 else { return [] }
 
@@ -183,7 +174,7 @@ func ormTokenize(_ source: String) -> [Token] {
     }
     cursors.append(TokenCursor(type: .none, offset: sourceLen, len: 0))
 
-    var results: [Token] = []
+    var results: [SQLiteORMToken] = []
     var lastType: TokenType = .none
     var partOffset = 0
     var partLength = 0
@@ -197,8 +188,10 @@ func ormTokenize(_ source: String) -> [Token] {
                     case .letter: fallthrough
                     case .digit:
                         let range = partOffset ..< (partOffset + partLength)
-                        let string = String(bytes: cSource[range], encoding: .ascii) ?? ""
-                        results.append(Token(token: string, len: partLength, start: partOffset, end: partOffset + partLength))
+                        let bytes = cSource[range]
+                        let string = String(bytes: bytes, encoding: .ascii) ?? ""
+                        let _tk = SQLiteORMToken(string, len: Int32(partLength), start: Int32(partOffset), end: Int32(partOffset + partLength))
+                        results.append(_tk)
 
                     default: break
                     }
@@ -224,9 +217,11 @@ func ormTokenize(_ source: String) -> [Token] {
             case .auxiliary:
                 if cursor.len > 0 {
                     let range = cursor.offset ..< (cursor.offset + cursor.len)
-                    let string = String(bytes: cSource[range], encoding: .ascii) ?? ""
+                    let bytes = cSource[range]
+                    let string = String(bytes: bytes, encoding: .utf8) ?? ""
                     if string.count > 0 {
-                        results.append(Token(token: string, len: cursor.len, start: cursor.offset, end: cursor.offset + cursor.len))
+                        let _tk = SQLiteORMToken(string, len: Int32(cursor.len), start: Int32(cursor.offset), end: Int32(cursor.offset + cursor.len))
+                        results.append(_tk)
                     }
                 }
 
@@ -241,23 +236,32 @@ func ormTokenize(_ source: String) -> [Token] {
 
 /// 拼音分词
 @_silgen_name("swift_pinyinTokenize")
-public func pinyinTokenize(_ source: String, _ start: Int, _ end: Int) -> [Token] {
+public func swift_pinyinTokenize(_ source: NSString, _ start: Int, _ end: Int) -> NSArray {
+    return pinyinTokenize(source as String, start, end) as NSArray
+}
+
+public func pinyinTokenize(_ source: String, _ start: Int, _ end: Int) -> [SQLiteORMToken] {
     guard source.count > 0 else { return [] }
-    var results: [Token] = []
+    var results: [SQLiteORMToken] = []
     let pinyins = source.pinyinTokens
     for py in pinyins {
         let len = py.utf8.count
         if len <= 0 || py == source {
             continue
         }
-        results.append(Token(token: py, len: len, start: start, end: end))
+        let _tk = SQLiteORMToken(py, len: Int32(len), start: Int32(start), end: Int32(end))
+        results.append(_tk)
     }
     return results
 }
 
 /// 数字分词
 @_silgen_name("swift_numberTokenize")
-public func numberTokenize(_ source: String) -> [Token] {
+public func swift_numberTokenize(_ source: NSString) -> NSArray {
+    return numberTokenize(source as String) as NSArray
+}
+
+public func numberTokenize(_ source: String) -> [SQLiteORMToken] {
     let utf8 = source.utf8CString
     let len = utf8.count
 
@@ -293,7 +297,7 @@ public func numberTokenize(_ source: String) -> [Token] {
         array.append((str, offset))
     }
 
-    var results: [Token] = []
+    var results: [SQLiteORMToken] = []
     for (s, o) in array {
         let tks = s.numberTokens
         if tks.count < 2 {
@@ -301,7 +305,8 @@ public func numberTokenize(_ source: String) -> [Token] {
         }
         let l = s.count
         for numstr in tks {
-            results.append(Token(token: numstr, len: l, start: o, end: o + l))
+            let _tk = SQLiteORMToken(numstr, len: Int32(l), start: Int32(o), end: Int32(o + l))
+            results.append(_tk)
         }
     }
 

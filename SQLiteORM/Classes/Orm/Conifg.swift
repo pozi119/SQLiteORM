@@ -259,7 +259,7 @@ public final class FtsConfig: Config {
     /// fts 模块: fts3/fts4/fts5
     public var module: String = "fts5"
 
-    /// 分词器,比如:ascii,porter,nl,apple,jieba
+    /// 分词器,比如:ascii,porter,nl,apple,sqliteorm
     public var tokenizer: String = ""
 
     /// fts版本号
