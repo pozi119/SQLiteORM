@@ -49,7 +49,7 @@ public class Config {
             }
 
         default:
-            fatalError("unsupported type")
+            assert(false, "unsupported type")
         }
         self.columns = columns
         self.types = types
@@ -311,9 +311,7 @@ public final class FtsConfig: Config {
 
         // 获取FTS分词器
         r = tableSql.range(of: "\\(.*\\)", options: options)
-        guard r != nil else {
-            fatalError("invalid fts table")
-        }
+        assert(r != nil, "invalid fts table")
         let ftsOptionsString = String(tableSql[r!.lowerBound ..< r!.upperBound])
         let ftsOptions = ftsOptionsString.components(separatedBy: .init(charactersIn: ",)"))
         for optionStr in ftsOptions {

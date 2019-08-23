@@ -39,9 +39,8 @@ public final class Orm {
     ///   - table: 表
     ///   - flag: 是否检查并创建表.某些场景需延迟创建表
     public init(config: Config, db: Database = Database(.temporary), table: String = "", setup flag: Bool = true) {
-        guard config.type != nil && config.columns.count > 0 else {
-            fatalError("invalid config")
-        }
+        assert(config.type != nil && config.columns.count > 0, "invalid config")
+
         self.config = config
         self.db = db
 

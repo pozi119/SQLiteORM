@@ -258,8 +258,9 @@ extension SQLiteORMTests {
     func testFtsMatch() {
         let r = ftsOrm.find(W("intro").match("李四"))
         XCTAssert(r.count > 0)
-
-        // TODO: let s = ftsOrm.highlight(r, field: "intro", keyword: "李四", attributes: [.foregroundColor: UIColor.red])
-        // TODO: XCTAssert(s.count > 0)
+        let highlighter = Highlighter(orm: ftsOrm, keyword: "李四", highlightAttributes: [.foregroundColor: UIColor.red])
+        let sources = r.map { $0["intro"] as? String ?? "" }
+        let s = highlighter.highlight(sources)
+        XCTAssert(s.count > 0)
     }
 }

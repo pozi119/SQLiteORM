@@ -53,9 +53,8 @@ func naturalTokenize(_ source: String, locale: String = "") -> [SQLiteORMToken] 
         tokenizer.enumerateTokens(in: range) { (tokenRange, _) -> Bool in
             let tk = source[tokenRange]
             let pre = source[source.startIndex ..< tokenRange.lowerBound]
-            let text = tk.utf8
             let start = pre.utf8.count
-            let len = text.count
+            let len = tk.utf8.count
             let token = SQLiteORMToken(String(tk), len: Int32(len), start: Int32(start), end: Int32(start + len))
             results.append(token)
             return true
@@ -262,8 +261,8 @@ public func swift_numberTokenize(_ source: NSString) -> NSArray {
 }
 
 public func numberTokenize(_ source: String) -> [SQLiteORMToken] {
-    let utf8 = source.utf8CString
-    let len = utf8.count
+    let bytes = source.utf8.map { UInt8($0) }
+    let len = bytes.count
 
     guard len > 0 else { return [] }
 
@@ -272,7 +271,7 @@ public func numberTokenize(_ source: String) -> [SQLiteORMToken] {
     var offset = -1
 
     for i in 0 ..< len {
-        let ch = utf8[i]
+        let ch = bytes[i]
         if ch >= 0x30 && ch <= 0x39 {
             if ch > 0x30 && offset < 0 {
                 offset = i

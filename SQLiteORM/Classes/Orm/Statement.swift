@@ -190,7 +190,8 @@ extension Cursor: Sequence {
             case SQLITE_TEXT:
                 return String(cString: UnsafePointer(sqlite3_column_text(handle, Int32(idx))))
             case let type:
-                fatalError("unsupported column type: \(type)")
+                assert(false, "unsupported column type: \(type)")
+                return nil
             }
         }
         set(newValue) {
@@ -234,7 +235,7 @@ extension Cursor: Sequence {
             case let newValue as String:
                 sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
             default:
-                fatalError("tried to bind unexpected value \(newValue ?? "")")
+                assert(false, "tried to bind unexpected value \(newValue ?? "")")
             }
         }
     }
