@@ -147,7 +147,7 @@ class TableViewController: UITableViewController {
 
         updateUI(action: false, search: false, log: "")
 
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .default).async {
             var mockTime: CFAbsoluteTime = 0
             var normalTime: CFAbsoluteTime = 0
             var ftsTime: CFAbsoluteTime = 0
@@ -179,18 +179,18 @@ class TableViewController: UITableViewController {
                     let progress = min(1.0, Float(startId) / Float(item.maxCount))
                     let progressText = String(format: "%.2f%", progress * 100.0)
 
-                    print("id: \(startId) - \(startId + 1000), progress: \(progressText), mock: \(mock), normal: \(normal), fts: \(fts)")
+                    print("id: \(startId) - \(startId + 1000), progress: \(progressText)%, mock: \(mock), normal: \(normal), fts: \(fts)")
                     DispatchQueue.main.async {
                         self.generateProgressView.progress = progress
                         self.generateProgressLabel.text = progressText
                     }
                 })
-                let str = "[insert] \(thousands * 1000), mock: \(mockTime), normal: \(normalTime), fts: \(ftsTime)"
-//                print(str)
-                DispatchQueue.main.async {
-                    self.loadDetails(for: self.selectedIndex)
-                    self.updateUI(action: true, search: false, log: str)
-                }
+            }
+            let str = "[insert] \(thousands * 1000), mock: \(mockTime), normal: \(normalTime), fts: \(ftsTime)"
+            print(str)
+            DispatchQueue.main.async {
+                self.loadDetails(for: self.selectedIndex)
+                self.updateUI(action: true, search: false, log: str)
             }
         }
     }

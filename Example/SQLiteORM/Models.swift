@@ -52,7 +52,7 @@ struct Item {
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
         ftsDb.register(.sqliteorm, for: "sqliteorm")
-        ftsDb.updateInterval = 1.0
+//        ftsDb.updateInterval = 1.0
         ftsOrm = Orm(config: ftsConfig, db: ftsDb, table: tableName, setup: true)
     }
 }

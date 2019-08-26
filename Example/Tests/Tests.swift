@@ -34,6 +34,20 @@ final class SQLiteORMTests: XCTestCase {
         let orm = Orm(config: config, db: ftsDb, table: "person", setup: true)
         return orm
     }()
+    
+    fileprivate lazy var infos: [String] = {
+        var _infos = [String]()
+        autoreleasepool(invoking: { () -> Void in
+            let path = Bundle.main.path(forResource: "神话纪元", ofType: "txt")!
+            let text = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+            let set1: CharacterSet = .whitespacesAndNewlines
+            let set2: CharacterSet = .punctuationCharacters
+            let set = set1.union(set2)
+            _infos = text.components(separatedBy: set).filter { $0.count > 0 }
+        })
+        return _infos
+    }()
+
 
     static var allTests = [
         ("testConnection", testConnection),
@@ -262,5 +276,54 @@ extension SQLiteORMTests {
         let sources = r.map { $0["intro"] as? String ?? "" }
         let s = highlighter.highlight(sources)
         XCTAssert(s.count > 0)
+    }
+
+    func testBigBatch() {
+        var r = orm.delete()
+        XCTAssert(r)
+        
+        r = ftsOrm.delete()
+        XCTAssert(r)
+        
+        var mockTime: CFAbsoluteTime = 0
+        var normalTime: CFAbsoluteTime = 0
+        var ftsTime: CFAbsoluteTime = 0
+        
+        let loop = 100
+        let batch = 1000
+        let total = loop * batch
+        
+        for i in 0 ..< loop {
+            autoreleasepool(invoking: { () -> Void in
+                let begin = CFAbsoluteTimeGetCurrent()
+                var persons: [Person] = []
+                for j in 0 ..< batch {
+                    let id = i * batch + j
+                    let intro = infos[id % infos.count]
+                    let p = Person(name: "张三", age: 21, id: Int64(id), sex: .male, intro: intro)
+                    persons.append(p)
+                }
+                let step1 = CFAbsoluteTimeGetCurrent()
+                self.orm.insert(multi: persons)
+                let step2 = CFAbsoluteTimeGetCurrent()
+                self.ftsOrm.insert(multi: persons)
+                let end = CFAbsoluteTimeGetCurrent()
+                
+                let mock = step1 - begin
+                let normal = step2 - step1
+                let fts = end - step2
+                
+                mockTime += mock
+                normalTime += normal
+                ftsTime += fts
+                
+                let progress = min(1.0, Float(i + 1) / Float(loop))
+                let progressText = String(format: "%.2f%", progress * 100.0)
+                
+                print("id: \(i * batch) - \((i + 1) * batch), progress: \(progressText)%, mock: \(mock), normal: \(normal), fts: \(fts)")
+            })
+        }
+        let str = "[insert] \(total), mock: \(mockTime), normal: \(normalTime), fts: \(ftsTime)"
+        print(str)
     }
 }

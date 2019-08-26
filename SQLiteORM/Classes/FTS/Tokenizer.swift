@@ -10,7 +10,7 @@ import NaturalLanguage
 
 public enum TokenMethod: Int {
     case apple, natural, sqliteorm
-    case unknown = 0xFFFFFFFF
+    case unknown = 0xFFFF
 }
 
 enum TokenType {

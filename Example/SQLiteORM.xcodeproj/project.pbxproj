@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3E01814B231392F7005A0F46 /* 神话纪元.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3E9DD8BF229CD77B00B82C44 /* 神话纪元.txt */; };
 		3E59720C2293E088004DA63C /* TestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E59720B2293E088004DA63C /* TestHelpers.swift */; };
 		3E9DD8BE229CD39800B82C44 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E9DD8BD229CD39800B82C44 /* Models.swift */; };
 		3E9DD8C0229CD77B00B82C44 /* 神话纪元.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3E9DD8BF229CD77B00B82C44 /* 神话纪元.txt */; };
@@ -266,6 +267,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3E01814B231392F7005A0F46 /* 神话纪元.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -323,10 +325,12 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SQLiteORM_Example/Pods-SQLiteORM_Example-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/SQLCipher/SQLCipher.framework",
 				"${BUILT_PRODUCTS_DIR}/SQLiteORM/SQLiteORM.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SQLCipher.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SQLiteORM.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;

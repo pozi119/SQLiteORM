@@ -8,7 +8,7 @@
 #import <Foundation/Foundation.h>
 #import "SQLiteORM+FTS.h"
 
-#ifdef SQLITE_HAS_CODEC
+#ifdef SQLITE_SWIFT_SQLCIPHER
 #import "sqlite3.h"
 #else
 #import <sqlite3.h>
@@ -242,7 +242,7 @@ static fts5_api * fts5_api_from_db(sqlite3 *db)
     sqlite3_stmt *pStmt = 0;
 
     if (SQLITE_OK == sqlite3_prepare(db, "SELECT fts5(?1)", -1, &pStmt, 0) ) {
-#ifdef SQLITE_HAS_CODEC
+#ifdef SQLITE_SWIFT_SQLCIPHER
         sqlite3_bind_pointer(pStmt, 1, (void *)&pRet, "fts5_api_ptr", NULL);
         sqlite3_step(pStmt);
 #else

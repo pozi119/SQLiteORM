@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
   
-  s.default_subspec = 'system'
+  s.default_subspec = 'cipher'
   
   s.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   s.swift_version = '5.0'
@@ -31,7 +31,7 @@ Pod::Spec.new do |s|
       ss.dependency 'SQLiteORM/common'
       ss.dependency 'SQLCipher'
       ss.pod_target_xcconfig = {
-          'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DHAVE_USLEEP=1',
+          'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DHAVE_USLEEP=1 -DSQLITE_SWIFT_SQLCIPHER=1',
           'HEADER_SEARCH_PATHS' => 'SQLCipher'
       }
   end
