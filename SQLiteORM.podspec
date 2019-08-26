@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SQLiteORM'
-  s.version          = '0.1.0-beta3'
+  s.version          = '0.1.0-beta4'
   s.summary          = 'The swift version of VVSequelize.'
 
   s.description      = <<-DESC
@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
   
-  s.default_subspec = 'cipher'
+  s.default_subspec = 'system'
   
   s.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   s.swift_version = '5.0'
@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
       ss.dependency 'SQLCipher'
       ss.pod_target_xcconfig = {
           'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DHAVE_USLEEP=1 -DSQLITE_SWIFT_SQLCIPHER=1',
-          'HEADER_SEARCH_PATHS' => 'SQLCipher'
+          'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/SQLCipher'
       }
   end
 
