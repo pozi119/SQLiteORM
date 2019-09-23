@@ -1,0 +1,20 @@
+PODS:
+  - SQLiteORM (0.1.0-beta4):
+    - SQLiteORM/system (= 0.1.0-beta4)
+  - SQLiteORM/common (0.1.0-beta4)
+  - SQLiteORM/system (0.1.0-beta4):
+    - SQLiteORM/common
+
+DEPENDENCIES:
+  - SQLiteORM (from `../`)
+
+EXTERNAL SOURCES:
+  SQLiteORM:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  SQLiteORM: a024663406a26b40bc17c7b95b3f5d1d26e7ca9f
+
+PODFILE CHECKSUM: 455c597c68e27aa490edc50e008d2e593dd447b0
+
+COCOAPODS: 1.7.5
