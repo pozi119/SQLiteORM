@@ -80,7 +80,7 @@ public extension Orm {
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入成功
     @discardableResult func insert<T: Codable>(_ item: T) -> Bool {
-        let dic = try? OrmEncoder().encode(item)
+        let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding])
     }
 
@@ -89,7 +89,7 @@ public extension Orm {
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入成功的数量
     @discardableResult func insert<T: Codable>(multi items: [T]) -> Int64 {
-        let array = items.map { try? OrmEncoder().encode($0) } as! [[String: Binding]]
+        let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array)
     }
 
@@ -98,7 +98,7 @@ public extension Orm {
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入或更新成功
     @discardableResult func upsert<T: Codable>(_ item: T) -> Bool {
-        let dic = try? OrmEncoder().encode(item)
+        let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding], type: .upsert)
     }
 
@@ -107,7 +107,7 @@ public extension Orm {
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入或更新成功的数量
     @discardableResult func upsert<T: Codable>(multi items: [T]) -> Int64 {
-        let array = items.map { try? OrmEncoder().encode($0) } as! [[String: Binding]]
+        let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array, type: .upsert)
     }
 }
@@ -131,7 +131,7 @@ public extension Orm {
     /// - Returns: 是否更新成功
     @discardableResult func update<T: Codable>(_ item: T) -> Bool {
         let condition = uniqueCondition(for: item)
-        let bindings = try! OrmEncoder().encode(item) as! [String: Binding]
+        let bindings = try! encoder.encode(item) as! [String: Binding]
         return _update(bindings, type: .upsert, condition: condition)
     }
 
@@ -143,7 +143,7 @@ public extension Orm {
     /// - Returns: 是否更新成功
     @discardableResult func update<T: Codable>(_ item: T, fields: [String]) -> Bool {
         let condition = uniqueCondition(for: item)
-        var bindings = try! OrmEncoder().encode(item) as! [String: Binding]
+        var bindings = try! encoder.encode(item) as! [String: Binding]
         let trashKeys = Array(Set(bindings.keys).subtracting(fields))
         bindings.removeValues(forKeys: trashKeys)
         return _update(bindings, type: .upsert, condition: condition)

@@ -20,6 +20,9 @@ public final class Orm {
     /// 属性
     public let properties: [String: PropertyInfo]
 
+    /// Encoder
+    let encoder = OrmEncoder()
+
     /// 表检查结果选项
     public struct Inspection: OptionSet {
         public let rawValue: UInt8

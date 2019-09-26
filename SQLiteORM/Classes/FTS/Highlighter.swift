@@ -46,11 +46,13 @@ public class Highlighter {
             tokens.append(contentsOf: pys)
         }
         var tokenized = Array(repeating: UInt8(0), count: count)
+        var firstMatchLen = 0
 
         for token in tokens {
             for pytk in keywordTokens {
                 if pytk.token == token.token {
                     tokenized.replaceSubrange(Int(token.start) ..< Int(token.end), with: token.token.utf8.map { UInt8($0) })
+                    if firstMatchLen == 0 { firstMatchLen = pytk.token.count }
                 }
             }
         }
@@ -66,8 +68,8 @@ public class Highlighter {
                     var string = String(bytes: bytes[start ..< end], encoding: .utf8) ?? ""
                     if isBegin {
                         isBegin = false
-                        if flag == 0 && string.count > 12 {
-                            let range = string.index(string.endIndex, offsetBy: -3) ..< string.endIndex
+                        if flag == 0 && string.count + firstMatchLen > 17 {
+                            let range = string.index(string.endIndex, offsetBy: firstMatchLen - 17) ..< string.endIndex
                             string = "..." + string[range]
                         }
                     }

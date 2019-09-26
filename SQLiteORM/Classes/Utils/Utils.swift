@@ -279,8 +279,9 @@ public extension Array where Element: Binding {
 
 public extension Array where Element == Dictionary<String, Binding> {
     func allItems<T: Codable>(_ type: T.Type) -> [T] {
+        let decoder = OrmDecoder()
         do {
-            let array = try OrmDecoder().decode([T].self, from: self)
+            let array = try decoder.decode([T].self, from: self)
             return array
         } catch {
             print(error)
