@@ -22,6 +22,9 @@ public final class Orm {
 
     /// Encoder
     let encoder = OrmEncoder()
+    
+    /// Decoder
+    let decoder = OrmDecoder()
 
     /// 表检查结果选项
     public struct Inspection: OptionSet {
@@ -87,7 +90,7 @@ public final class Orm {
 
         let tableConfig = Config.factory(table, db: db)
         switch (tableConfig, config) {
-        case let (tableConfig as GeneralConfig, config as GeneralConfig):
+        case let (tableConfig as PlainConfig, config as PlainConfig):
             if tableConfig != config {
                 ins.insert(.tableChanged)
             }
@@ -112,7 +115,7 @@ public final class Orm {
         let exist = options.contains(.exist)
         let changed = options.contains(.tableChanged)
         let indexChanged = options.contains(.indexChanged)
-        let general = config is GeneralConfig
+        let general = config is PlainConfig
 
         let tempTable = table + "_" + String(describing: NSDate().timeIntervalSince1970)
 
@@ -168,7 +171,7 @@ public final class Orm {
     ///
     /// - Throws: 重建索引过程中的错误
     func rebuildIndex() throws {
-        guard config is GeneralConfig else {
+        guard config is PlainConfig else {
             return
         }
         // 删除旧索引
@@ -205,7 +208,7 @@ public final class Orm {
     public func uniqueCondition(for item: Any) -> Where {
         var condition = [String: Binding]()
         switch config {
-        case let config as GeneralConfig:
+        case let config as PlainConfig:
             if config.primaries.count > 0 {
                 var dic = [String: Binding]()
                 for pk in config.primaries {

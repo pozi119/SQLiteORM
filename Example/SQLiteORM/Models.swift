@@ -34,7 +34,7 @@ struct Item {
         self.ftsDbName = ftsDbName
         self.label = label
 
-        let config = GeneralConfig(Message.self)
+        let config = PlainConfig(Message.self)
         config.primaries = ["message_id"]
 
         let param = TokenizerParamNumber | TokenizerParamTransform

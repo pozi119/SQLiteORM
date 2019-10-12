@@ -12,7 +12,7 @@ public class Config {
     public static let updateAt: String = "updateAt"
 
     /// 生成config的Struct/Class. 从数据表创建则为nil
-    public var type: Any.Type?
+    public var type: Codable.Type?
 
     /// 是否从数据表创建
     public var fromTable: Bool = false
@@ -35,7 +35,7 @@ public class Config {
     /// 从数据类型创建配置
     ///
     /// - Parameter type: 数据类型
-    public init(_ type: Any.Type) {
+    public init(_ type: Codable.Type) {
         self.type = type
         let info: TypeInfo = try! typeInfo(of: type)
 
@@ -75,7 +75,7 @@ public class Config {
         if fts {
             return FtsConfig(table: table, db: db)
         }
-        return GeneralConfig(table: table, db: db)
+        return PlainConfig(table: table, db: db)
     }
 
     /// 预处理
@@ -98,7 +98,7 @@ public class Config {
 }
 
 /// 普通表配置
-public final class GeneralConfig: Config {
+public final class PlainConfig: Config {
     /// 是否记录数据创建/修改时间
     public var logAt: Bool = false
 
@@ -120,7 +120,7 @@ public final class GeneralConfig: Config {
     /// 从数据类型创建
     ///
     /// - Parameter type: 数据类型,Struct/Class
-    public override init(_ type: Any.Type) {
+    public override init(_ type: Codable.Type) {
         super.init(type)
     }
 
@@ -212,7 +212,7 @@ public final class GeneralConfig: Config {
     ///
     /// - Parameter other: 比较的配置
     /// - Returns: true-索引相同,false-索引不同
-    func isIndexesEqual(_ other: GeneralConfig) -> Bool {
+    func isIndexesEqual(_ other: PlainConfig) -> Bool {
         treate()
         return uniques == other.uniques && indexes == other.indexes
     }
@@ -277,7 +277,7 @@ public final class FtsConfig: Config {
     /// 从数据类型创建
     ///
     /// - Parameter type: 数据类型,Struct/Class
-    public override init(_ type: Any.Type) {
+    public override init(_ type: Codable.Type) {
         super.init(type)
     }
 
@@ -378,7 +378,7 @@ extension Config: Equatable {
         lhs.treate()
         rhs.treate()
         switch (lhs, rhs) {
-        case let (lhs as GeneralConfig, rhs as GeneralConfig):
+        case let (lhs as PlainConfig, rhs as PlainConfig):
             return lhs.pkAutoInc == rhs.pkAutoInc &&
                 lhs.columns === rhs.columns &&
                 lhs.types == rhs.types &&

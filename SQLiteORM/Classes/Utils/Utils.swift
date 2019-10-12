@@ -259,12 +259,6 @@ public extension Dictionary {
     }
 }
 
-public extension Dictionary where Key == String, Value == Binding {
-    func item<T: Codable>(_ type: T.Type) -> T? {
-        return try? OrmDecoder().decode(T.self, from: self)
-    }
-}
-
 public extension Array where Element: Hashable {
     static func === (lhs: Array, rhs: Array) -> Bool {
         return Set(lhs) == Set(rhs)
@@ -274,18 +268,5 @@ public extension Array where Element: Hashable {
 public extension Array where Element: Binding {
     var sqlJoined: String {
         return map { $0.sqlValue }.joined(separator: ",")
-    }
-}
-
-public extension Array where Element == Dictionary<String, Binding> {
-    func allItems<T: Codable>(_ type: T.Type) -> [T] {
-        let decoder = OrmDecoder()
-        do {
-            let array = try decoder.decode([T].self, from: self)
-            return array
-        } catch {
-            print(error)
-            return []
-        }
     }
 }

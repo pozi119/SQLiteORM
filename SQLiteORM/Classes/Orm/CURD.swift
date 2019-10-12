@@ -20,7 +20,7 @@ extension Orm {
         }
         var dic = bindings
         switch config {
-        case let config as GeneralConfig:
+        case let config as PlainConfig:
             if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
                 dic.removeValues(forKeys: config.primaries)
             }
@@ -204,6 +204,22 @@ public extension Orm {
 // MARK: - Retrieve
 
 public extension Orm {
+    func decode<T: Codable>(_ keyValues: [String: Binding], with type: T.Type) -> T? {
+        return try? decoder.decode(T.self, from: self)
+    }
+
+    func decode<T: Codable>(_ allKeyValues: [[String: Binding]], with type: T.Type) -> [T] {
+        do {
+            let array = try decoder.decode([T].self, from: self)
+            return array
+        } catch {
+            print(error)
+            return []
+        }
+    }
+}
+
+public extension Orm {
     /// 最大rowid. 此rowid,自增主键和数据条数不一定一致
     var maxRowId: Int64 {
         return max(of: "rowid") as? Int64 ?? 0
@@ -231,9 +247,14 @@ public extension Orm {
     ///   - limit: 查询数量
     ///   - offset: 起始位置
     /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
-    func find(_ condition: Where = Where(""), distinct: Bool = false, fields: Fields = Fields("*"),
-              groupBy: GroupBy = GroupBy(""), having: Where = Where(""), orderBy: OrderBy = OrderBy(""),
-              limit: Int64 = 0, offset: Int64 = 0) -> [[String: Binding]] {
+    func find(_ condition: Where = Where(""),
+              distinct: Bool = false,
+              fields: Fields = Fields("*"),
+              groupBy: GroupBy = GroupBy(""),
+              having: Where = Where(""),
+              orderBy: OrderBy = OrderBy(""),
+              limit: Int64 = 0,
+              offset: Int64 = 0) -> [[String: Binding]] {
         return Select().orm(self).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
             .limit(limit).offset(offset).allKeyValues
