@@ -31,16 +31,16 @@ public struct Where: SQLable, Conditional {
         switch expr {
         case let expr as String:
             _expr = expr
-        case let expr as Array<Dictionary<String, Binding>> where expr.count > 0:
+        case let expr as [[String: Binding]] where expr.count > 0:
             let array = expr.map({ (dic) -> Where in
                 Where(dic)
             })
             _expr = array.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as Array<Where> where expr.count > 0:
+        case let expr as [Where] where expr.count > 0:
             _expr = expr.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as Array<String> where expr.count > 0:
+        case let expr as [String] where expr.count > 0:
             _expr = expr.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as Dictionary<String, Binding> where expr.count > 0:
+        case let expr as [String: Binding] where expr.count > 0:
             _expr = expr.map { "(" + $0.key.quoted + " == " + $0.value.sqlValue + ")" }.joined(separator: " AND ")
         default:
             _expr = "\(expr)"
@@ -111,11 +111,21 @@ public func !< (lhs: Where, value: Binding) -> Where {
 // MARK: - Logic
 
 public func && (lhs: Where, rhs: Where) -> Where {
-    return Where("(\(lhs))" + " AND " + "(\(rhs))")
+    switch (lhs.sql.count, rhs.sql.count) {
+    case (0, 0): return lhs
+    case (_, 0): return lhs
+    case (0, _): return rhs
+    case (_, _): return Where("(\(lhs))" + " AND " + "(\(rhs))")
+    }
 }
 
 public func || (lhs: Where, rhs: Where) -> Where {
-    return Where("(\(lhs))" + " OR " + "(\(rhs))")
+    switch (lhs.sql.count, rhs.sql.count) {
+    case (0, 0): return lhs
+    case (_, 0): return lhs
+    case (0, _): return rhs
+    case (_, _): return Where("(\(lhs))" + " OR " + "(\(rhs))")
+    }
 }
 
 public extension Where {
@@ -171,11 +181,11 @@ public extension Where {
         return Where(quoted + " NOT BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
-    func `in`<T: Binding>(_ array: Array<T>) -> Where {
+    func `in`<T: Binding>(_ array: [T]) -> Where {
         return Where(quoted + " IN (" + array.sqlJoined + ")")
     }
 
-    func notIn<T: Binding>(_ array: Array<T>) -> Where {
+    func notIn<T: Binding>(_ array: [T]) -> Where {
         return Where(quoted + " NOT IN (" + array.sqlJoined + ")")
     }
 }
@@ -219,7 +229,7 @@ public struct OrderBy: SQLable, Filtrable {
         switch expr {
         case let expr as String where expr.count > 0:
             str = expr.quoted
-        case let expr as Array<String> where expr.count > 0:
+        case let expr as [String] where expr.count > 0:
             let filtered = expr.filter({ $0.count > 0 })
             if filtered.count == 0 {
                 str = ""
@@ -253,7 +263,7 @@ public struct GroupBy: SQLable, Filtrable {
 
     public init(_ expr: Conditional) {
         switch expr {
-        case let expr as Array<String> where expr.count > 0:
+        case let expr as [String] where expr.count > 0:
             _expr = expr.sqlJoined
         case let expr as String where expr.count > 0:
             _expr = expr.quoted
@@ -278,7 +288,7 @@ public struct Fields: SQLable, Filtrable {
 
     public init(_ expr: Conditional) {
         switch expr {
-        case let expr as Array<String> where expr.count > 0:
+        case let expr as [String] where expr.count > 0:
             _expr = expr.sqlJoined
         case let expr as String where expr.count > 0:
             _expr = expr

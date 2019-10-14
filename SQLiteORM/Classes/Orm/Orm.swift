@@ -22,7 +22,7 @@ public final class Orm {
 
     /// Encoder
     let encoder = OrmEncoder()
-    
+
     /// Decoder
     let decoder = OrmDecoder()
 
@@ -205,7 +205,7 @@ public final class Orm {
     ///
     /// - Parameter item: 数据
     /// - Returns: 约束条件
-    public func uniqueCondition(for item: Any) -> Where {
+    public func constraint(for item: Any, unique: Bool = true) -> Where? {
         var condition = [String: Binding]()
         switch config {
         case let config as PlainConfig:
@@ -216,8 +216,9 @@ public final class Orm {
                     let val = try? prop?.get(from: item) as? Binding
                     if val != nil { dic[pk] = val! }
                 }
-                if dic.count == config.primaries.count {
+                if (!unique && dic.count > 0) || dic.count == config.primaries.count {
                     condition = dic
+                    break
                 }
             }
             for unique in config.uniques {
@@ -225,10 +226,35 @@ public final class Orm {
                 let val = try? prop?.get(from: item) as? Binding
                 if val != nil {
                     condition = [unique: val!]
+                    break
                 }
             }
         default: break
         }
+        guard condition.count > 0 else { return nil }
+        return Where(condition)
+    }
+
+    public func constraint(for KeyValues: [String: Binding], unique: Bool = true) -> Where? {
+        var condition = [String: Binding]()
+        switch config {
+        case let config as PlainConfig:
+            var dic = [String: Binding]()
+            config.primaries.forEach { dic[$0] = KeyValues[$0] }
+            if (!unique && dic.count > 0) || dic.count == config.primaries.count {
+                condition = dic
+                break
+            }
+            
+            for col in config.uniques {
+                if let val = KeyValues[col] {
+                    condition = [col: val]
+                    break
+                }
+            }
+        default: break
+        }
+        guard condition.count > 0 else { return nil }
         return Where(condition)
     }
 }
