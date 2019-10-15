@@ -15,7 +15,8 @@ public extension Database {
     ///   - type: 分词器
     ///   - tokenizer: 分词器名称
     /// - Returns: 是否注册成功
-    @discardableResult func register(_ method: TokenMethod, for tokenizer: String) -> Bool {
+    @discardableResult
+    func register(_ method: TokenMethod, for tokenizer: String) -> Bool {
         return SQLiteORMRegisterEnumerator(handle, Int32(method.rawValue), tokenizer)
     }
 

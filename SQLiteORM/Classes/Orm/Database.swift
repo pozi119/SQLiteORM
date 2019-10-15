@@ -217,7 +217,8 @@ public final class Database {
         return true
     }
 
-    @objc @discardableResult private func runMergeUpdates() -> Bool {
+    @objc @discardableResult
+    private func runMergeUpdates() -> Bool {
         #if DEBUG
             print("[SQLiteORM][Merge] now: \(CFAbsoluteTimeGetCurrent()), count: \(updates.count), db: \((_path as NSString).lastPathComponent)\n")
         #endif
@@ -419,7 +420,8 @@ public final class Database {
 
     // MARK: - Error Handling
 
-    @discardableResult func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
+    @discardableResult
+    func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
         guard let error = Result(errorCode: resultCode, db: self, statement: statement) else {
             return resultCode
         }

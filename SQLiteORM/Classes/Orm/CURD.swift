@@ -79,12 +79,14 @@ public extension Orm {
     ///
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入成功
-    @discardableResult func insert<T: Codable>(_ item: T) -> Bool {
+    @discardableResult
+    func insert<T: Codable>(_ item: T) -> Bool {
         let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding])
     }
 
-    @discardableResult func insert(keyValues: [String: Binding]) -> Bool {
+    @discardableResult
+    func insert(keyValues: [String: Binding]) -> Bool {
         return _update(keyValues)
     }
 
@@ -92,12 +94,14 @@ public extension Orm {
     ///
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入成功的数量
-    @discardableResult func insert<T: Codable>(multi items: [T]) -> Int64 {
+    @discardableResult
+    func insert<T: Codable>(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array)
     }
 
-    @discardableResult func insert(multiKeyValues: [[String: Binding]]) -> Int64 {
+    @discardableResult
+    func insert(multiKeyValues: [[String: Binding]]) -> Int64 {
         return _update(multi: multiKeyValues)
     }
 
@@ -105,12 +109,14 @@ public extension Orm {
     ///
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入或更新成功
-    @discardableResult func upsert<T: Codable>(_ item: T) -> Bool {
+    @discardableResult
+    func upsert<T: Codable>(_ item: T) -> Bool {
         let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding], type: .upsert)
     }
 
-    @discardableResult func upsert(keyValues: [String: Binding]) -> Bool {
+    @discardableResult
+    func upsert(keyValues: [String: Binding]) -> Bool {
         return _update(keyValues, type: .upsert)
     }
 
@@ -118,12 +124,14 @@ public extension Orm {
     ///
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入或更新成功的数量
-    @discardableResult func upsert<T: Codable>(multi items: [T]) -> Int64 {
+    @discardableResult
+    func upsert<T: Codable>(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array, type: .upsert)
     }
 
-    @discardableResult func upsert(multiKeyValues: [[String: Binding]]) -> Int64 {
+    @discardableResult
+    func upsert(multiKeyValues: [[String: Binding]]) -> Int64 {
         return _update(multi: multiKeyValues, type: .upsert)
     }
 }
@@ -137,7 +145,8 @@ public extension Orm {
     ///   - condition: 条件
     ///   - bindings: [字段:数据]
     /// - Returns: 是否更新成功
-    @discardableResult func update(_ condition: Where, with bindings: [String: Binding]) -> Bool {
+    @discardableResult
+    func update(_ condition: Where, with bindings: [String: Binding]) -> Bool {
         return _update(bindings, type: .upsert, condition: condition)
     }
 
@@ -145,7 +154,8 @@ public extension Orm {
     ///
     /// - Parameter item: 要更新的数据
     /// - Returns: 是否更新成功
-    @discardableResult func update<T: Codable>(_ item: T) -> Bool {
+    @discardableResult
+    func update<T: Codable>(_ item: T) -> Bool {
         guard let condition = constraint(for: item) else { return false }
         let bindings = try! encoder.encode(item) as! [String: Binding]
         return _update(bindings, type: .upsert, condition: condition)
@@ -157,7 +167,8 @@ public extension Orm {
     ///   - item: 要更新的数据
     ///   - fields: 指定字段
     /// - Returns: 是否更新成功
-    @discardableResult func update<T: Codable>(_ item: T, fields: [String]) -> Bool {
+    @discardableResult
+    func update<T: Codable>(_ item: T, fields: [String]) -> Bool {
         guard let condition = constraint(for: item) else { return false }
         var bindings = try! encoder.encode(item) as! [String: Binding]
         let trashKeys = Array(Set(bindings.keys).subtracting(fields))
@@ -169,7 +180,8 @@ public extension Orm {
     ///
     /// - Parameter items: 要更新的数据
     /// - Returns: 更新成功的数量
-    @discardableResult func update<T: Codable>(multi items: [T]) -> Int64 {
+    @discardableResult
+    func update<T: Codable>(multi items: [T]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(.immediate) {
@@ -190,7 +202,8 @@ public extension Orm {
     ///   - items: 要更新的数据
     ///   - fields: 指定字段
     /// - Returns: 更新成功的数量
-    @discardableResult func update<T: Codable>(multi items: [T], fields: [String]) -> Int64 {
+    @discardableResult
+    func update<T: Codable>(multi items: [T], fields: [String]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(.immediate) {
@@ -212,7 +225,8 @@ public extension Orm {
     ///   - field: 指定字段
     ///   - value: 更新的值,比如: 2表示加2, -2表示减2
     /// - Returns: 是否更新成功
-    @discardableResult func increase(_ condition: Where, field: String, value: Int) -> Bool {
+    @discardableResult
+    func increase(_ condition: Where, field: String, value: Int) -> Bool {
         return _update([field: value], type: .update, condition: condition)
     }
 }
@@ -347,7 +361,8 @@ public extension Orm {
     ///
     /// - Attention: 删除表后,若需重新访问,请重新生成Orm.请慎用
     /// - Returns: 是否删除成功
-    @discardableResult func drop() -> Bool {
+    @discardableResult
+    func drop() -> Bool {
         let sql = "DROP TABLE IF EXISTS \(table.quoted)"
         do {
             try db.run(sql)
@@ -362,7 +377,8 @@ public extension Orm {
     /// - Parameter item: 要删除的数据
     /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
     /// - Returns: 是否删除成功
-    @discardableResult func delete(_ item: Codable) -> Bool {
+    @discardableResult
+    func delete(_ item: Codable) -> Bool {
         guard let condition = constraint(for: item) else { return false }
         return delete(where: condition)
     }
@@ -372,7 +388,8 @@ public extension Orm {
     /// - Parameter items: 要删除的数据
     /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
     /// - Returns: 是否删除成功
-    @discardableResult func delete(_ items: [Codable]) -> Int64 {
+    @discardableResult
+    func delete(_ items: [Codable]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(block: {
@@ -391,7 +408,8 @@ public extension Orm {
     ///
     /// - Parameter condition: 删除条件
     /// - Returns: 是否删除成功
-    @discardableResult func delete(where condition: Where = Where("")) -> Bool {
+    @discardableResult
+    func delete(where condition: Where = Where("")) -> Bool {
         let clause = condition.sql
         let sql = "DELETE FROM \(table.quoted)" + (clause.count > 0 ? " WHERE \(clause)" : "")
         do {
