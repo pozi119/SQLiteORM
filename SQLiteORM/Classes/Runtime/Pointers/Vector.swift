@@ -26,17 +26,17 @@ struct Vector<Element> {
     
     var element: Element
     
-    mutating func vector(n: IntegerConvertible) -> [Element] {
+    mutating func vector(n: Int) -> UnsafeBufferPointer<Element> {
         return withUnsafePointer(to: &self) {
             $0.withMemoryRebound(to: Element.self, capacity: 1) { start in
-                return start.vector(n: n)
+                return start.buffer(n: n)
             }
         }
     }
     
-    mutating func element(at i: IntegerConvertible) -> UnsafeMutablePointer<Element> {
+    mutating func element(at i: Int) -> UnsafeMutablePointer<Element> {
         return withUnsafePointer(to: &self) {
-            return $0.raw.assumingMemoryBound(to: Element.self).advanced(by: i.getInt()).mutable
+            return $0.raw.assumingMemoryBound(to: Element.self).advanced(by: i).mutable
         }
     }
 }

@@ -22,7 +22,7 @@
 
 import Foundation
 
-struct RelativePointer<Offset: IntegerConvertible, Pointee> {
+struct RelativePointer<Offset: FixedWidthInteger, Pointee> {
     var offset: Offset
     
     mutating func pointee() -> Pointee {
@@ -30,9 +30,11 @@ struct RelativePointer<Offset: IntegerConvertible, Pointee> {
     }
     
     mutating func advanced() -> UnsafeMutablePointer<Pointee> {
-        let offsetCopy = self.offset
+        let offset = self.offset
         return withUnsafePointer(to: &self) { p in
-            return p.raw.advanced(by: offsetCopy.getInt()).assumingMemoryBound(to: Pointee.self).mutable
+            return p.raw.advanced(by: numericCast(offset))
+                .assumingMemoryBound(to: Pointee.self)
+                .mutable
         }
     }
 }

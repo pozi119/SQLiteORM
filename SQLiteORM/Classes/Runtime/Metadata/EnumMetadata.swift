@@ -31,11 +31,11 @@ struct EnumMetadata: NominalMetadataType {
             .fieldDescriptor
             .advanced()
         
-        return (0..<numberOfFields()).map { i in
+        return (0..<fieldDescriptor.pointee.numFields).map { i in
             let record = fieldDescriptor
                 .pointee
                 .fields
-                .element(at: i)
+                .element(at: Int(i))
             
             return Case(name: record.pointee.fieldName())
         }
