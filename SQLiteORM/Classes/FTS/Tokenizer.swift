@@ -18,6 +18,26 @@ enum TokenType {
     case auxiliary
 }
 
+public struct TokenMask: OptionSet {
+    public let rawValue: UInt32
+
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+
+    static let pinyin = TokenMask(rawValue: 0xFFFF << 0)
+    static let firstLetter = TokenMask(rawValue: 1 << 16)
+    static let charater = TokenMask(rawValue: 1 << 17)
+    static let number = TokenMask(rawValue: 1 << 18)
+    static let splitPinyin = TokenMask(rawValue: 1 << 19)
+    static let transform = TokenMask(rawValue: 1 << 20)
+
+    static let `default`: TokenMask = []
+    static let manual: TokenMask = [.number, .transform]
+    static let extra: TokenMask = [.pinyin, .firstLetter, .number]
+    static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
+}
+
 struct TokenCursor {
     var type: TokenType = .none
     var offset: Int = 0
@@ -25,11 +45,11 @@ struct TokenCursor {
 }
 
 @_silgen_name("swift_tokenize")
-public func swift_tokenize(_ source: NSString, _ method: Int) -> NSArray {
-    return tokenize(source as String, TokenMethod(rawValue: method) ?? .unknown) as NSArray
+public func swift_tokenize(_ source: NSString, _ method: Int, _ mask: UInt32) -> NSArray {
+    return tokenize(source as String, TokenMethod(rawValue: method) ?? .unknown, .init(rawValue: mask)) as NSArray
 }
 
-public func tokenize(_ source: String, _ method: TokenMethod = .unknown) -> [SQLiteORMToken] {
+public func tokenize(_ source: String, _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [SQLiteORMToken] {
     switch method {
     case .apple: return appleTokenize(source)
     case .natural: return naturalTokenize(source)
@@ -242,8 +262,8 @@ public func swift_pinyinTokenize(_ source: NSString, _ start: Int, _ end: Int) -
 public func pinyinTokenize(_ source: String, _ start: Int, _ end: Int) -> [SQLiteORMToken] {
     guard source.count > 0 else { return [] }
     var results: [SQLiteORMToken] = []
-    let pinyins = source.pinyinTokens
-    for py in pinyins {
+    let pinyins = source.pinyinsForMatch
+    for py in pinyins.fulls {
         let len = py.utf8.count
         if len <= 0 || py == source {
             continue

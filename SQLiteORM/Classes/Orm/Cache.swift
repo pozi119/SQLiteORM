@@ -8,7 +8,7 @@
 import Foundation
 
 /// 简单缓存
-open class Cache<Key, Value>: NSObject where Key: Hashable, Value: Any {
+open class Cache<Key, Value>: NSObject where Key: Hashable {
     /// 缓存名
     open var name: String = ""
 
@@ -63,5 +63,18 @@ open class Cache<Key, Value>: NSObject where Key: Hashable, Value: Any {
     open func removeAllObjects() {
         storage.removeAll()
         lru.removeAll()
+    }
+
+    open subscript(key: Key) -> Value? {
+        get {
+            return object(forKey: key)
+        }
+        set(newValue) {
+            guard let value = newValue else {
+                removeObject(forKey: key)
+                return
+            }
+            setObject(value, forKey: key)
+        }
     }
 }

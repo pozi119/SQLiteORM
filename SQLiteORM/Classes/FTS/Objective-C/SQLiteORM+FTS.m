@@ -14,11 +14,7 @@
 #import <sqlite3.h>
 #endif
 
-extern NSString * simplifiedString(NSString *);
-extern NSString * traditionalString(NSString *);
-extern NSArray * swift_tokenize(NSString *, int);
-extern NSArray * swift_pinyinTokenize(NSString *, int, int);
-extern NSArray * swift_numberTokenize(NSString *);
+extern NSArray * swift_tokenize(NSString *, int, uint32_t);
 
 @implementation SQLiteORMToken
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
@@ -83,9 +79,7 @@ struct sqlite3_tokenizer_cursor {
 typedef struct vv_fts3_tokenizer {
     sqlite3_tokenizer base;
     char locale[16];
-    int pinyinMaxLen;
-    bool tokenNum;
-    bool transfrom;
+    uint32_t mask;
 } vv_fts3_tokenizer;
 
 typedef struct vv_fts3_tokenizer_cursor {
@@ -135,17 +129,13 @@ static int vv_fts3_create(
     memset(tok, 0, sizeof(*tok));
 
     memset(tok->locale, 0x0, 16);
-    tok->pinyinMaxLen = 0;
-    tok->tokenNum = false;
-    tok->transfrom = false;
+    tok->mask = 0;
 
     for (int i = 0; i < MIN(2, argc); i++) {
         const char *arg = argv[i];
-        uint32_t flag = (uint32_t)atol(arg);
-        if (flag > 0) {
-            tok->pinyinMaxLen = flag & TokenizerParamPinyin;
-            tok->tokenNum = (flag & TokenizerParamNumber) > 0;
-            tok->transfrom = (flag & TokenizerParamTransform) > 0;
+        uint32_t mask = (uint32_t)atol(arg);
+        if (mask > 0) {
+            tok->mask = mask;
         } else {
             strncpy(tok->locale, arg, 15);
         }
@@ -179,21 +169,8 @@ static int vv_fts3_open(
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
 
     vv_fts3_tokenizer *tok = (vv_fts3_tokenizer *)pTokenizer;
-
     NSString *ocString = [NSString stringWithUTF8String:pInput].lowercaseString;
-    if (tok->transfrom) {
-        ocString = simplifiedString(ocString);
-    }
-
-    NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
-    [array addObjectsFromArray:swift_tokenize(ocString, method)];
-
-    if (tok->tokenNum) {
-        [array addObjectsFromArray:swift_numberTokenize(ocString)];
-    }
-    if (tok->pinyinMaxLen > 0 && nInput < tok->pinyinMaxLen) {
-        [array addObjectsFromArray:swift_pinyinTokenize(ocString, 0, nInput)];
-    }
+    NSArray *array = swift_tokenize(ocString, method, tok->mask);
 
     c->pInput = pInput;
     c->nBytes = nInput;
@@ -259,9 +236,7 @@ static fts5_api * fts5_api_from_db(sqlite3 *db)
 typedef struct Fts5VVTokenizer Fts5VVTokenizer;
 struct Fts5VVTokenizer {
     char locale[16];
-    int pinyinMaxLen;
-    bool tokenNum;
-    bool transfrom;
+    uint32_t mask;
     int method;
 };
 
@@ -280,17 +255,13 @@ static int vv_fts5_xCreate(
     if (!tok) return SQLITE_NOMEM;
 
     memset(tok->locale, 0x0, 16);
-    tok->pinyinMaxLen = 0;
-    tok->tokenNum = false;
-    tok->transfrom = false;
+    tok->mask = 0;
 
     for (int i = 0; i < MIN(2, nArg); i++) {
         const char *arg = azArg[i];
-        uint32_t flag = (uint32_t)atol(arg);
-        if (flag > 0) {
-            tok->pinyinMaxLen = flag & TokenizerParamPinyin;
-            tok->tokenNum = (flag & TokenizerParamNumber) > 0;
-            tok->transfrom = (flag & TokenizerParamTransform) > 0;
+        uint32_t mask = (uint32_t)atol(arg);
+        if (mask > 0) {
+            tok->mask = mask;
         } else {
             strncpy(tok->locale, arg, 15);
         }
@@ -316,23 +287,9 @@ static int vv_fts5_xTokenize(
 
     __block int rc = SQLITE_OK;
     Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
-    int nInput = (pText == 0) ? 0 : (nText < 0 ? (int)strlen(pText) : nText);
 
-    NSString *ocString = [NSString stringWithUTF8String:pText].lowercaseString;
-    if (tok->transfrom) {
-        ocString = simplifiedString(ocString);
-    }
-    int method = tok->method;
-
-    NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
-    [array addObjectsFromArray:swift_tokenize(ocString, method)];
-
-    if (tok->tokenNum) {
-        [array addObjectsFromArray:swift_numberTokenize(ocString)];
-    }
-    if (tok->pinyinMaxLen > 0 && nInput < tok->pinyinMaxLen) {
-        [array addObjectsFromArray:swift_pinyinTokenize(ocString, 0, nInput)];
-    }
+    NSString *ocString = [NSString stringWithUTF8String:pText ? : ""].lowercaseString;
+    NSArray *array = swift_tokenize(ocString, tok->method, tok->mask);
 
     for (SQLiteORMToken *tk in array) {
         rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);
