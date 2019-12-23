@@ -11,7 +11,7 @@ final class SQLiteORMTests: XCTestCase {
     }()
 
     fileprivate lazy var orm: Orm = {
-        let config = GeneralConfig(Person.self)
+        let config = PlainConfig(Person.self)
         config.primaries = ["id"]
         let orm = Orm(config: config, db: db, table: "person", setup: true)
         return orm
@@ -230,9 +230,9 @@ extension SQLiteORMTests {
     }
 
     func testSelect() {
-        let one = orm.findOne()?.item(Person.self)
-        let all = orm.find().allItems(Person.self)
-        let p1 = orm.findOne(W("name") == "王五")?.item(Person.self)
+        let one = orm.findOne()
+        let all = orm.find()
+        let p1 = orm.findOne(W("name") == "王五")
         XCTAssert(one != nil)
         XCTAssert(all.count > 0)
         XCTAssert(p1 != nil)
