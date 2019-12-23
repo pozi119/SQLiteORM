@@ -92,6 +92,21 @@ fileprivate final class PinYin {
 }
 
 public extension String {
+    init(bytes: [UInt8]) {
+        if let s = String(bytes: bytes, encoding: .ascii) {
+            self = s
+        } else {
+            for i in 0 ..< 30 {
+                let encoding = String.Encoding(rawValue: UInt(i))
+                if let s = String(bytes: bytes, encoding: encoding) {
+                    self = s
+                    break
+                }
+            }
+        }
+        self = ""
+    }
+
     /// 是否包含汉字
     var hasChinese: Bool {
         let regex = ".*[\\u4e00-\\u9fa5].*"

@@ -14,7 +14,7 @@
 #import <sqlite3.h>
 #endif
 
-extern NSArray * swift_tokenize(NSString *, int, uint32_t);
+extern NSArray * swift_tokenize(uint8_t *, int, uint32_t);
 
 @implementation SQLiteORMToken
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
@@ -169,8 +169,7 @@ static int vv_fts3_open(
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
 
     vv_fts3_tokenizer *tok = (vv_fts3_tokenizer *)pTokenizer;
-    NSString *ocString = [NSString stringWithUTF8String:pInput].lowercaseString;
-    NSArray *array = swift_tokenize(ocString, method, tok->mask);
+    NSArray *array = swift_tokenize((uint8_t *)pInput, method, tok->mask);
 
     c->pInput = pInput;
     c->nBytes = nInput;
@@ -288,8 +287,7 @@ static int vv_fts5_xTokenize(
     __block int rc = SQLITE_OK;
     Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
 
-    NSString *ocString = [NSString stringWithUTF8String:pText ? : ""].lowercaseString;
-    NSArray *array = swift_tokenize(ocString, tok->method, tok->mask);
+    NSArray *array = swift_tokenize((uint8_t *)pText, tok->method, tok->mask);
 
     for (SQLiteORMToken *tk in array) {
         rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);
