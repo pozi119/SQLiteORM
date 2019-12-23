@@ -14,6 +14,10 @@
 #import <sqlite3.h>
 #endif
 
+#ifndef   UNUSED_PARAM
+#define   UNUSED_PARAM(v) (void)(v)
+#endif
+
 extern NSArray * swift_tokenize(uint8_t *, int, uint32_t);
 
 @implementation SQLiteORMToken

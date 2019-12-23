@@ -22,17 +22,17 @@ public struct TokenMask: OptionSet {
         self.rawValue = rawValue
     }
 
-    static let pinyin = TokenMask(rawValue: 0xFFFF << 0)
-    static let firstLetter = TokenMask(rawValue: 1 << 16)
-    static let charater = TokenMask(rawValue: 1 << 17)
-    static let number = TokenMask(rawValue: 1 << 18)
-    static let splitPinyin = TokenMask(rawValue: 1 << 19)
-    static let transform = TokenMask(rawValue: 1 << 20)
+    public static let pinyin = TokenMask(rawValue: 0xFFFF << 0)
+    public static let firstLetter = TokenMask(rawValue: 1 << 16)
+    public static let charater = TokenMask(rawValue: 1 << 17)
+    public static let number = TokenMask(rawValue: 1 << 18)
+    public static let splitPinyin = TokenMask(rawValue: 1 << 19)
+    public static let transform = TokenMask(rawValue: 1 << 20)
 
-    static let `default`: TokenMask = []
-    static let manual: TokenMask = [.number, .transform]
-    static let extra: TokenMask = [.pinyin, .firstLetter, .number]
-    static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
+    public static let `default`: TokenMask = []
+    public static let manual: TokenMask = [.number, .transform]
+    public static let extra: TokenMask = [.pinyin, .firstLetter, .number]
+    public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
 }
 
 private enum TokenType {

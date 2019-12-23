@@ -80,9 +80,8 @@ public final class Statement {
             return []
         }
 
-        let results = db.cache.object(forKey: sql) as? [[String: Binding]]
-        guard results == nil else {
-            return results!
+        if let results = db.cache.object(forKey: sql) {
+            return results
         }
 
         var ret = true
@@ -108,7 +107,7 @@ public final class Statement {
     /// - Throws: 执行过程中的错误
     public func run() throws {
         reset(clear: false)
-        repeat {} while try step()
+        try db.sync { repeat {} while try step() }
     }
 
     /// 执行sql语句

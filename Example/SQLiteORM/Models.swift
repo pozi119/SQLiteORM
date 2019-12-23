@@ -37,10 +37,10 @@ struct Item {
         let config = PlainConfig(Message.self)
         config.primaries = ["message_id"]
 
-        let param = TokenizerParamNumber | TokenizerParamTransform
+        let mask: TokenMask = [.number, .transform, .init(rawValue: 30)]
         let ftsConfig = FtsConfig(Message.self)
         ftsConfig.module = "fts5"
-        ftsConfig.tokenizer = "sqliteorm \(param)"
+        ftsConfig.tokenizer = "sqliteorm \(mask.rawValue)"
         ftsConfig.indexes = ["info"]
 
         let url = URL(fileURLWithPath: dir).appendingPathComponent(dbName)

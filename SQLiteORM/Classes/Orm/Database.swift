@@ -40,14 +40,13 @@ public final class Database {
     }
 
     /// 数据库路径
-    public var path: String { return _path }
+    public private(set) var path: String
 
     /// 默认Open flags
     private let _essential: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
     private var _flags: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
 
     fileprivate var _handle: OpaquePointer?
-    fileprivate var _path: String = ""
     fileprivate var encrypt: String = ""
     fileprivate var flags: Int32 {
         get {
@@ -58,15 +57,16 @@ public final class Database {
         }
     }
 
-    private static var _caches = [String: Cache<String, Any>]()
+    private static var _caches = [String: Cache<String, [[String: Binding]]>]()
 
     /// query缓存
-    lazy var cache: Cache<String, Any> = {
-        var _cache: Cache? = Database._caches[path]
-        guard _cache == nil else { return _cache! }
-        _cache = Cache<String, Any>()
-        Database._caches[path] = _cache!
-        return _cache!
+    lazy var cache: Cache<String, [[String: Binding]]> = {
+        if let _cache = Database._caches[path] {
+            return _cache
+        }
+        let _cache = Cache<String, [[String: Binding]]>()
+        Database._caches[path] = _cache
+        return _cache
     }()
 
     /// 初始化数据库
@@ -75,8 +75,8 @@ public final class Database {
     ///   - location: 位置
     ///   - flags: sqlite3 open flags
     ///   - encrypt: 加密密码
-    public init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {
-        _path = location.description
+    public required init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {
+        path = location.description
         self.flags = flags
         self.encrypt = encrypt
     }
@@ -150,6 +150,36 @@ public final class Database {
         return Int(sqlite3_total_changes(handle))
     }
 
+    // MARK: - queue
+
+    private static let queueKey = DispatchSpecificKey<String>()
+    private static var queueNum = 0
+
+    private lazy var name = ((self.path as NSString).lastPathComponent as NSString).deletingPathExtension
+    private lazy var queueNum: Int = { defer { Database.queueNum += 1 }; return Database.queueNum }()
+    private lazy var writeLabel = "com.sqliteorm.write.\(self.queueNum).\(self.name)"
+    private lazy var readLabel = "com.sqliteorm.read.\(self.queueNum).\(self.name)"
+
+    public lazy var writeQueue: DispatchQueue = {
+        let queue = DispatchQueue(label: self.writeLabel, qos: .utility, attributes: .init(), autoreleaseFrequency: .inherit, target: nil)
+        queue.setSpecific(key: Database.queueKey, value: self.writeLabel)
+        return queue
+    }()
+
+    public lazy var readQueue: DispatchQueue = {
+        let queue = DispatchQueue(label: self.readLabel, qos: .utility, attributes: .concurrent, autoreleaseFrequency: .inherit, target: nil)
+        queue.setSpecific(key: Database.queueKey, value: self.writeLabel)
+        return queue
+    }()
+
+    public func sync<T>(_ work: () throws -> T) rethrows -> T {
+        if DispatchQueue.getSpecific(key: Database.queueKey) == writeLabel {
+            return try work()
+        } else {
+            return try writeQueue.sync(execute: work)
+        }
+    }
+
     // MARK: - Execute
 
     /// 执行指定sql语句
@@ -184,64 +214,7 @@ public final class Database {
 
     // MARK: - Merge
 
-    public var updateInterval: CFAbsoluteTime = 0 {
-        willSet {
-            #if os(iOS)
-                let name = UIApplication.willTerminateNotification
-            #elseif os(OSX)
-                let name = NSApplication.willTerminateNotification
-            #else
-                let name = "unsupported"
-            #endif
-            if newValue > 0 {
-                NotificationCenter.default.addObserver(self, selector: #selector(runMergeUpdates), name: name, object: nil)
-            } else {
-                NotificationCenter.default.removeObserver(self, name: name, object: nil)
-            }
-        }
-    }
-
     private var updates: [(String, [Binding])] = []
-
-    private func merge(_ sql: String, values: [Binding]) -> Bool {
-        guard updateInterval > 0 else {
-            return false
-        }
-        if updates.count == 0 {
-            let deadline = DispatchTime.now() + updateInterval
-            Database.serialQueue.asyncAfter(deadline: deadline) {
-                self.runMergeUpdates()
-            }
-        }
-        updates.append((sql, values))
-        return true
-    }
-
-    @objc @discardableResult
-    private func runMergeUpdates() -> Bool {
-        #if DEBUG
-            print("[SQLiteORM][Merge] now: \(CFAbsoluteTimeGetCurrent()), count: \(updates.count), db: \((_path as NSString).lastPathComponent)\n")
-        #endif
-
-        guard updates.count > 0 else {
-            return true
-        }
-
-        let array = updates
-        updates.removeAll()
-
-        do {
-            try transaction(.immediate) {
-                for (sql, values) in array {
-                    try prepare(sql, values).run()
-                }
-            }
-        } catch _ {
-            return false
-        }
-
-        return true
-    }
 
     // MARK: - Run
 
@@ -258,9 +231,6 @@ public final class Database {
     /// - Parameter statement: sql语句
     /// - Throws: 准备过程中的错误
     public func run(_ statement: String) throws {
-        guard !merge(statement, values: []) else {
-            return
-        }
         return try prepare(statement).run()
     }
 
@@ -271,9 +241,6 @@ public final class Database {
     ///   - bindings: 绑定的数据,需和sql语句对应
     /// - Throws: 准备过程中出现的错误
     public func run(_ statement: String, _ bindings: [Binding]) throws {
-        guard !merge(statement, values: bindings) else {
-            return
-        }
         return try prepare(statement).run(bindings)
     }
 

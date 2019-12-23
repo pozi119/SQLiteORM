@@ -5,20 +5,7 @@
 //  Created by Valo on 2019/5/21.
 //
 
-#ifndef   UNUSED_PARAM
-#define   UNUSED_PARAM(v) (void)(v)
-#endif
-
-#ifndef TOKEN_PINYIN_MAX_LENGTH
-#define TOKEN_PINYIN_MAX_LENGTH 15
-#endif
-
 typedef struct sqlite3 sqlite3;
-
-//MARK: - 分词器参数
-#define TokenizerParamNumber    (1 << 16)
-#define TokenizerParamTransform (1 << 17)
-#define TokenizerParamPinyin    0xFFFF
 
 NS_ASSUME_NONNULL_BEGIN
 
