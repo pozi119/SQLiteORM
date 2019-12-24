@@ -47,24 +47,25 @@ private struct TokenCursor {
 }
 
 @_silgen_name("swift_tokenize")
-public func swift_tokenize(_ cSource: [UInt8], _ method: Int, _ mask: UInt32) -> NSArray {
-    return tokenize(cSource, TokenMethod(rawValue: method) ?? .unknown, .init(rawValue: mask)) as NSArray
+public func swift_tokenize(_ source: NSString, _ method: Int, _ mask: UInt32) -> NSArray {
+    guard source.length > 0 else { return [] as NSArray }
+    let bytes = source.lowercased.bytes
+    return tokenize(bytes, TokenMethod(rawValue: method) ?? .unknown, .init(rawValue: mask)) as NSArray
 }
 
-public func tokenize(_ cSource: [UInt8], _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [Token] {
+public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [Token] {
     switch method {
-    case .apple: return appleTokenize(cSource, mask: mask)
-    case .natural: return naturalTokenize(cSource, mask: mask)
-    case .sqliteorm: return ormTokenize(cSource, mask: mask)
+    case .apple: return appleTokenize(bytes, mask: mask)
+    case .natural: return naturalTokenize(bytes, mask: mask)
+    case .sqliteorm: return ormTokenize(bytes, mask: mask)
     default: return []
     }
 }
 
 /// 自然语言处理分词
-private func naturalTokenize(_ cSource: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
-    let source = String(bytes: cSource).lowercased()
-    let bytes = source.decoded.bytes
+private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
     guard bytes.count > 0 else { return [] }
+    let source = String(bytes: bytes)
 
     var results: [Token] = []
     if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
@@ -90,10 +91,9 @@ private func naturalTokenize(_ cSource: [UInt8], mask: TokenMask, locale: String
 }
 
 /// CoreFundation分词
-private func appleTokenize(_ cSource: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
-    let source = String(bytes: cSource).lowercased()
-    let bytes = source.decoded.bytes
+private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
     guard bytes.count > 0 else { return [] }
+    let source = String(bytes: bytes)
 
     var results: [Token] = []
     let cfText = source as CFString
@@ -125,9 +125,7 @@ private func appleTokenize(_ cSource: [UInt8], mask: TokenMask, locale: String =
 }
 
 /// SQLiteORM分词
-private func ormTokenize(_ cSource: [UInt8], mask: TokenMask) -> [Token] {
-    let source = String(bytes: cSource).lowercased()
-    let bytes = source.decoded.bytes
+private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     guard bytes.count > 0 else { return [] }
 
     let cs = cursors(of: bytes)
@@ -249,12 +247,12 @@ private func pinyinTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: Token
         if let s = String(bytes: sub, encoding: .utf8) {
             let pinyins = s.pinyinsForMatch
             for pinyin in pinyins.fulls {
-                let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.len))
+                let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
                 results.append(token)
             }
             if mask.contains(.firstLetter) {
                 for pinyin in pinyins.firsts {
-                    let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.len))
+                    let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
                     results.append(token)
                 }
             }
@@ -394,7 +392,7 @@ private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMas
             if encoding.rawValue != .max {
                 let sub = bytes[c.offset ..< (c.offset + c.len)]
                 if let str = String(bytes: sub, encoding: encoding) {
-                    let token = Token(str, len: Int32(sub.count), start: Int32(c.offset), end: Int32(c.len))
+                    let token = Token(str, len: Int32(sub.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
                     results.append(token)
                 }
             }

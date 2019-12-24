@@ -93,16 +93,13 @@ fileprivate final class PinYin {
 
 public extension String {
     init(bytes: [UInt8]) {
+        if let s = String(bytes: bytes, encoding: .utf8) {
+            self = s
+            return
+        }
         if let s = String(bytes: bytes, encoding: .ascii) {
             self = s
-        } else {
-            for i in 0 ..< 30 {
-                let encoding = String.Encoding(rawValue: UInt(i))
-                if let s = String(bytes: bytes, encoding: encoding) {
-                    self = s
-                    break
-                }
-            }
+            return
         }
         self = ""
     }
@@ -114,17 +111,8 @@ public extension String {
         return predicate.evaluate(with: self)
     }
 
-    var decoded: (bytes: [UInt8], encoding: String.Encoding) {
-        if let bytes = cString(using: .utf8) {
-            return (bytes.map { UInt8($0) }, .utf8)
-        }
-        for i in 0 ..< 30 {
-            let encoding = String.Encoding(rawValue: UInt(i))
-            if let bytes = cString(using: encoding) {
-                return (bytes.map { UInt8($0) }, encoding)
-            }
-        }
-        return ([], .ascii)
+    var bytes: [UInt8] {
+        return utf8.map { UInt8($0) }
     }
 
     var simplified: String {
@@ -177,7 +165,7 @@ public extension String {
         }
 
         let pinyins = self.pinyins(at: 0)
-        let letter = String(self[index(startIndex, offsetBy: 1)])
+        let letter = String(self[startIndex])
         let headFulls = pinyins.fulls.count > 0 ? pinyins.fulls : [letter]
         let headFirsts = pinyins.firsts.count > 0 ? pinyins.firsts : [letter]
         guard count > 1 else {
@@ -251,7 +239,7 @@ public extension String {
     }
 
     private var headPinyins: [String] {
-        let bytes = decoded.bytes
+        let bytes = self.bytes
         guard bytes.count > 0 else { return [] }
         let s = String(bytes[0])
         guard let array = PinYin.shared.pinyins[s], array.count > 0 else {
@@ -259,7 +247,7 @@ public extension String {
         }
         var results: [String] = []
         for pinyin in array {
-            let subbytes = pinyin.decoded.bytes
+            let subbytes = pinyin.bytes
             if bytes.count < subbytes.count {
                 continue
             }

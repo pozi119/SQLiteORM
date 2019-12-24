@@ -244,7 +244,12 @@ extension SQLiteORMTests {
 extension SQLiteORMTests {
     func testPinyin() {
         let tokens = "成都".pinyinsForMatch
-        XCTAssertEqual(Set(tokens.fulls), Set(["chengdu", "chengdou", "cd"]))
+        XCTAssertEqual(Set(tokens.fulls + tokens.firsts), Set(["chengdu", "chengdou", "cd"]))
+    }
+
+    func testToken() {
+        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
+        print(tokens)
     }
 
     func testRegisterTokenizer() {

@@ -51,7 +51,7 @@ public class Highlighter {
         var pylen = self.mask.rawValue & TokenMask.pinyin.rawValue
         pylen = max(pylen, 30)
         let mask = (self.mask.rawValue & (~TokenMask.pinyin.rawValue)) | TokenMask.splitPinyin.rawValue | pylen
-        return tokenize(self.keyword.decoded.bytes, self.method, .init(rawValue: mask))
+        return tokenize(self.keyword.bytes, self.method, .init(rawValue: mask))
     }()
 
     private lazy var keywordSplitedPinyins = self.keyword.splitedPinyins
@@ -80,8 +80,7 @@ public class Highlighter {
         }
 
         var match = Match(source: source, attrText: NSAttributedString(string: source))
-        let decoded = text.decoded
-        let bytes = decoded.bytes
+        let bytes = text.bytes
         let count = bytes.count
         let attrText = NSMutableAttributedString()
 
@@ -142,7 +141,7 @@ public class Highlighter {
             }
         }
 
-        let tokens = tokenize(decoded.bytes, method, mask)
+        let tokens = tokenize(bytes, method, mask)
         var tokenized = Array(repeating: UInt8(0), count: count)
 
         var k = 0
@@ -151,7 +150,7 @@ public class Highlighter {
             for j in k ..< tokens.count {
                 let tk = tokens[j]
                 if pytk.token != tk.token { continue }
-                tokenized.replaceSubrange(Int(tk.start) ..< Int(tk.end), with: tk.token.decoded.bytes)
+                tokenized.replaceSubrange(Int(tk.start) ..< Int(tk.end), with: tk.token.bytes)
                 k = j
             }
         }
@@ -162,7 +161,7 @@ public class Highlighter {
         var flag = -1
 
         let block = {
-            let sub = String(bytes: bytes[start ..< end], encoding: decoded.encoding) ?? ""
+            let sub = String(bytes: bytes[start ..< end], encoding: .utf8) ?? ""
             if flag == 1 && !hl {
                 hl = true
                 let loc = attrText.length

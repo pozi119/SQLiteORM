@@ -18,7 +18,26 @@
 #define   UNUSED_PARAM(v) (void)(v)
 #endif
 
-extern NSArray * swift_tokenize(uint8_t *, int, uint32_t);
+extern NSArray * swift_tokenize(NSString *, int, uint32_t);
+
+@interface NSString (SQLiteORM)
+
++ (instancetype)stringWithCString:(const char *)cString;
+
+@end
+
+@implementation NSString (SQLiteORM)
+
++ (instancetype)stringWithCString:(const char *)cString
+{
+    NSString *string = [NSString stringWithUTF8String:cString];
+    if (string) return string;
+    string = [NSString stringWithCString:cString encoding:NSASCIIStringEncoding];
+    if (string) return string;
+    return @"";
+}
+
+@end
 
 @implementation SQLiteORMToken
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
@@ -31,12 +50,9 @@ extern NSArray * swift_tokenize(uint8_t *, int, uint32_t);
     return tk;
 }
 
-- (NSString *)description {
-    return _token;
-}
-
-- (NSString *)debugDescription {
-    return [NSString stringWithFormat:@"'%@',%@,%@,%@", _token, @(_len), @(_start), @(_end)];
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"[%@-%@](%@) '%@'", @(_start), @(_end), @(_len), _token];
 }
 
 @end
@@ -173,7 +189,8 @@ static int vv_fts3_open(
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
 
     vv_fts3_tokenizer *tok = (vv_fts3_tokenizer *)pTokenizer;
-    NSArray *array = swift_tokenize((uint8_t *)pInput, method, tok->mask);
+    NSString *ocString = [NSString stringWithCString:pInput];
+    NSArray *array = swift_tokenize(ocString, method, tok->mask);
 
     c->pInput = pInput;
     c->nBytes = nInput;
@@ -291,7 +308,8 @@ static int vv_fts5_xTokenize(
     __block int rc = SQLITE_OK;
     Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
 
-    NSArray *array = swift_tokenize((uint8_t *)pText, tok->method, tok->mask);
+    NSString *ocString = [NSString stringWithCString:pText];
+    NSArray *array = swift_tokenize(ocString, tok->method, tok->mask);
 
     for (SQLiteORMToken *tk in array) {
         rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);
