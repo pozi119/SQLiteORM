@@ -71,7 +71,7 @@ public class Highlighter {
         self.highlightAttributes = highlightAttributes
     }
 
-    public func highlight(_ source: String) -> Match? {
+    public func highlight(_ source: String) -> Match {
         var text = source.replacingOccurrences(of: "\n", with: " ").lowercased()
         var kw = keyword.lowercased()
         if mask.contains(.transform) {
@@ -113,30 +113,32 @@ public class Highlighter {
             return match
         }
 
-        let len = mask.rawValue & TokenMask.pinyin.rawValue
-        guard count > 0 && len > count else {
+        guard match.type == .none else {
             return match
         }
-
-        let pinyins = text.pinyinsForMatch
-        for pinyin in pinyins.fulls + pinyins.firsts {
-            if let range = pinyin.range(of: kw) {
-                if range == pinyin.startIndex ..< pinyin.endIndex {
-                    match.type = kw.count == 1 ? .pinyinPrefix : .pinyinFull
-                    break
-                } else if range.lowerBound == pinyin.startIndex {
-                    match.type = .pinyinPrefix
+        
+        let len = mask.rawValue & TokenMask.pinyin.rawValue
+        if count > 0 && len > count {
+            let pinyins = text.pinyinsForMatch
+            for pinyin in pinyins.fulls + pinyins.firsts {
+                if let range = pinyin.range(of: kw) {
+                    if range == pinyin.startIndex ..< pinyin.endIndex {
+                        match.type = kw.count == 1 ? .pinyinPrefix : .pinyinFull
+                        break
+                    } else if range.lowerBound == pinyin.startIndex {
+                        match.type = .pinyinPrefix
+                    } else {
+                        if match.type != .pinyinPrefix {
+                            match.type = .pinyinMiddle
+                        }
+                    }
                 } else {
-                    if match.type != .pinyinPrefix {
+                    var pinyinset = Set(pinyin.splitedPinyins)
+                    let count = pinyinset.count
+                    pinyinset.subtract(keywordSplitedPinyins)
+                    if pinyinset.count < count {
                         match.type = .pinyinMiddle
                     }
-                }
-            } else {
-                var pinyinset = Set(pinyin.splitedPinyins)
-                let count = pinyinset.count
-                pinyinset.subtract(keywordSplitedPinyins)
-                if pinyinset.count < count {
-                    match.type = .pinyinMiddle
                 }
             }
         }
@@ -195,7 +197,7 @@ public class Highlighter {
         return match
     }
 
-    public func highlight(_ sources: [String]) -> [Match?] {
+    public func highlight(_ sources: [String]) -> [Match] {
         return sources.map { highlight($0) }
     }
 }

@@ -113,8 +113,6 @@ class TableViewController: UITableViewController {
             item.ftsFileSize = ftsFileSize
             item.count = UInt64(item.orm.count())
 
-            self.items[row] = item
-
             DispatchQueue.main.async {
                 let sizeText = self.sizeString(for: item.fileSize)
                 let ftsSizeText = self.sizeString(for: item.ftsFileSize)
