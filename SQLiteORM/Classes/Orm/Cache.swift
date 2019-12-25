@@ -8,7 +8,7 @@
 import Foundation
 
 /// 简单缓存
-open class Cache<Key, Value>: NSObject where Key: Hashable {
+open class Cache<Key, Value> where Key: Hashable {
     /// 缓存名
     open var name: String = ""
 

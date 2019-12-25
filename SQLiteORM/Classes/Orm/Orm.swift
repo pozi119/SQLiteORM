@@ -7,7 +7,18 @@
 
 import Foundation
 
-public final class Orm {
+/// 表检查结果选项
+public struct Inspection: OptionSet {
+    public let rawValue: UInt8
+    public static let exist = Inspection(rawValue: 1 << 0)
+    public static let tableChanged = Inspection(rawValue: 1 << 1)
+    public static let indexChanged = Inspection(rawValue: 1 << 2)
+    public init(rawValue: UInt8) {
+        self.rawValue = rawValue
+    }
+}
+
+public final class Orm<T: Codable> {
     /// 配置
     public let config: Config
 
@@ -21,21 +32,10 @@ public final class Orm {
     public let properties: [String: PropertyInfo]
 
     /// Encoder
-    let encoder = OrmEncoder()
+    public let encoder = OrmEncoder()
 
     /// Decoder
-    let decoder = OrmDecoder()
-
-    /// 表检查结果选项
-    public struct Inspection: OptionSet {
-        public let rawValue: UInt8
-        public static let exist = Inspection(rawValue: 1 << 0)
-        public static let tableChanged = Inspection(rawValue: 1 << 1)
-        public static let indexChanged = Inspection(rawValue: 1 << 2)
-        public init(rawValue: UInt8) {
-            self.rawValue = rawValue
-        }
-    }
+    public let decoder = OrmDecoder()
 
     /// 初始化ORM
     ///
@@ -213,8 +213,9 @@ public final class Orm {
                 var dic = [String: Binding]()
                 for pk in config.primaries {
                     let prop = properties[pk]
-                    let val = try? prop?.get(from: item) as? Binding
-                    if val != nil { dic[pk] = val! }
+                    if let val = (try? prop?.get(from: item)) as? Binding {
+                        dic[pk] = val
+                    }
                 }
                 if (!unique && dic.count > 0) || dic.count == config.primaries.count {
                     condition = dic
@@ -223,9 +224,8 @@ public final class Orm {
             }
             for unique in config.uniques {
                 let prop = properties[unique]
-                let val = try? prop?.get(from: item) as? Binding
-                if val != nil {
-                    condition = [unique: val!]
+                if let val = (try? prop?.get(from: item)) as? Binding {
+                    condition = [unique: val]
                     break
                 }
             }
@@ -245,7 +245,7 @@ public final class Orm {
                 condition = dic
                 break
             }
-            
+
             for col in config.uniques {
                 if let val = KeyValues[col] {
                     condition = [col: val]

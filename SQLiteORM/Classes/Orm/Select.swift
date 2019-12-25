@@ -9,9 +9,6 @@ import Foundation
 
 /// 数据查询
 public final class Select {
-    /// ORM对象
-    var orm: Orm?
-
     /// 表名
     var table: String = ""
 
@@ -19,19 +16,19 @@ public final class Select {
     var distinct: Bool = false
 
     /// 指定查询字段
-    var fields: Fields = Fields("*")
+    var fields: Fields = "*"
 
     /// 查询条件
-    var `where`: Where = Where("")
+    var `where`: Where = ""
 
     /// 排序条件
-    var orderBy: OrderBy = OrderBy("")
+    var orderBy: OrderBy = ""
 
     /// 分组
-    var groupBy: GroupBy = GroupBy("")
+    var groupBy: GroupBy = ""
 
     /// 分组条件
-    var having: Where = Where("")
+    var having: Where = ""
 
     /// 查询条数
     var limit: Int64 = 0
@@ -41,7 +38,7 @@ public final class Select {
 
     /// 生成具体查询语句
     var sql: String {
-        assert(table.count > 0, "set table or orm first!")
+        assert(table.count > 0, "set table first!")
 
         let distinctClause = distinct ? " DISTINCT " : ""
 
@@ -69,18 +66,6 @@ public final class Select {
 
         let str = "SELECT " + distinctClause + fieldsClause + tableClause + whereClause + groupByClause + havingClause + orderByClause + limitClause + offsetClause
         return str
-    }
-
-    /// 查询并获取结果
-    public var allKeyValues: [[String: Binding]] {
-        assert(orm != nil, "set orm first!")
-        return orm!.db.query(sql)
-    }
-
-    public func orm(_ orm: Orm) -> Select {
-        self.orm = orm
-        table = orm.table
-        return self
     }
 
     public func table(_ table: String) -> Select {
@@ -126,5 +111,24 @@ public final class Select {
     public func offset(_ offset: Int64) -> Select {
         self.offset = offset
         return self
+    }
+}
+
+extension Select {
+    public func allKeyValues<T: Codable>(_ orm: Orm<T>) -> [[String: Binding]] {
+        table = orm.table
+        return orm.db.query(sql)
+    }
+
+    public func allItems<T: Codable>(_ orm: Orm<T>) -> [T] {
+        table = orm.table
+        let keyValues = orm.db.query(sql)
+        do {
+            let array = try orm.decoder.decode([T].self, from: keyValues)
+            return array
+        } catch {
+            print(error)
+            return []
+        }
     }
 }

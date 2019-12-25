@@ -234,22 +234,6 @@ public extension Orm {
 // MARK: - Retrieve
 
 public extension Orm {
-    func decode<T: Codable>(_ keyValues: [String: Binding], with type: T.Type) -> T? {
-        return try? decoder.decode(T.self, from: self)
-    }
-
-    func decode<T: Codable>(_ allKeyValues: [[String: Binding]], with type: T.Type) -> [T] {
-        do {
-            let array = try decoder.decode([T].self, from: self)
-            return array
-        } catch {
-            print(error)
-            return []
-        }
-    }
-}
-
-public extension Orm {
     /// 最大rowid. 此rowid,自增主键和数据条数不一定一致
     var maxRowId: Int64 {
         return max(of: "rowid") as? Int64 ?? 0
@@ -262,7 +246,17 @@ public extension Orm {
     ///   - orderBy: 排序方式
     /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
     func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
-        return Select().orm(self).where(condition).orderBy(orderBy).limit(1).allKeyValues.first
+        return Select().where(condition).orderBy(orderBy).limit(1).allKeyValues(self).first
+    }
+
+    /// 查找一条数据
+    ///
+    /// - Parameters:
+    ///   - condition: 查询条件
+    ///   - orderBy: 排序方式
+    /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
+    func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
+        return Select().where(condition).orderBy(orderBy).limit(1).allItems(self).first
     }
 
     /// 查询数据
@@ -285,9 +279,34 @@ public extension Orm {
               orderBy: OrderBy = OrderBy(""),
               limit: Int64 = 0,
               offset: Int64 = 0) -> [[String: Binding]] {
-        return Select().orm(self).where(condition).distinct(distinct).fields(fields)
+        return Select().where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allKeyValues
+            .limit(limit).offset(offset).allKeyValues(self)
+    }
+
+    /// 查询数据
+    ///
+    /// - Parameters:
+    ///   - condition: 查询条件
+    ///   - distinct: 是否去重
+    ///   - fields: 指定字段
+    ///   - groupBy: 分组字段
+    ///   - having: 分组条件
+    ///   - orderBy: 排序条件
+    ///   - limit: 查询数量
+    ///   - offset: 起始位置
+    /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
+    func xFind(_ condition: Where = Where(""),
+               distinct: Bool = false,
+               fields: Fields = Fields("*"),
+               groupBy: GroupBy = GroupBy(""),
+               having: Where = Where(""),
+               orderBy: OrderBy = OrderBy(""),
+               limit: Int64 = 0,
+               offset: Int64 = 0) -> [T] {
+        return Select().where(condition).distinct(distinct).fields(fields)
+            .groupBy(groupBy).having(having).orderBy(orderBy)
+            .limit(limit).offset(offset).allItems(self)
     }
 
     /// 查询数据条数
@@ -349,7 +368,7 @@ public extension Orm {
     ///   - condition: 查询条件
     /// - Returns: 函数执行结果
     func function(_ function: String, condition: Where = Where("")) -> Binding? {
-        let dic = Select().orm(self).fields(Fields(function)).where(condition).allKeyValues.first
+        let dic = Select().fields(Fields(function)).where(condition).allKeyValues(self).first
         return dic?.values.first
     }
 }

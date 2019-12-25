@@ -12,6 +12,12 @@ public protocol SQLable: CustomStringConvertible {
     var sql: String { get }
 }
 
+extension SQLable {
+    public var description: String {
+        return sql
+    }
+}
+
 public protocol Conditional {}
 public protocol Filtrable {}
 
@@ -24,39 +30,58 @@ extension Array: Filtrable {}
 
 // MARK: - where
 
-public struct Where: SQLable, Conditional {
-    private var _expr: String
+public struct Where: SQLable {
+    public private(set) var sql: String
 
-    public init(_ expr: Conditional) {
-        switch expr {
-        case let expr as String:
-            _expr = expr
-        case let expr as [[String: Binding]] where expr.count > 0:
-            let array = expr.map({ (dic) -> Where in
-                Where(dic)
-            })
-            _expr = array.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as [Where] where expr.count > 0:
-            _expr = expr.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as [String] where expr.count > 0:
-            _expr = expr.map { "(\($0))" }.joined(separator: " OR ")
-        case let expr as [String: Binding] where expr.count > 0:
-            _expr = expr.map { "(" + $0.key.quoted + " == " + $0.value.sqlValue + ")" }.joined(separator: " AND ")
-        default:
-            _expr = "\(expr)"
-        }
+    public init(_ condition: String) {
+        sql = condition
+    }
+
+    public init(_ keyValues: [[String: Binding]]) {
+        let array = keyValues.map { Where($0) }
+        sql = array.map { "(\($0))" }.joined(separator: " OR ")
+    }
+
+    public init(_ conditions: [Where]) {
+        sql = conditions.map { "(\($0))" }.joined(separator: " OR ")
+    }
+
+    public init(_ conditions: [String]) {
+        sql = conditions.joined(separator: " OR ")
+    }
+
+    public init(_ keyValue: [String: Binding]) {
+        sql = keyValue.map { "(\($0.key.quoted) == \($0.value.sqlValue))" }.joined(separator: " AND ")
     }
 
     public var quoted: String {
-        return _expr.quoted
+        return sql.quoted
     }
+}
 
-    public var sql: String {
-        return _expr
+extension Where: ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(value)
     }
+}
 
-    public var description: String {
-        return _expr
+extension Where: ExpressibleByArrayLiteral {
+    public typealias ArrayLiteralElement = String
+    public init(arrayLiteral elements: String...) {
+        self.init(elements)
+    }
+}
+
+extension Where: ExpressibleByDictionaryLiteral {
+    public typealias Key = String
+    public typealias Value = Binding
+    public init(dictionaryLiteral elements: (String, Binding)...) {
+        var dic = [String: Binding]()
+        for (key, val) in elements {
+            dic[key] = val
+        }
+        self.init(dic)
     }
 }
 
@@ -220,88 +245,96 @@ public extension String {
 
 // MARK: - order by
 
-public struct OrderBy: SQLable, Filtrable {
-    private var _expr: String
+public struct OrderBy: SQLable {
+    public private(set) var sql: String
 
-    public init(_ expr: Conditional) {
-        let regular = "( +ASC *$)|( +DESC *$)"
-        var str: String
-        switch expr {
-        case let expr as String where expr.count > 0:
-            str = expr.quoted
-        case let expr as [String] where expr.count > 0:
-            let filtered = expr.filter({ $0.count > 0 })
-            if filtered.count == 0 {
-                str = ""
-                break
-            }
-            let ordered = filtered.filter({ $0.match(regular) })
-            if ordered.count == 0 {
-                str = filtered.sqlJoined
-            } else {
-                str = filtered.map { $0.match(regular) ? $0 : ($0.quoted + " ASC") }.joined(separator: ",")
-            }
-        default:
-            str = ""
+    private let rx = "( +ASC *$)|( +DESC *$)"
+
+    public init(_ order: String) {
+        sql = order.count == 0 ? "" : (order.match(rx) ? order : (order + " ASC"))
+    }
+
+    public init(_ orders: [String]) {
+        var array: [String] = []
+        for order in orders {
+            if order.count == 0 { continue }
+            let t = order.match(rx) ? order : (order + " ASC")
+            array.append(t)
         }
-        _expr = (str.count == 0 || str.match(regular)) ? str : (str + " ASC")
+        sql = array.joined(separator: ",")
     }
+}
 
-    public var sql: String {
-        return _expr
+extension OrderBy: ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(value)
     }
+}
 
-    public var description: String {
-        return _expr
+extension OrderBy: ExpressibleByArrayLiteral {
+    public typealias ArrayLiteralElement = String
+    public init(arrayLiteral elements: String...) {
+        self.init(elements)
     }
 }
 
 // MARK: - group by
 
-public struct GroupBy: SQLable, Filtrable {
-    private var _expr: String
+public struct GroupBy: SQLable {
+    public private(set) var sql: String
 
-    public init(_ expr: Conditional) {
-        switch expr {
-        case let expr as [String] where expr.count > 0:
-            _expr = expr.sqlJoined
-        case let expr as String where expr.count > 0:
-            _expr = expr.quoted
-        default:
-            _expr = ""
-        }
+    public init(_ group: String) {
+        sql = group
     }
 
-    public var sql: String {
-        return _expr
+    public init(_ groups: [String]) {
+        sql = groups.joined(separator: ",")
     }
+}
 
-    public var description: String {
-        return _expr
+extension GroupBy: ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(value)
+    }
+}
+
+extension GroupBy: ExpressibleByArrayLiteral {
+    public typealias ArrayLiteralElement = String
+    public init(arrayLiteral elements: String...) {
+        self.init(elements)
     }
 }
 
 // MARK: - fields
 
-public struct Fields: SQLable, Filtrable {
-    private var _expr: String
+public struct Fields: SQLable {
+    public private(set) var sql: String
 
-    public init(_ expr: Conditional) {
-        switch expr {
-        case let expr as [String] where expr.count > 0:
-            _expr = expr.sqlJoined
-        case let expr as String where expr.count > 0:
-            _expr = expr
-        default:
-            _expr = "*"
-        }
+    public init(_ field: String) {
+        sql = field
     }
 
-    public var sql: String {
-        return _expr
+    public init(_ fields: [String]) {
+        sql = fields.joined(separator: ",")
     }
 
-    public var description: String {
-        return _expr
+    public init() {
+        sql = "*"
+    }
+}
+
+extension Fields: ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(value)
+    }
+}
+
+extension Fields: ExpressibleByArrayLiteral {
+    public typealias ArrayLiteralElement = String
+    public init(arrayLiteral elements: String...) {
+        self.init(elements)
     }
 }

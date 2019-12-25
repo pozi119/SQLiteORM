@@ -56,7 +56,7 @@ public class Highlighter {
 
     private lazy var keywordSplitedPinyins = self.keyword.splitedPinyins
 
-    public convenience init(orm: Orm, keyword: String, highlightAttributes: [NSAttributedString.Key: Any]) {
+    public convenience init<T: Codable>(orm: Orm<T>, keyword: String, highlightAttributes: [NSAttributedString.Key: Any]) {
         let config = orm.config as? FtsConfig
         assert(config != nil, "invalid fts orm")
         let tokenizer = config!.tokenizer.components(separatedBy: " ").first ?? ""
@@ -116,7 +116,7 @@ public class Highlighter {
         guard match.type == .none else {
             return match
         }
-        
+
         let len = mask.rawValue & TokenMask.pinyin.rawValue
         if count > 0 && len > count {
             let pinyins = text.pinyinsForMatch

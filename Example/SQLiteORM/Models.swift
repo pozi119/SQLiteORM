@@ -17,13 +17,13 @@ struct Item {
 
     var dbName: String = ""
     var dbPath: String = ""
-    var orm: Orm
+    var orm: Orm<Message>
     var db: Database
     var fileSize: UInt64 = 0
 
     var ftsDbName: String = ""
     var ftsDbPath: String = ""
-    var ftsOrm: Orm
+    var ftsOrm: Orm<Message>
     var ftsDb: Database
     var ftsFileSize: UInt64 = 0
 

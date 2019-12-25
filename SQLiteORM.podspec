@@ -40,6 +40,6 @@ Pod::Spec.new do |s|
       ss.source_files = 'SQLiteORM/Classes/**/*'
       # ss.private_header_files = 'SQLiteORM/Classes/**/*.h'
       ss.public_header_files = 'SQLiteORM/Classes/**/*.h'
-      ss.resource = ['SQLiteORM/Assets/Jieba.bundle','SQLiteORM/Assets/PinYin.bundle']
+      ss.resource = ['SQLiteORM/Assets/PinYin.bundle']
   end
 end

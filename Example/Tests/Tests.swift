@@ -10,10 +10,10 @@ final class SQLiteORMTests: XCTestCase {
         return Database(with: url.path)
     }()
 
-    fileprivate lazy var orm: Orm = {
+    fileprivate lazy var orm: Orm<Person> = {
         let config = PlainConfig(Person.self)
         config.primaries = ["id"]
-        let orm = Orm(config: config, db: db, table: "person", setup: true)
+        let orm = Orm<Person>(config: config, db: db, table: "person", setup: true)
         return orm
     }()
 
@@ -25,16 +25,16 @@ final class SQLiteORMTests: XCTestCase {
         return _db
     }()
 
-    fileprivate lazy var ftsOrm: Orm = {
+    fileprivate lazy var ftsOrm: Orm<Person> = {
         let config = FtsConfig(Person.self)
         config.module = "fts5"
         config.tokenizer = "sqliteorm"
         config.indexes = ["name", "intro"]
 
-        let orm = Orm(config: config, db: ftsDb, table: "person", setup: true)
+        let orm = Orm<Person>(config: config, db: ftsDb, table: "person", setup: true)
         return orm
     }()
-    
+
     fileprivate lazy var infos: [String] = {
         var _infos = [String]()
         autoreleasepool(invoking: { () -> Void in
@@ -47,7 +47,6 @@ final class SQLiteORMTests: XCTestCase {
         })
         return _infos
     }()
-
 
     static var allTests = [
         ("testConnection", testConnection),
@@ -286,18 +285,18 @@ extension SQLiteORMTests {
     func testBigBatch() {
         var r = orm.delete()
         XCTAssert(r)
-        
+
         r = ftsOrm.delete()
         XCTAssert(r)
-        
+
         var mockTime: CFAbsoluteTime = 0
         var normalTime: CFAbsoluteTime = 0
         var ftsTime: CFAbsoluteTime = 0
-        
+
         let loop = 100
         let batch = 1000
         let total = loop * batch
-        
+
         for i in 0 ..< loop {
             autoreleasepool(invoking: { () -> Void in
                 let begin = CFAbsoluteTimeGetCurrent()
@@ -313,18 +312,18 @@ extension SQLiteORMTests {
                 let step2 = CFAbsoluteTimeGetCurrent()
                 self.ftsOrm.insert(multi: persons)
                 let end = CFAbsoluteTimeGetCurrent()
-                
+
                 let mock = step1 - begin
                 let normal = step2 - step1
                 let fts = end - step2
-                
+
                 mockTime += mock
                 normalTime += normal
                 ftsTime += fts
-                
+
                 let progress = min(1.0, Float(i + 1) / Float(loop))
                 let progressText = String(format: "%.2f%", progress * 100.0)
-                
+
                 print("id: \(i * batch) - \((i + 1) * batch), progress: \(progressText)%, mock: \(mock), normal: \(normal), fts: \(fts)")
             })
         }

@@ -20,6 +20,9 @@ public class Config {
     /// 所有字段
     public var columns: [String] = []
 
+    /// 主键,可多个. FTS仅供外部增删使用
+    public var primaries: [String] = []
+
     /// 白名单
     public var whites: [String] = []
 
@@ -104,9 +107,6 @@ public final class PlainConfig: Config {
 
     /// 是否自增主键,仅当主键数量为1时有效
     public var pkAutoInc: Bool = false
-
-    /// 主键,可多个
-    public var primaries: [String] = []
 
     /// 非空字段
     public var notnulls: [String] = []
