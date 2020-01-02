@@ -149,14 +149,14 @@ public extension String {
         let ch = string.character(at: index)
         let key = String(format: "%X", ch)
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
-        let fulls = NSMutableOrderedSet()
-        let firsts = NSMutableOrderedSet()
+        var fulls: [String] = []
+        var firsts: [String] = []
         for pinyin in pinyins {
             if pinyin.count < 1 { continue }
-            fulls.add(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)])
-            firsts.add(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)])
+            fulls.append(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)]))
+            firsts.append(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)]))
         }
-        return (fulls.array as! [String], firsts.array as! [String])
+        return (Array(Set(fulls)), Array(Set(firsts)))
     }
 
     var pinyinsForMatch: (fulls: [String], firsts: [String]) {
@@ -281,7 +281,7 @@ public extension String {
     }
 
     var splitedPinyins: [[String]] {
-        return simplified._splitedPinyins
+        return lowercased()._splitedPinyins
     }
 
     /// 预加载拼音分词资源

@@ -52,7 +52,7 @@ public class Highlighter {
         pylen = max(pylen, 30)
         let mask = (self.mask.rawValue & (~TokenMask.pinyin.rawValue)) | TokenMask.splitPinyin.rawValue | pylen
         let tokens = tokenize(self.keyword.bytes, self.method, .init(rawValue: mask))
-        return tokens.sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
+        return tokens
     }()
 
     private lazy var keywordSplitedPinyins = self.keyword.splitedPinyins
@@ -166,7 +166,7 @@ public class Highlighter {
             }
         }
 
-        let tokens = tokenize(bytes, method, mask).sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
+        let tokens = tokenize(bytes, method, mask)
         var tokenized = Array(repeating: UInt8(0), count: count)
 
         var k = 0

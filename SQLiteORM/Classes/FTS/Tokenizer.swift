@@ -29,7 +29,7 @@ public struct TokenMask: OptionSet {
     public static let splitPinyin = TokenMask(rawValue: 1 << 19)
     public static let transform = TokenMask(rawValue: 1 << 20)
 
-    public static let `default`: TokenMask = []
+    public static let `default`: TokenMask = .init(rawValue: 0xFFFF0000 & ~(1 << 19))
     public static let manual: TokenMask = [.number, .transform]
     public static let extra: TokenMask = [.pinyin, .firstLetter, .number]
     public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
@@ -54,12 +54,15 @@ public func swift_tokenize(_ source: NSString, _ method: Int, _ mask: UInt32) ->
 }
 
 public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [Token] {
+    var tokens: [Token] = []
     switch method {
-    case .apple: return appleTokenize(bytes, mask: mask)
-    case .natural: return naturalTokenize(bytes, mask: mask)
-    case .sqliteorm: return ormTokenize(bytes, mask: mask)
-    default: return []
+    case .apple: tokens = appleTokenize(bytes, mask: mask)
+    case .natural: tokens = naturalTokenize(bytes, mask: mask)
+    case .sqliteorm: tokens = ormTokenize(bytes, mask: mask)
+    default: break
     }
+    tokens.sort { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
+    return tokens
 }
 
 /// 自然语言处理分词
@@ -274,9 +277,6 @@ private func pinyinTokens(bySplit fragment: String, start: Int) -> [Token] {
         }
     }
     results = Array(Set(results))
-    results.sort { (t1, t2) -> Bool in
-        t1.start == t2.start ? t1.len < t2.len : t1.start < t2.start
-    }
     return results
 }
 
