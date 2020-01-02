@@ -12,7 +12,7 @@ public struct Match {
     }
 
     public var type: Type = .none
-    public var range: Range<String.Index> = "".startIndex ..< "".endIndex
+    public var range: Range<Int> = 0 ..< 0
     public var source: String
     public var attrText: NSAttributedString
 }
@@ -51,7 +51,8 @@ public class Highlighter {
         var pylen = self.mask.rawValue & TokenMask.pinyin.rawValue
         pylen = max(pylen, 30)
         let mask = (self.mask.rawValue & (~TokenMask.pinyin.rawValue)) | TokenMask.splitPinyin.rawValue | pylen
-        return tokenize(self.keyword.bytes, self.method, .init(rawValue: mask))
+        let tokens = tokenize(self.keyword.bytes, self.method, .init(rawValue: mask))
+        return tokens.sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
     }()
 
     private lazy var keywordSplitedPinyins = self.keyword.splitedPinyins
@@ -72,7 +73,8 @@ public class Highlighter {
     }
 
     public func highlight(_ source: String) -> Match {
-        var text = source.replacingOccurrences(of: "\n", with: " ").lowercased()
+        let clean = source.replacingOccurrences(of: "\n", with: " ")
+        var text = clean.lowercased()
         var kw = keyword.lowercased()
         if mask.contains(.transform) {
             text = text.simplified
@@ -81,34 +83,46 @@ public class Highlighter {
 
         var match = Match(source: source, attrText: NSAttributedString(string: source))
         let bytes = text.bytes
+        let cleanbytes = clean.bytes
         let count = bytes.count
         let attrText = NSMutableAttributedString()
 
+        let TrimAttrText = { (r: Range<String.Index>) -> Void in
+            let lower = r.lowerBound.utf16Offset(in: clean)
+            let upper = r.upperBound.utf16Offset(in: clean)
+            if upper > self.attrTextMaxLen && upper <= attrText.length{
+                let dlen = min(lower, upper - self.attrTextMaxLen)
+                attrText.deleteCharacters(in: NSMakeRange(0, dlen))
+                attrText.insert(NSAttributedString(string: "..."), at: 0)
+            }
+        }
+
         if let range = text.range(of: kw) {
-            match.range = range
             if range == text.startIndex ..< text.endIndex {
                 match.type = .full
                 match.attrText = NSAttributedString(string: source, attributes: highlightAttributes)
+                match.range = 0 ..< bytes.count
             } else if range.lowerBound == text.startIndex {
                 match.type = .prefix
-                let sk = String(source[range])
-                let s2 = String(source[range.upperBound ..< source.endIndex])
+                let sk = String(clean[range])
+                let s2 = String(clean[range.upperBound ..< clean.endIndex])
                 attrText.append(NSAttributedString(string: sk, attributes: highlightAttributes))
                 attrText.append(NSAttributedString(string: s2, attributes: normalAttributes))
                 match.attrText = attrText
+                match.range = 0 ..< sk.bytes.count
             } else {
                 match.type = .middle
-                var s1 = String(source[source.startIndex ..< range.lowerBound])
-                let sk = String(source[range])
-                let s2 = String(source[range.upperBound ..< source.endIndex])
-                if s1.count + sk.count > attrTextMaxLen {
-                    let offset = max(0, attrTextMaxLen - sk.count)
-                    s1 = "..." + String(s1[s1.index(s1.endIndex, offsetBy: -offset) ..< s1.endIndex])
-                }
+                let s1 = String(clean[clean.startIndex ..< range.lowerBound])
+                let sk = String(clean[range])
+                let s2 = String(clean[range.upperBound ..< clean.endIndex])
                 attrText.append(NSAttributedString(string: s1, attributes: normalAttributes))
                 attrText.append(NSAttributedString(string: sk, attributes: highlightAttributes))
                 attrText.append(NSAttributedString(string: s2, attributes: normalAttributes))
+                TrimAttrText(range)
                 match.attrText = attrText
+                let loc = s1.bytes.count
+                let len = sk.bytes.count
+                match.range = loc ..< (loc + len)
             }
             return match
         }
@@ -120,30 +134,39 @@ public class Highlighter {
         let len = mask.rawValue & TokenMask.pinyin.rawValue
         if count > 0 && len > count {
             let pinyins = text.pinyinsForMatch
-            for pinyin in pinyins.fulls + pinyins.firsts {
+            for pinyin in pinyins.firsts {
                 if let range = pinyin.range(of: kw) {
                     if range == pinyin.startIndex ..< pinyin.endIndex {
-                        match.type = kw.count == 1 ? .pinyinPrefix : .pinyinFull
+                        match.type = .pinyinFull
                         break
                     } else if range.lowerBound == pinyin.startIndex {
                         match.type = .pinyinPrefix
                     } else {
-                        if match.type != .pinyinPrefix {
+                        if match.type == .none {
                             match.type = .pinyinMiddle
                         }
                     }
-                } else {
-                    var pinyinset = Set(pinyin.splitedPinyins)
-                    let count = pinyinset.count
-                    pinyinset.subtract(keywordSplitedPinyins)
-                    if pinyinset.count < count {
-                        match.type = .pinyinMiddle
+                }
+            }
+            if match.type == .none {
+                for pinyin in pinyins.fulls {
+                    if let range = pinyin.range(of: kw) {
+                        if range == pinyin.startIndex ..< pinyin.endIndex {
+                            match.type = .pinyinFull
+                            break
+                        } else if range.lowerBound == pinyin.startIndex {
+                            match.type = .pinyinPrefix
+                        } else {
+                            if match.type == .none {
+                                match.type = .pinyinMiddle
+                            }
+                        }
                     }
                 }
             }
         }
 
-        let tokens = tokenize(bytes, method, mask)
+        let tokens = tokenize(bytes, method, mask).sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
         var tokenized = Array(repeating: UInt8(0), count: count)
 
         var k = 0
@@ -152,48 +175,49 @@ public class Highlighter {
             for j in k ..< tokens.count {
                 let tk = tokens[j]
                 if pytk.token != tk.token { continue }
-                tokenized.replaceSubrange(Int(tk.start) ..< Int(tk.end), with: tk.token.bytes)
+                let r = Int(tk.start) ..< Int(tk.end)
+                tokenized[r].replaceSubrange(r, with: cleanbytes[r])
                 k = j
+                break
             }
         }
 
         var start = 0
         var end = 0
-        var hl = false
         var flag = -1
+        var r: Range<String.Index>?
 
-        let block = {
-            let sub = String(bytes: bytes[start ..< end], encoding: .utf8) ?? ""
-            if flag == 1 && !hl {
-                hl = true
-                let loc = attrText.length
-                let len = sub.count
-                let lower = source.index(source.startIndex, offsetBy: loc)
-                let upper = source.index(source.startIndex, offsetBy: loc + len)
-                match.range = lower ..< upper
-                if loc + len > self.attrTextMaxLen {
-                    let rem = max(0, self.attrTextMaxLen - len)
-                    attrText.deleteCharacters(in: NSMakeRange(loc - rem, rem))
-                    attrText.insert(NSAttributedString(string: "..."), at: 0)
+        while end <= count {
+            let newflag = end == count ? -1 : tokenized[end] == 0 ? 0 : 1
+            if newflag != flag && end > start {
+                let sub = String(bytes: bytes[start ..< end], encoding: .utf8) ?? ""
+                if flag == 1 && r == nil {
+                    let loc = attrText.length
+                    let len = sub.count
+                    let lower = clean.index(clean.startIndex, offsetBy: loc)
+                    let upper = clean.index(clean.startIndex, offsetBy: loc + len)
+                    r = lower ..< upper
                 }
+                let attrs = flag == 1 ? highlightAttributes : normalAttributes
+                let subAttrText = NSAttributedString(string: sub, attributes: attrs)
+                attrText.append(subAttrText)
+                start = end
             }
-            let attrs = flag == 1 ? self.highlightAttributes : self.normalAttributes
-            let subAttrText = NSAttributedString(string: sub, attributes: attrs)
-            attrText.append(subAttrText)
-            start = end
-        }
-
-        while end < count {
-            let newflag = tokenized[end] == 0 ? 0 : 1
-            if newflag != flag && end > start { block() }
             flag = newflag
             end += 1
         }
-        if end > start { block() }
-        if match.type == .none && hl {
-            match.type = .other
+        if let range = r {
+            let s1 = String(clean[clean.startIndex ..< range.lowerBound])
+            let sk = String(clean[range])
+            let pos = s1.bytes.count
+            let len = sk.bytes.count
+            match.range = pos ..< (pos + len)
+            TrimAttrText(range)
+            match.attrText = attrText
+            if match.type == .none{
+                match.type = .other
+            }
         }
-        match.attrText = attrText
         return match
     }
 
