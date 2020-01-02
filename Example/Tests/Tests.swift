@@ -162,9 +162,9 @@ extension SQLiteORMTests {
         let o2 = OrderBy(["age", "name"])
         let o3 = OrderBy(["age DESC", "name"])
         let o4 = OrderBy(["age DESC", "name ASC"])
-        XCTAssertEqual(o1.sql, "\"age\" ASC")
-        XCTAssertEqual(o2.sql, "\"age\",\"name\" ASC")
-        XCTAssertEqual(o3.sql, "age DESC,\"name\" ASC")
+        XCTAssertEqual(o1.sql, "age ASC")
+        XCTAssertEqual(o2.sql, "age ASC,name ASC")
+        XCTAssertEqual(o3.sql, "age DESC,name ASC")
         XCTAssertEqual(o4.sql, "age DESC,name ASC")
     }
 
@@ -172,8 +172,8 @@ extension SQLiteORMTests {
         let g1 = GroupBy("age")
         let g2 = GroupBy(["age", "name"])
         let g3 = GroupBy(["\"age\"", "\"name\""])
-        XCTAssertEqual(g1.sql, "\"age\"")
-        XCTAssertEqual(g2.sql, "\"age\",\"name\"")
+        XCTAssertEqual(g1.sql, "age")
+        XCTAssertEqual(g2.sql, "age,name")
         XCTAssertEqual(g3.sql, "\"age\",\"name\"")
     }
 
@@ -182,7 +182,7 @@ extension SQLiteORMTests {
         let f2 = Fields(["age", "name"])
         let f3 = Fields("count(*)")
         XCTAssertEqual(f1.sql, "age")
-        XCTAssertEqual(f2.sql, "\"age\",\"name\"")
+        XCTAssertEqual(f2.sql, "age,name")
         XCTAssertEqual(f3.sql, "count(*)")
     }
 }
@@ -256,7 +256,7 @@ extension SQLiteORMTests {
         XCTAssert(r)
 
         let x = ftsDb.enumerator(for: "nl")
-        XCTAssert(x != .natural)
+        XCTAssert(x == .natural)
     }
 
     func testFtsDeleteInsert() {
