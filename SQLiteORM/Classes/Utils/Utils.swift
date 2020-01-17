@@ -7,16 +7,6 @@
 
 import Foundation
 
-@_silgen_name("simplifiedString")
-func simplifiedString(_ string: NSString) -> NSString {
-    return (string as String).simplified as NSString
-}
-
-@_silgen_name("traditionalString")
-func traditionalString(_ string: NSString) -> NSString {
-    return (string as String).traditional as NSString
-}
-
 /// 拼音相关
 fileprivate final class PinYin {
     static let shared: PinYin = PinYin()
@@ -145,6 +135,7 @@ public extension String {
     }
 
     func pinyins(at index: Int) -> (fulls: [String], firsts: [String]) {
+        guard count > index else { return ([], []) }
         let string = simplified as NSString
         let ch = string.character(at: index)
         let key = String(format: "%X", ch)
@@ -160,6 +151,7 @@ public extension String {
     }
 
     var pinyinsForMatch: (fulls: [String], firsts: [String]) {
+        guard count > 0 else { return ([], []) }
         if let results = PinYin.shared.cache[self] {
             return results
         }
