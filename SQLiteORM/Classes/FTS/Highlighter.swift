@@ -6,34 +6,38 @@
 //
 
 public final class Match {
-    fileprivate enum LV1: UInt64 {
+    public enum LV1: UInt64 {
         case none = 0, firsts, full, origin
     }
 
-    fileprivate enum LV2: UInt64 {
+    public enum LV2: UInt64 {
         case none = 0, other, nonprefix, prefix, full
     }
 
-    fileprivate enum LV3: UInt64 {
-        case low = 0, mid, high
+    public enum LV3: UInt64 {
+        case low = 0, medium, high
     }
 
-    fileprivate var lv1: LV1 = .none
-    fileprivate var lv2: LV2 = .none
-    fileprivate var lv3: LV3 = .low
+    public var lv1: LV1 = .none
+    public var lv2: LV2 = .none
+    public var lv3: LV3 = .low
 
     public var range = 0 ..< 0
     public var source: String
     public var attrText: NSAttributedString
 
-    public lazy var weight: UInt64 = {
-        let loc: UInt64 = 0xFFFF - (UInt64(range.lowerBound) & 0xFFFF)
-        let rate: UInt64 = UInt64(range.upperBound - range.lowerBound) * 0xFFFF / UInt64(source.count)
+    public lazy var upperWeight: UInt64 = {
         let _lv1 = lv1.rawValue, _lv2 = lv2.rawValue, _lv3 = lv3.rawValue
-        var _weight = ((_lv1 & 0xF) << 56) | ((_lv2 & 0xF) << 52) | ((_lv3 & 0xF) << 48)
-        _weight = _weight | ((loc & 0xFFFF) << 16) | ((rate & 0xFFFF) << 0)
-        return _weight
+        return ((_lv1 & 0xF) << 24) | ((_lv2 & 0xF) << 20) | ((_lv3 & 0xF) << 16)
     }()
+
+    public lazy var lowerWeight: UInt64 = {
+        let loc: UInt64 = ~UInt64(range.lowerBound) & 0xFFFF
+        let rate: UInt64 = UInt64(range.upperBound - range.lowerBound) << 32 / UInt64(source.count)
+        return ((loc & 0xFFFF) << 16) | ((rate & 0xFFFF) << 0)
+    }()
+
+    public lazy var weight: UInt64 = self.upperWeight << 32 | self.lowerWeight
 
     init(source: String, attrText: NSAttributedString? = nil) {
         self.source = source
@@ -115,7 +119,7 @@ public class Highlighter {
         return match
     }
 
-    fileprivate func highlight(_ source: String, keyword kw: String, lv1: Match.LV1, clean: String, text: String, bytes: [UInt8], cleanbytes: [UInt8]) -> Match {
+    private func highlight(_ source: String, keyword: String, lv1: Match.LV1, clean: String, text: String, bytes: [UInt8], cleanbytes: [UInt8]) -> Match {
         let nomatch = Match(source: source, attrText: NSAttributedString(string: clean, attributes: normalAttributes))
 
         let match = Match(source: source)
@@ -133,7 +137,9 @@ public class Highlighter {
             }
         }
 
-        if let range = text.range(of: kw) {
+        let hasSpace = keyword.range(of: " ") != nil
+        let exp = hasSpace ? keyword.replacingOccurrences(of: " +", with: " +", options: .regularExpression) : keyword
+        if let range = text.range(of: exp) {
             let lower = text.distance(from: text.startIndex, to: range.lowerBound)
             let upper = text.distance(from: text.startIndex, to: range.upperBound)
             match.range = lower ..< upper
@@ -162,17 +168,23 @@ public class Highlighter {
         }
 
         guard match.lv2 == .none else {
-            match.lv3 = .high
+            match.lv3 = lv1 == .origin ? .high : .medium
             return match
         }
 
         let len = mask.rawValue & TokenMask.pinyin.rawValue
-        if count > 0 && len > count {
-            let pinyins = text.pinyinsForMatch
-            let array = [lv1 == .origin ? pinyins.fulls : [], pinyins.firsts]
+        if len > 0 {
+            var array: [[String]] = []
+            if count < 30 {
+                let pinyins = text.pinyinsForMatch
+                array = [lv1 == .origin ? pinyins.fulls : [], pinyins.firsts]
+            } else {
+                let py = text.pinyin.replacingOccurrences(of: " ", with: "")
+                array = [[], [py]]
+            }
             for i in 0 ..< array.count {
                 for pinyin in array[i] {
-                    if let range = pinyin.range(of: kw) {
+                    if let range = pinyin.range(of: exp) {
                         var lv2: Match.LV2 = .none
                         switch (range.lowerBound, range.upperBound) {
                         case (pinyin.startIndex, pinyin.endIndex): lv2 = .full
@@ -184,7 +196,7 @@ public class Highlighter {
                             let upper = pinyin.distance(from: pinyin.startIndex, to: range.upperBound)
                             match.lv2 = lv2
                             match.range = lower ..< upper
-                            match.lv3 = i == 1 ? .mid : .low
+                            match.lv3 = i == 1 ? .medium : .low
                         }
                     }
                     if match.lv2 == .full { break }
