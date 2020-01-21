@@ -114,7 +114,7 @@ public class Highlighter {
         let cleanbytes = clean.bytes
 
         var match = highlight(source, keyword: kw, lv1: .origin, clean: clean, text: text, bytes: bytes, cleanbytes: cleanbytes)
-        guard match.weight == 0 && fuzzyMatch && keywordPinyin.count > 0 else { return match }
+        guard match.upperWeight == 0 && fuzzyMatch && keywordPinyin.count > 0 else { return match }
         match = highlight(source, keyword: kw, lv1: .full, clean: clean, text: text, bytes: bytes, cleanbytes: cleanbytes)
         return match
     }
