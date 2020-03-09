@@ -140,18 +140,18 @@ public extension String {
         let ch = string.character(at: index)
         let key = String(format: "%X", ch)
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
-        var fulls: [String] = []
-        var firsts: [String] = []
+        let fulls = NSMutableOrderedSet()
+        let firsts = NSMutableOrderedSet()
         for pinyin in pinyins {
             if pinyin.count < 1 { continue }
-            fulls.append(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)]))
-            firsts.append(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)]))
+            fulls.add(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)]))
+            firsts.add(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)]))
         }
-        return (Array(Set(fulls)), Array(Set(firsts)))
+        return (fulls.array as! [String], firsts.array as! [String])
     }
 
-    var pinyinsForMatch: (fulls: [String], firsts: [String]) {
-        guard count > 0 else { return ([], []) }
+    private func pinyinsForMatch(_ polyphone: Bool) -> (fulls: [String], firsts: [String]) {
+        guard count > 0 else { return ([self], [self]) }
         if let results = PinYin.shared.cache[self] {
             return results
         }
@@ -164,21 +164,38 @@ public extension String {
             return (headFulls, headFirsts)
         }
         let sub = String(self[index(startIndex, offsetBy: 1) ..< endIndex])
-        let subPinyins = sub.pinyinsForMatch
+        let subPinyins = sub.pinyinsForMatch(polyphone)
         var fulls: [String] = []
         var firsts: [String] = []
-        for headfull in headFulls {
+        let fullsCount = polyphone ? headFulls.count : 1
+        let firstsCount = polyphone ? headFirsts.count : 1
+
+        for i in 0 ..< fullsCount {
+            let headfull = headFulls[i]
             for subfull in subPinyins.fulls {
                 fulls.append(headfull + subfull)
             }
         }
-        for headfirst in headFirsts {
+
+        for i in 0 ..< firstsCount {
+            let headfirst = headFirsts[i]
             for subfirst in subPinyins.firsts {
                 firsts.append(headfirst + subfirst)
             }
         }
 
         let results = (fulls, firsts)
+        PinYin.shared.cache[self] = results
+        return results
+    }
+
+    var pinyinsForMatch: (fulls: [String], firsts: [String]) {
+        guard count > 0 else { return ([], []) }
+        if let results = PinYin.shared.cache[self] {
+            return results
+        }
+
+        let results = pinyinsForMatch(count < 5)
         PinYin.shared.cache[self] = results
         return results
     }

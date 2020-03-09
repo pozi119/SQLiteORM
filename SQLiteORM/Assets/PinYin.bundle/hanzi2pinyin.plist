@@ -6926,7 +6926,6 @@
 	<array>
 		<string>gua1</string>
 		<string>gu1</string>
-		<string>wa1</string>
 		<string>gua3</string>
 	</array>
 	<key>5472</key>
@@ -8576,6 +8575,7 @@
 		<string>n2</string>
 		<string>n3</string>
 		<string>n4</string>
+		<string>en1</string>
 	</array>
 	<key>55F0</key>
 	<array>

@@ -35,8 +35,8 @@ public struct TokenMask: OptionSet {
     public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
 }
 
-private enum TokenType {
-    case none, letter, digit, symbol, other
+private enum TokenType: Int {
+    case none = 0, letter, digit, symbol, other
     case auxiliary
 }
 
@@ -217,25 +217,41 @@ private func cursors(of bytes: [UInt8]) -> [TokenCursor] {
     return cursors
 }
 
-private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding) -> [Token] {
-    guard bytes.count > 0, cursors.count > 0 else { return [] }
+private func wordTokens(of bytes: [UInt8], cursors sources: [TokenCursor], encoding: String.Encoding) -> [Token] {
+    guard bytes.count > 0, sources.count > 0 else { return [] }
+
+    let count = sources.count
+    let last = sources.last!
+
+    var cursors = sources
     var tokens: [Token] = []
-    for i in 0 ..< (cursors.count - 1) {
+
+    let extCursor = TokenCursor(type: last.type, offset: last.offset, len: 0)
+    let extIsChar = last.type.rawValue < TokenType.symbol.rawValue
+    let extString = extIsChar ? "®" : "圝"
+    let extCount = extIsChar ? 2 : 1
+    for _ in 0 ..< extCount {
+        cursors.append(extCursor)
+    }
+
+    for i in 0 ..< count {
         let c1 = cursors[i]
-        let c2 = cursors[i + 1]
         let loc = c1.offset
-        let len = c1.len + c2.len
+        var len = c1.len
+        for j in 0 ..< extCount {
+            let c2 = cursors[i + j + 1]
+            len += c2.len
+        }
         let sub = [UInt8](bytes[loc ..< (loc + len)])
         if let text = String(bytes: sub, encoding: encoding) {
-            let token = Token(text, len: Int32(len), start: Int32(loc), end: Int32(loc + len))
+            var str = text
+            let append = max(0, extCount - (count - 1 - i))
+            for _ in 0 ..< append {
+                str += extString
+            }
+            let token = Token(str, len: Int32(len), start: Int32(loc), end: Int32(loc + len))
             tokens.append(token)
         }
-    }
-    let c = cursors.last!
-    let sub = [UInt8](bytes[c.offset ..< (c.offset + c.len)])
-    if let text = String(bytes: sub, encoding: encoding) {
-        let token = Token(text, len: Int32(c.len), start: Int32(c.offset), end: Int32(c.offset + c.len))
-        tokens.append(token)
     }
 
     return tokens
