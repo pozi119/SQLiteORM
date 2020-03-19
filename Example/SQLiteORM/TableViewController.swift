@@ -222,7 +222,9 @@ class TableViewController: UITableViewController {
 
         guard keyword.count > 0 else { return }
 
-        let highlighter = Highlighter(orm: item.ftsOrm, keyword: keyword, highlightAttributes: [.foregroundColor: UIColor.red])
+        let highlighter = Highlighter(orm: item.ftsOrm, keyword: keyword)
+        highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
+        highlighter.option = .token
 
         updateUI(action: false, search: true, log: "")
         DispatchQueue.global(qos: .background).async {

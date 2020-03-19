@@ -14,7 +14,7 @@ fileprivate final class PinYin {
 
     private let big5Codes = "锕皚藹礙愛嗳嫒瑷暧霭谙铵鹌肮襖奧媪骜鳌壩罷钯擺敗呗頒辦絆钣幫綁鎊謗剝飽寶報鮑鸨龅輩貝鋇狽備憊鹎贲锛繃筆畢斃幣閉荜哔滗铋筚跸邊編貶變辯辮苄缏邊標骠飑飙镖镳鳔鼈別癟瀕濱賓擯傧缤槟殡膑镔髌鬓餅禀撥缽鉑駁饽钹鹁補钸財參蠶殘慚慘燦骖黪蒼艙倉滄廁側冊測測層詫锸侪钗攙摻蟬饞讒纏鏟産闡顫冁谄谶蒇忏婵骣觇禅镡場嘗長償腸廠暢伥苌怅阊鲳鈔車徹砗塵陳襯伧谌榇碜龀撐稱懲誠騁枨柽铖铛癡遲馳恥齒熾饬鸱沖沖蟲寵铳疇躊籌綢俦疇雠櫥廚鋤雛礎儲觸處刍礎蹰傳钏瘡闖創怆錘缍純鹑綽辍龊辭詞賜鹚聰蔥囪從叢從骢縱湊辏躥竄撺錯锉鹾達哒鞑帶貸骀绐擔單鄲撣膽憚誕彈殚赕瘅箪當擋黨蕩檔谠砀裆搗島禱導盜焘燈鄧镫敵滌遞締籴诋谛绨觌镝顛點墊電巅钿癫釣調铫鲷諜疊鲽釘頂錠訂铤丟铥東動棟凍凍鸫窦犢獨讀賭鍍犢椟牍笃黩鍛斷緞簖兌隊對對镦噸頓鈍炖趸奪墮铎鵝額訛惡餓谔垩阏轭锇锷鹗颚颛鳄诶兒爾餌貳迩铒鸸鲕發罰閥琺礬釩煩販飯訪紡钫鲂飛誹廢費绯镄鲱紛墳奮憤糞偾豐楓鋒風瘋馮縫諷鳳沣膚輻撫輔賦複負訃婦縛凫驸绂绋赙麸鲋鳆钆該鈣蓋赅杆趕稈贛尴擀绀岡剛鋼綱崗戆鎬睾诰缟锆擱鴿閣鉻個纥镉颍給亘赓绠鲠龔宮鞏貢鈎溝苟構購夠诟缑觏蠱顧估毂沽锢鸪鹄鹘剮挂鸹掴關觀館慣貫诖掼鹳鳏廣犷規歸龜閨軌詭貴劊軌刿妫桧鲑鳜輥滾衮绲鲧鍋國過埚呙帼椁蝈哈駭韓漢阚绗颉號灏颢閡鶴賀诃阖蛎橫轟鴻紅黉讧荭闳鲎壺護滬戶浒鹕嘩華畫劃話骅桦铧懷壞歡環還緩換喚瘓煥渙奂缳锾鲩黃謊鳇揮輝毀賄穢會燴彙諱誨繪诙荟哕會缋珲晖葷渾诨馄阍獲貨禍夥獲擊機積饑迹譏雞績緝極輯級擠幾薊劑濟計記際繼紀讦诘荠叽擠骥玑觊齑矶羁虿跻霁鲚鲫夾莢頰賈鉀價駕郏浃铗镓蛲殲監堅箋間艱緘繭檢堿鹼揀撿簡儉減薦檻鑒踐賤見鍵艦劍餞漸濺澗谏缣戋戬睑鹣笕鲣鞯將漿蔣槳獎講醬绛缰膠澆驕嬌攪鉸矯僥腳餃繳絞轎較挢峤鹪鲛階節潔結誡屆疖颌鲒緊錦僅謹進晉燼盡勁荊莖卺荩馑缙赆觐鯨驚經頸靜鏡徑痙競淨刭泾迳弪胫靓糾廄舊阄鸠鹫駒舉據鋸懼劇讵屦榉飓钜锔窭龃鵑絹锩镌隽覺決絕谲珏鈞軍駿皲開凱凱垲忾恺铠锴龛闶钪铐顆殼課骒缂轲钶锞颔墾懇龈铿摳庫褲喾塊儈郐哙脍寬狯髋礦曠況诓诳邝圹礦贶虧巋窺饋潰匮蒉愦聩篑阃锟鲲擴闊蛴蠟臘萊來賴崃徕涞濑赉睐铼癞籁藍欄攔籃闌蘭瀾讕攬覽懶纜爛濫岚榄斓镧褴琅阆锒撈勞澇唠撈铑铹痨樂鳓鐳壘類淚诔缧籬狸離鯉禮麗厲勵礫曆瀝隸俪郦坜苈位離曆逦骊缡枥栎轹砺锂鹂厲粝躍雳鲡鳢倆聯蓮連鐮憐漣簾斂臉鏈戀煉練蔹奁斂琏殓裢裣鲢糧涼兩輛諒魉療遼鐐缭钌鹩獵臨鄰鱗凜賃蔺廪檩辚躏齡鈴靈嶺領绫棂蛏鲮餾劉浏骝绺镏鹨龍聾嚨籠壟攏隴嚨壟珑栊胧砻樓婁摟簍偻蒌喽摟镂瘘耧蝼髅蘆盧顱廬爐擄鹵虜魯賂祿錄陸垆撸魯闾泸渌栌橹轳辂辘氇胪鸬鹭舻鲈巒攣孿灤亂脔娈栾鸾銮掄輪倫侖淪綸論掄蘿羅邏鑼籮騾駱絡荦猡樂椤脶镙驢呂鋁侶屢縷慮濾綠榈褛锊呒媽瑪碼螞馬罵嗎唛嬷杩買麥賣邁脈劢瞞饅蠻滿謾缦镘颡鳗貓錨鉚貿麽沒鎂門悶們扪焖懑钔錳夢眯謎彌覓冪芈谧猕祢綿緬渑腼黾廟缈缪滅憫閩闵缗鳴銘謬谟蓦馍殁镆謀畝钼呐鈉納難撓腦惱鬧铙讷餒內擬膩铌鲵攆辇鲶釀鳥鳥袅聶齧鑷鎳陧蘖聶颟蹑檸獰甯擰濘苎咛聍鈕紐膿濃農侬膿驽钕諾傩瘧歐鷗毆嘔漚讴怄歐盤蹒龐抛疱賠辔噴鵬批罴铍騙谝骈飄缥頻貧嫔蘋憑評潑頗钋撲鋪樸譜镤镨棲臍齊騎豈啓氣棄訖薪骐绮桤碛颀颃鳍牽釺鉛遷簽謙錢鉗潛淺譴塹佥荨悭骞缱椠钤槍嗆牆薔強搶牆樯戗炝锖锵镪羟跄鍬橋喬僑翹竅诮谯荞缲硗跷竊惬锲箧欽親寢浸輕氫傾頃請慶揿鲭瓊窮茕蛱巯赇虮鳅趨區軀驅齲诎區阒觑鸲顴權勸诠绻辁铨卻鵲確阕阙悫讓饒擾繞荛娆桡熱韌認紉饪轫榮絨嵘蝾缛铷颦軟銳蚬閏潤灑薩飒鰓賽傘毵糁喪騷掃缫澀啬铯穑殺刹紗铩鲨篩曬酾刪閃陝贍繕讪姗骟钐鳝墒傷賞垧殇觞燒紹賒攝懾設厍滠畲紳審嬸腎滲诜谂渖聲繩勝師獅濕詩時蝕實識駛勢適釋飾視試益埘莳弑轼贳铈鲥壽獸绶樞輸書贖屬術樹豎數摅纾帥闩雙誰稅順說碩爍铄絲飼厮驷缌锶鸶聳慫頌訟誦擻數馊飕锼蘇訴肅谡稣雖隨綏歲谇孫損筍荪狲縮瑣鎖唢睃獺撻闼铊鳎台態钛鲐攤貪癱灘壇譚談歎昙坦锬顸湯燙傥湯铴镗濤縧討韬铽騰謄銻題體屜缇鹈阗條粜龆鲦貼鐵廳聽烴銅統恸頭钭禿圖钍團專頹蛻饨脫鴕馱駝橢箨鼍襪娲腽彎灣頑萬纨绾網辋韋違圍爲濰維葦偉僞緯謂衛诿帏闱僞涠玮韪炜鲔溫聞紋穩問阌甕撾蝸渦窩臥莴龌嗚鎢烏誣無蕪吳塢霧務誤邬庑怃妩骛鹉鹜錫犧襲習銑戲細饩阋玺觋蝦轄峽俠狹廈嚇硖鮮纖賢銜閑顯險現獻縣餡羨憲線苋莶藓岘猃閑鹇痫蚝籼跹廂鑲鄉詳響項鄉饷骧缃飨蕭囂銷曉嘯曉潇骁绡枭箫協挾攜脅諧寫瀉謝亵撷泄缬鋅釁興陉荥凶洶鏽繡馐鸺虛噓須許敘緒續诩顼軒懸選癬絢谖铉镟學谑泶鳕勳詢尋馴訓訊遜埙尋鲟壓鴉鴨啞亞訝垭娅桠氩閹煙鹽嚴岩顔閻豔厭硯彥諺驗厣赝俨兖谳恹闫酽魇餍鼹鴦楊揚瘍陽癢養樣炀瑤搖堯遙窯謠藥轺鹞鳐爺頁業葉靥谒邺晔烨醫銥頤遺儀蟻藝億憶義詣議誼譯異繹诒呓峄饴怿驿缢轶贻钇镒镱瘗舣蔭陰銀飲隱铟瘾櫻嬰鷹應纓瑩螢營熒蠅贏穎茔莺萦蓥撄嘤滢潆櫻鹦瘿颏罂喲擁傭癰踴詠镛優憂郵鈾猶誘莸铕鱿輿魚漁娛與嶼語獄譽預馭伛俣谀谕蓣嵛饫阈妪于觎欤钰鹆鹬龉鴛淵轅園員圓緣遠橼鸢鼋約躍鑰粵悅閱钺鄖勻隕運蘊醞暈韻郓芸恽愠纭韫隕氲雜災載攢暫贊攢趱錾贓髒驵鑿棗責擇則澤赜啧帻箦賊谮贈綜缯軋鍘閘柵詐齋債氈盞斬輾嶄棧戰綻谵張漲帳賬脹趙诏钊蟄轍鍺這谪辄鹧貞針偵診鎮陣貞缜桢轸赈祯鸩掙睜猙爭幀症鄭證诤峥钲铮筝織職執紙摯擲幟質滯骘栉栀職轾贽鸷蛳絷踬踯觯鍾終種腫衆锺謅軸皺晝驟纣绉豬諸誅燭矚囑貯鑄駐伫槠铢專磚轉賺轉馔颞樁莊裝妝壯狀錐贅墜綴骓缒諄准著濁诼镯茲資漬谘缁辎赀眦锱龇鲻蹤總縱偬鄒诹驺鲰詛組镞鑽缵躜鳟翺並蔔沈醜澱叠鬥範幹臯矽櫃後夥稭傑訣誇裏淩麽黴撚淒扡聖屍擡塗窪喂汙鍁鹹蠍彜湧遊籲禦願嶽雲竈紮劄築于志注凋讠谫郄勐凼坂垅垴埯埝苘買荮莜莼菰藁揸吒吣咔咝咴噘霹嚯幞岙嵴彷徼瑪狍馀馇馓馕愣憷懔丬敘豔溷婪潴澹甯纟绔绱珉枧桊桉槔橥轱轷赍肷胨飚葫煅熘愍淼砜磙眍钚钷铘吊锃锍锎锏锘锝锪锫锿镅镎镢镥镩察稆鹋鹛鹱疬疴痖癯裥襁耢颥螨麴鲅鲆鲇鲞鲴鲺鲼鳊鳋鳘鳙鞒鞴齄丟並亂亙亞伋伕佇佈佔佪併來侖侶侷俁係俠倀倆倉個們倖倣倫偉側偵偺偽傑傖傘備傢傭傯傳傴債傷傾僂僅僇僉僑僕僥僨僱價儀儂億儅儈儉儐儔儕儘償優儲儷儸儺儻儼兇兌兒兗內兩冊冑冪凈凍凜凱別刪剄則剋剎剛剝剮剴創剷劃劇劉劊劌劍劑劻勁動勗務勛勝勞勢勣勦勱勵勸勻匭匯匱區協卹卻厙厭厲厴參叢吋吳吶呂呎咼員唄唸問啞啟啣喚喪喫喬單喲嗆嗇嗎嗚嗩嗶嘆嘍嘔嘖嘗嘜嘩嘮嘯嘰嘵嘸噁噓噠噥噦噯噲噴噸噹嚀嚇嚌嚕嚙嚥嚦嚨嚮嚳嚴嚶囀囁囂囅囈囉囌囑囪圇國圍園圓圖團坰埡執堅堊堝堯報場堿塊塋塏塒塗塢塤塵塹墊墑墜墮墳墻墾壇壎壓壘壙壚壞壟壢壩壯壺壽夠夢夾奐奧奩奪奮妝妳姍姦姪娛婁婦婭媧媯媼媽嫗嫵嫻嬈嬋嬌嬙嬝嬡嬤嬪嬰嬸孃孌孫學孿宮寢實寧審寫寬寵寶將專尋對導尷屆屜屝屢層屨屬岡岧峴島峽崍崗崙崠崢崳嵐嵒嶁嶄嶇嶗嶠嶧嶸嶺嶼嶽巋巑巒巔巖巰巹帥師帳帶幀幃幗幘幟幣幫幬幹幾庂庫廁廂廄廈廚廝廟廠廡廢廣廩廬廱廳弒弔弳張強彆彈彊彌彎彙彥彫彿徑從徠復徬徹恆恥悅悵悶悽惡惱惲惻愛愜愨愴愷愾慄慇態慍慘慚慟慣慪慫慮慳慶慼憂憊憐憑憒憚憤憫憮憲憶懇應懌懍懞懟懣懨懲懶懷懸懺懼懾戀戇戉戔戧戩戰戲戶扐扠扢扺抃抆抎抴拋挶挾捍捨捫捲掃掄掙掛採揀揚換揮揹搆損搖搗搟搶摑摜摟摯摳摶摻撈撐撓撚撟撢撣撥撫撲撳撻撾撿擁擄擇擊擋擔據擠擣擬擯擰擱擲擴擷擺擻擼擾攄攆攏攔攖攙攛攜攝攢攣攤攪攬攷敗敘敵數斂斃斕斬斷旂時晉晝晞暈暉暘暢暫暱暸曄曆曇曉曖曠曬書會朧朮杇東枙枴柵桿梔條梟棄棖棗棟棧棲椏楊楓楨業極榦榪榮榿槃構槍槓槧槨槳樁樂樅樑樓標樞樣樸樹樺橈橋機橢橫檁檉檔檜檢檣檯檳檸檻櫃櫓櫚櫛櫝櫞櫟櫥櫧櫨櫪櫬櫳櫸櫺櫻欄權欏欒欖欞欽歎歐歟歡歲歷歸歿殘殞殤殫殮殯殲殺殼毀毆毌毬毿氈氌氣氫氬氳氾汍汎汙決沒沖況洩洶浬浹涇涼淒淚淥淨淪淵淶淺渙減渦測渾湊湞湧湯溈準溝溫溼滄滅滌滎滬滯滲滷滸滾滿漁漚漢漣漬漲漸漿潁潑潔潛潟潤潯潰潷潿澀澆澇澗澠澤澩澮澱濁濃濕濘濛濟濤濫濰濱濺濼濾瀅瀆瀉瀋瀏瀕瀘瀝瀟瀠瀧瀨瀰瀲瀾灃灄灑灕灘灝灣灤災為烏烴無煉煒煙煢煥煩煬熒熗熱熾燁燄燈燉燐燒燙燜營燦燬燭燴燼燾爍爐爛爭爺爾牆牘牪牴牽犖犛犢犧狀狹狽猙猶猻獄獅獎獨獪獫獮獰獲獵獷獸獺獻獼玀玆玨珮現琺琿瑋瑣瑤瑩瑪瑯璉璣璦環璽瓊瓏瓔瓖瓚甌甕產甦畝畢畫畬異當疇疊疿痙痠痲痳痺瘋瘍瘓瘞瘡瘧瘺療癆癇癉癘癟癡癢癤癥癩癬癭癮癰癱癲發皚皰皸皺皻盜盞盡監盤盧盪眥眾睏睜睞睪瞇瞞瞭瞼矇矓矚矯砲硃硤硨硯碩碭確碼磚磣磧磯磽礎礙礦礪礫礬礱祅祇祐祕祿禍禎禦禪禮禰禱禿秈稅稈稜稟種稱穀穌積穎穡穢穩穫窩窪窮窯窶窺竄竅竇竊競笻筆筍筧箄箇箋箏節範築篋篠篤篩篳簀簍簑簞簡簣簫簷簽簾籃籌籐籜籟籠籤籥籩籪籬籮籲粵糝糞糢糧糰糲糴糶糾紀紂約紅紆紇紈紉紋納紐紓純紕紗紙級紛紜紡細紱紲紳紹紺紼紿絀終絃組絆絎結絕絛絞絡絢給絨統絲絳絹綁綃綆綈綏經綜綞綠綢綣綬維綰綱網綴綵綸綹綺綻綽綾綿緄緇緊緋緒緗緘緙線緝緞締緡緣緦編緩緬緯緱緲練緶緹緻縈縉縊縋縐縑縚縛縝縞縟縣縫縭縮縯縱縲縳縴縵縶縷縹總績繃繅繆繈繒織繕繚繞繡繢繩繪繫繭繯繰繳繹繼繽繾纈纊續纍纏纓纔纖纘纜缽罈罌罰罵罷羅羆羈羋羥羨義習翹耑耬聖聞聯聰聲聳聵聶職聹聽聾肅脅脈脛脣脧脩脫脹腎腡腦腫腳腸膃膚膠膩膽膾膿臉臍臏臘臚臟臠臥臨臺與興舉舊艙艣艤艦艫艱艷艸芐芻苧茍茲荊莊莖莢莧華菴萇萊萬萵葉葒著葦葯葷蒔蒞蒼蓀蓋蓮蓯蓽蔆蔔蔞蔣蔥蔦蔭蕁蕆蕎蕓蕕蕘蕢蕩蕪蕭蕷薈薊薌薑薔薟薦薧薩薺藍藎藝藥藪藶藷藹藺蘄蘆蘇蘊蘋蘗蘚蘞蘢蘭蘺蘿處虛虜號虧蛺蛻蜆蝕蝦蝸螄螞螢螻蟄蟈蟣蟬蟯蟲蟶蟻蠅蠆蠐蠑蠔蠟蠣蠱蠶蠻衊術衛衝衹袞裊裏補裝裡製複褲褳褸褻襖襝襠襤襪襬襯襲覈見規覓視覘覡覦親覬覯覲覷覺覽覿觀觔觴觶觸訂訃計訊訌討訐訓訕訖託記訛訝訟訢訣訥訪設許訴訶診註証詁詆詎詐詒詔評詘詛詞詠詡詢詣試詩詫詬詭詮詰話該詳詵詼詿誄誅誆誇誌認誑誒誕誘誚語誠誡誣誤誥誦誨說誰課誶誹誼調諂諄談諉請諍諏諑諒論諗諛諜諞諢諤諦諧諫諭諮諱諳諶諷諸諺諼諾謀謁謂謄謅謊謎謐謔謖謗謙謚講謝謠謨謫謬謳謹謾證譎譏譖識譙譚譜譟譫譯議譴護譽讀變讎讒讓讕讖讚讜讞豈豎豐豔豬貍貓貝貞負財貢貧貨販貪貫責貯貰貲貳貴貶買貸貺費貼貽貿賀賁賂賃賄賅資賈賊賑賒賓賕賚賜賞賠賡賢賣賤賦賧質賬賭賴賺賻購賽賾贄贅贈贊贍贏贐贓贖贗贛趕趙趨趲跡跼踐踡踫踴蹌蹕蹠蹣蹤蹺躉躊躋躍躑躒躓躕躚躡躥躦躪軀車軋軌軍軒軔軛軟軫軸軹軺軻軼軾較輅輇載輊輒輓輔輕輛輜輝輞輟輥輦輩輪輯輳輸輻輾輿轂轄轅轆轉轍轎轔轟轡轢轤辦辭辮辯農迆迴迺逕這連週進遊運過達違遙遜遞遠適遲遷選遺遼邁還邇邊邏邐郃郟郵鄆鄉鄒鄔鄖鄧鄭鄰鄲鄴鄶鄺酈醃醜醞醫醬釀釁釃釅釋釐釓釔釕釗釘釙針釣釤釦釧釩釬釵釷釹鈀鈁鈄鈉鈍鈐鈑鈔鈕鈞鈣鈥鈦鈧鈮鈰鈳鈴鈷鈸鈹鈺鈽鈾鈿鉀鉅鉆鉈鉉鉋鉍鉑鉗鉚鉛鉞鉤鉦鉬鉭鉸鉺鉻鉿銀銃銅銑銓銖銘銚銜銠銣銥銦銨銩銪銫銬銲銳銷銹銻銼鋁鋃鋅鋇鋌鋏鋒鋝鋟鋤鋦鋨鋪鋮鋯鋰鋱鋸鋼錁錄錆錈錐錒錕錘錙錚錛錟錠錢錦錨錫錮錯錳錶錸鍆鍇鍊鍋鍍鍔鍘鍛鍤鍥鍬鍰鍵鍶鍺鍾鎂鎊鎔鎖鎗鎘鎢鎣鎦鎧鎩鎪鎬鎮鎰鎳鎵鏃鏇鏈鏌鏍鏑鏗鏘鏜鏝鏞鏟鏡鏢鏤鏨鏵鏷鏹鏽鐃鐉鐋鐐鐒鐓鐔鐘鐙鐠鐨鐫鐮鐲鐳鐵鐸鐺鐽鐿鑄鑊鑌鑑鑒鑠鑣鑤鑭鑰鑲鑷鑼鑽鑾鑿長門閂閃閆閉開閌閎閏閑閒間閔閘閡閣閤閥閨閩閫閬閭閱閶閹閻閼閽閾閿闃闆闈闊闋闌闐闔闕闖關闞闡闢闥阨阯陘陜陝陣陰陳陸陽隄隉隊階隕際隨險隱隴隸隻雋雖雙雛雜雞離難雲電霑霤霧霽靂靄靈靚靜靦靨鞏鞦韁韃韆韉韋韌韓韙韜韞韻響頁頂頃項順頇須頊頌頎頏預頑頒頓頗領頜頡頤頦頭頰頷頸頹頻顆題額顎顏顓願顙顛類顢顥顧顫顯顰顱顳顴風颮颯颱颳颶颺颼飄飆飛飢飩飪飫飭飯飲飴飼飽飾餃餅餉養餌餑餒餓餘餚餛餞餡館餳餵餼餽餾餿饃饅饈饉饋饌饑饒饗饜饞馬馭馮馱馳馴駁駐駑駒駔駕駘駙駛駝駟駢駭駱駿騁騅騍騎騏騖騙騫騭騮騰騶騷騸騾驀驁驂驃驄驅驊驍驏驕驗驚驛驟驢驤驥驪骯髏髒體髕髖髮鬆鬍鬚鬢鬥鬧鬨鬩鬮鬱魎魘魚魯魴魷鮐鮑鮒鮚鮞鮪鮫鮭鮮鯀鯁鯇鯉鯊鯔鯖鯛鯡鯢鯤鯧鯨鯪鯫鯰鯽鰈鰉鰍鰒鰓鰣鰥鰨鰩鰭鰱鰲鰳鰷鰹鰻鰾鱈鱉鱒鱔鱖鱗鱘鱟鱧鱭鱷鱸鱺鳥鳧鳩鳳鳴鳶鴆鴇鴉鴕鴛鴝鴟鴣鴦鴨鴯鴰鴻鴿鵂鵑鵒鵓鵜鵝鵠鵡鵪鵬鵯鵲鶇鶉鶘鶚鶩鶯鶱鶴鶻鶼鶿鷂鷓鷗鷙鷚鷥鷦鷯鷲鷳鷴鷸鷹鷺鸕鸚鸛鸝鸞鹵鹹鹺鹼鹽麗麥麩麵麼黃黌點黨黲黴黷黽黿鼇鼉鼕鼴齊齋齏齒齔齙齜齟齠齡齣齦齧齪齬齲齷龍龐龔龕龜"
 
-    lazy var cache = Cache<String, (fulls: [String], firsts: [String])>()
+    lazy var cache = Cache<String, (fulls: [String], abbrs: [String])>()
 
     lazy var pinyins: [String: [String]] = {
         let parent = Bundle(for: PinYin.self)
@@ -134,96 +134,60 @@ public extension String {
         return dest.replacingOccurrences(of: "'", with: "")
     }
 
-    func pinyins(at index: Int) -> (fulls: [String], firsts: [String]) {
+    func pinyins(at index: Int) -> (fulls: [String], abbrs: [String]) {
         guard count > index else { return ([], []) }
+        let zcs = ["z", "c", "s"]
         let string = simplified as NSString
         let ch = string.character(at: index)
         let key = String(format: "%X", ch)
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
         let fulls = NSMutableOrderedSet()
-        let firsts = NSMutableOrderedSet()
+        let abbrs = NSMutableOrderedSet()
         for pinyin in pinyins {
             if pinyin.count < 1 { continue }
-            fulls.add(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)]))
-            firsts.add(String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)]))
-        }
-        return (fulls.array as! [String], firsts.array as! [String])
-    }
-
-    private func pinyinsForMatch(_ polyphone: Bool) -> (fulls: [String], firsts: [String]) {
-        guard count > 0 else { return ([self], [self]) }
-        if let results = PinYin.shared.cache[self] {
-            return results
-        }
-
-        let pinyins = self.pinyins(at: 0)
-        let letter = String(self[startIndex])
-        let headFulls = pinyins.fulls.count > 0 ? pinyins.fulls : [letter]
-        let headFirsts = pinyins.firsts.count > 0 ? pinyins.firsts : [letter]
-        guard count > 1 else {
-            return (headFulls, headFirsts)
-        }
-        let sub = String(self[index(startIndex, offsetBy: 1) ..< endIndex])
-        let subPinyins = sub.pinyinsForMatch(polyphone)
-        var fulls: [String] = []
-        var firsts: [String] = []
-        let fullsCount = polyphone ? headFulls.count : 1
-        let firstsCount = polyphone ? headFirsts.count : 1
-
-        for i in 0 ..< fullsCount {
-            let headfull = headFulls[i]
-            for subfull in subPinyins.fulls {
-                fulls.append(headfull + subfull)
+            let full = String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)])
+            let abbr = String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)])
+            fulls.add(full)
+            abbrs.add(abbr)
+            if zcs.contains(abbr) {
+                abbrs.add(abbr + "h")
             }
         }
-
-        for i in 0 ..< firstsCount {
-            let headfirst = headFirsts[i]
-            for subfirst in subPinyins.firsts {
-                firsts.append(headfirst + subfirst)
-            }
-        }
-
-        let results = (fulls, firsts)
-        PinYin.shared.cache[self] = results
-        return results
+        return (fulls.array as! [String], abbrs.array as! [String])
     }
 
-    var pinyinsForMatch: (fulls: [String], firsts: [String]) {
+    var pinyins: (fulls: [String], abbrs: [String]) {
         guard count > 0 else { return ([], []) }
         if let results = PinYin.shared.cache[self] {
             return results
         }
-
-        let results = pinyinsForMatch(count < 5)
+        let matrix = pinyinMatrix
+        let fulls = matrix.fulls.map { $0.joined(separator: "") }
+        let abbrs = matrix.abbrs.map { $0.joined(separator: "") }
+        let results = (fulls, abbrs)
         PinYin.shared.cache[self] = results
         return results
     }
 
-    var pinyinMatrix: (fulls: [[String]], firsts: [[String]]) {
-        let pinyins = self.pinyins(at: 0)
-        let letter = String(self[index(startIndex, offsetBy: 1)])
-        let headFulls = pinyins.fulls.count > 0 ? [pinyins.fulls] : [[letter]]
-        let headFirsts = pinyins.firsts.count > 0 ? [pinyins.firsts] : [[letter]]
-        guard count > 1 else {
-            return (headFulls, headFirsts)
-        }
-        let sub = String(self[index(startIndex, offsetBy: 1) ..< endIndex])
-        let subPinyins = sub.pinyinMatrix
-        var fulls: [[String]] = []
-        var firsts: [[String]] = []
-        for headfull in headFulls {
-            for subfull in subPinyins.fulls {
-                fulls.append(headfull + subfull)
-            }
-        }
-        for headfirst in headFirsts {
-            for subfirst in subPinyins.firsts {
-                firsts.append(headfirst + subfirst)
-            }
-        }
+    var pinyinMatrix: (fulls: [[String]], abbrs: [[String]]) {
+        return pinyinMatrix(16)
+    }
 
-        return (fulls, firsts)
+    func pinyinMatrix(_ limit: Int) -> (fulls: [[String]], abbrs: [[String]]) {
+        guard count > 0 else {
+            return ([[self]], [[self]])
+        }
+        var fulls: [[String]] = []
+        var abbrs: [[String]] = []
+        for i in 0 ..< count {
+            let item = pinyins(at: i)
+            fulls.append(item.fulls)
+            abbrs.append(item.abbrs)
+        }
+        let rfulls = fulls.tiled(limit)
+        let rabbrs = abbrs.tiled(limit)
+
+        return (rfulls, rabbrs)
     }
 
     private static var tokenFormatter: NumberFormatter {
@@ -295,7 +259,7 @@ public extension String {
 
     /// 预加载拼音分词资源
     static func preloadingForPinyin() {
-        _ = "中文".pinyinsForMatch
+        _ = "中文".pinyins
     }
 }
 
@@ -380,5 +344,40 @@ public extension Array where Element: Hashable {
 public extension Array where Element: Binding {
     var sqlJoined: String {
         return map { $0.sqlValue }.joined(separator: ",")
+    }
+}
+
+public extension Array where Element == [String] {
+    var maxTiledCount: Int { return reduce(1) { $0 * $1.count } }
+
+    var tiled: [[String]] { return tiled(16) }
+
+    func tiled(_ limit: Int) -> [[String]] {
+        let max = maxTiledCount
+        guard max < 256 else {
+            return [map { $0.first ?? "" }]
+        }
+        let tiledCount = Swift.min(max, limit)
+        var dim = [String](repeating: "", count: tiledCount * count)
+
+        var rowRepeat = max
+        var secRepeat = 1
+        for col in 0 ..< count {
+            let sub = self[col]
+            rowRepeat = rowRepeat / sub.count
+            let sec = max / secRepeat
+            for j in 0 ..< sub.count {
+                let str = sub[j]
+                for k in 0 ..< secRepeat {
+                    for l in 0 ..< rowRepeat {
+                        let row = k * sec + j * rowRepeat + l
+                        if row >= tiledCount { continue }
+                        dim[row * count + col] = str
+                    }
+                }
+            }
+            secRepeat = secRepeat * sub.count
+        }
+        return (0 ..< tiledCount).map { [String](dim[($0 * count) ..< ($0 * count + count)]) }
     }
 }

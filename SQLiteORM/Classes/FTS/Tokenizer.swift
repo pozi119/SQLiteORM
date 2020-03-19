@@ -23,15 +23,14 @@ public struct TokenMask: OptionSet {
     }
 
     public static let pinyin = TokenMask(rawValue: 0xFFFF << 0)
-    public static let firstLetter = TokenMask(rawValue: 1 << 16)
+    public static let initial = TokenMask(rawValue: 1 << 16)
     public static let charater = TokenMask(rawValue: 1 << 17)
     public static let number = TokenMask(rawValue: 1 << 18)
-    public static let splitPinyin = TokenMask(rawValue: 1 << 19)
-    public static let transform = TokenMask(rawValue: 1 << 20)
+    public static let transform = TokenMask(rawValue: 1 << 19)
 
-    public static let `default`: TokenMask = .init(rawValue: 0xFFFF0000 & ~(1 << 19))
+    public static let `default`: TokenMask = .init(rawValue: 0xFFF00000)
     public static let manual: TokenMask = [.number, .transform]
-    public static let extra: TokenMask = [.pinyin, .firstLetter, .number]
+    public static let extra: TokenMask = [.pinyin, .initial, .number]
     public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
 }
 
@@ -264,13 +263,13 @@ private func pinyinTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: Token
         if c.type != .other { continue }
         let sub = bytes[c.offset ..< (c.offset + c.len)]
         if let s = String(bytes: sub, encoding: .utf8) {
-            let pinyins = s.pinyinsForMatch
+            let pinyins = s.pinyins
             for pinyin in pinyins.fulls {
                 let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
                 results.append(token)
             }
-            if mask.contains(.firstLetter) {
-                for pinyin in pinyins.firsts {
+            if mask.contains(.initial) {
+                for pinyin in pinyins.abbrs {
                     let token = Token(pinyin, len: Int32(pinyin.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
                     results.append(token)
                 }
@@ -293,32 +292,6 @@ private func pinyinTokens(bySplit fragment: String, start: Int) -> [Token] {
         }
     }
     results = Array(Set(results))
-    return results
-}
-
-private func pinyinTokens(bySplit bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
-    guard mask.contains(.splitPinyin), bytes.count > 0, cursors.count > 0 else { return [] }
-
-    var results: [Token] = []
-    var last: TokenType = .none
-    var offset = 0
-    var len = 0
-    for c in cursors {
-        let change = c.type != last
-        if change {
-            if last == .letter {
-                let sub = bytes[offset ..< (offset + len)]
-                if let str = String(bytes: sub, encoding: .ascii) {
-                    let tokens = pinyinTokens(bySplit: str, start: offset)
-                    results.append(contentsOf: tokens)
-                }
-            }
-            offset = c.offset
-            len = 0
-            last = c.type
-        }
-        len += c.len
-    }
     return results
 }
 
@@ -420,7 +393,6 @@ private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMas
 
 private func allOtherTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
     let pinyinTks = pinyinTokens(of: bytes, cursors: cursors, mask: mask)
-    let splitedTks = pinyinTokens(bySplit: bytes, cursors: cursors, mask: mask)
     let numberTks = numberTokens(of: bytes, cursors: cursors, mask: mask)
-    return pinyinTks + splitedTks + numberTks
+    return pinyinTks + numberTks
 }

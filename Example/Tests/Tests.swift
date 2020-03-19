@@ -242,8 +242,9 @@ extension SQLiteORMTests {
 
 extension SQLiteORMTests {
     func testPinyin() {
-        let tokens = "成都".pinyinsForMatch
-        XCTAssertEqual(Set(tokens.fulls + tokens.firsts), Set(["chengdu", "chengdou", "cd"]))
+        let tokens = "成都".pinyins
+        XCTAssertEqual(tokens.abbrs, ["cd", "chd"])
+        XCTAssertEqual(tokens.fulls, ["chengdou", "chengdu"])
     }
 
     func testToken() {
@@ -276,7 +277,8 @@ extension SQLiteORMTests {
     func testFtsMatch() {
         let r = ftsOrm.find(W("intro").match("李四"))
         XCTAssert(r.count > 0)
-        let highlighter = Highlighter(orm: ftsOrm, keyword: "李四", highlightAttributes: [.foregroundColor: UIColor.red])
+        let highlighter = Highlighter(orm: ftsOrm, keyword: "李四")
+        highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
         let sources = r.map { $0["intro"] as? String ?? "" }
         let s = highlighter.highlight(sources)
         XCTAssert(s.count > 0)
