@@ -28,10 +28,9 @@ public struct TokenMask: OptionSet {
     public static let number = TokenMask(rawValue: 1 << 18)
     public static let transform = TokenMask(rawValue: 1 << 19)
 
-    public static let `default`: TokenMask = .init(rawValue: 0xFFF00000)
-    public static let manual: TokenMask = [.number, .transform]
-    public static let extra: TokenMask = [.pinyin, .initial, .number]
+    public static let `default`: TokenMask = .init(rawValue: 0)
     public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
+    public static let allPinyin: TokenMask = [.pinyin, .initial]
 }
 
 private enum TokenType: Int {

@@ -248,7 +248,7 @@ extension SQLiteORMTests {
     }
 
     func testToken() {
-        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
+        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.default.rawValue)
         print(tokens)
     }
 

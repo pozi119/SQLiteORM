@@ -87,7 +87,7 @@ public class Highlighter {
         assert(self.keyword.count > 0, "invalid keyword")
         var pylen = self.mask.rawValue & TokenMask.pinyin.rawValue
         pylen = max(pylen, 30)
-        let mask = self.mask.rawValue | pylen
+        let mask = (self.mask.rawValue & ~TokenMask.pinyin.rawValue) | pylen
         let tokens = tokenize(self.keyword.bytes, self.method, .init(rawValue: mask))
         return tokens
     }()

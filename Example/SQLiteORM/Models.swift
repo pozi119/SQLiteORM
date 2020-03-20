@@ -37,7 +37,7 @@ struct Item {
         let config = PlainConfig(Message.self)
         config.primaries = ["message_id"]
 
-        let mask: TokenMask = [.default, .init(rawValue: 10)]
+        let mask: TokenMask = [.number, .transform, .init(rawValue: 10)]
         let ftsConfig = FtsConfig(Message.self)
         ftsConfig.module = "fts5"
         ftsConfig.tokenizer = "sqliteorm \(mask.rawValue)"
