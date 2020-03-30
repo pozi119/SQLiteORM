@@ -125,6 +125,25 @@ public extension String {
         return string
     }
 
+    func transform(_ map: [String: String]) -> String {
+        var string = self
+        let pattern = "[\\u4e00-\\u9fa5]+"
+        let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+        regex?.enumerateMatches(in: self, options: .reportCompletion, range: NSRange(location: 0, length: count), using: { result, _, _ in
+            guard let r = result, r.resultType == .regularExpression else { return }
+            let lower = self.index(self.startIndex, offsetBy: r.range.location)
+            let upper = self.index(lower, offsetBy: r.range.length)
+            var fragment = ""
+            for i in 0 ..< r.range.length {
+                let ch = String(self[self.index(self.startIndex, offsetBy: r.range.location + i)])
+                let trans = PinYin.shared.big52gbMap[ch] ?? ch
+                fragment.append(trans)
+            }
+            string.replaceSubrange(lower ..< upper, with: fragment)
+        })
+        return string
+    }
+
     /// 拼音字符串
     var pinyin: String {
         let source = NSMutableString(string: self) as CFMutableString
@@ -136,9 +155,16 @@ public extension String {
 
     func pinyins(at index: Int) -> (fulls: [String], abbrs: [String]) {
         guard count > index else { return ([], []) }
-        let zcs = ["z", "c", "s"]
+        let idx = self.index(startIndex, offsetBy: index)
         let string = simplified as NSString
-        let ch = string.character(at: index)
+        var ch = string.character(at: index)
+        let single = String(self[idx])
+        if ch < 0x4E00 || ch > 0x9FA5 {
+            return ([single], [single])
+        }
+        let trans = PinYin.shared.big52gbMap[single] ?? single
+        ch = (trans as NSString).character(at: 0)
+        let zcs = ["z", "c", "s"]
         let key = String(format: "%X", ch)
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
         let fulls = NSMutableOrderedSet()
@@ -354,7 +380,7 @@ public extension Array where Element == [String] {
 
     func tiled(_ limit: Int) -> [[String]] {
         let max = maxTiledCount
-        guard max < 256 else {
+        guard max > 0, max < 256 else {
             return [map { $0.first ?? "" }]
         }
         let tiledCount = Swift.min(max, limit)

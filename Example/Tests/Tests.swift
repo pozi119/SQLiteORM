@@ -248,7 +248,7 @@ extension SQLiteORMTests {
     }
 
     func testToken() {
-        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.default.rawValue)
+        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
         print(tokens)
     }
 
@@ -331,5 +331,19 @@ extension SQLiteORMTests {
         }
         let str = "[insert] \(total), mock: \(mockTime), normal: \(normalTime), fts: \(ftsTime)"
         print(str)
+    }
+
+    // MARK: - Utils
+
+    func testTransform() {
+        let string = "協力廠商研究公司Strategy Analytic曾於2月發佈數據預測，稱2020年AirPods出貨量有望增長50%，達到9000萬套。" +
+            "這也意味著AirPods 2019年銷量達到了6000萬套，但也有分析師認為其2019年實際出貨量並未達到這個水准。" +
+            " 蘋果不在財報中公佈AirPods的銷售數位，而是將其歸入“可穿戴設備、家庭用品和配件”類別。" +
+            " 上個季度，蘋果該類別創下了新的收入紀錄，蘋果將這歸功於Apple Watch和AirPods的成功。" +
+            "同樣在2月，天風國際分析師郭明錤給出了2020年度AirPods系列產品的預估出貨量，因受公共衛生事件影響，郭明錤預估AirPods系列產品在2020年出貨量約8000–9000萬部，其中AirPods Pro將會占到40%或更高的份額。" +
+            "稍早前，蘋果中國官網一度對包括iPhone、iPad、Airpods Pro在內的產品進行限購，但3天后又解除了大部分產品的購買限制，只有新款MacBook Air和iPad Pro仍維持限購措施。"
+        let simplified = string.simplified
+        let traditional = simplified.traditional
+        if traditional.count > 0 {}
     }
 }

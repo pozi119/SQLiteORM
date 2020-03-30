@@ -74,6 +74,12 @@ extension Match: Comparable {
     }
 }
 
+extension Match: CustomStringConvertible{
+    public var description: String{
+        return "lv1:\(lv1) lv2:\(lv2) lv3:\(lv3) range:\(range) weight: " + String(format: "0x%x", weight) + " attrText:" + attrText.description.replacingOccurrences(of: "\n", with: " ").strip
+    }
+}
+
 public class Highlighter {
     public var keyword: String
     public var option: Match.Option = .default
@@ -244,7 +250,7 @@ public class Highlighter {
         }
         
         let tokens = tokenize(bytes, method, mask)
-        var tokenized = Array(repeating: UInt8(0), count: count)
+        var tokenized = Array(repeating: UInt8(0), count: count + 1)
         
         var k = 0
         for i in 0 ..< keywordTokens.count {
@@ -259,29 +265,25 @@ public class Highlighter {
             }
         }
         
-        var start = 0, end = 0, flag = -1, loc = 0
-        var r: Range<Int>?
+        var start = -1, end = 0
         
-        while end <= count {
-            let curflag = end == count ? -1 : (tokenized[end] == 0 ? 0 : 1)
-            if curflag != flag && end > start {
-                let sub = String(bytes: bytes[start ..< end], encoding: .utf8) ?? ""
-                if flag == 1 && r == nil {
-                    r = loc ..< (loc + sub.count)
-                    break
-                }
-                loc += sub.count
-                start = end
-                flag = curflag
+        for i in 0 ... count {
+            let flag = tokenized[i] == 0 ? 0 : 1
+            if flag == 1 && start < 0{
+                start = i
             }
-            end += 1
+            else if flag == 0 && start >= 0{
+                end = i
+                break
+            }
         }
-        
-        if let range = r {
-            let lower = clean.index(clean.startIndex, offsetBy: range.lowerBound)
-            let upper = clean.index(clean.startIndex, offsetBy: range.upperBound)
+        if end > 0 {
+            let s1 = String(bytes: cleanbytes[0 ..< start], encoding: .utf8) ?? ""
+            let sk = String(bytes: cleanbytes[start ..< end], encoding: .utf8) ?? ""
+            let lower = clean.index(clean.startIndex, offsetBy: s1.count)
+            let upper = clean.index(clean.startIndex, offsetBy: s1.count + sk.count)
             match.attrText = highlight(text: clean, range: lower ..< upper)
-            match.range = range
+            match.range = start ..< end
             if match.lv2 == .none {
                 match.lv2 = .other
                 match.lv3 = .low

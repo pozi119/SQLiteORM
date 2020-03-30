@@ -22,15 +22,13 @@ public struct TokenMask: OptionSet {
         self.rawValue = rawValue
     }
 
-    public static let pinyin = TokenMask(rawValue: 0xFFFF << 0)
-    public static let initial = TokenMask(rawValue: 1 << 16)
-    public static let charater = TokenMask(rawValue: 1 << 17)
-    public static let number = TokenMask(rawValue: 1 << 18)
-    public static let transform = TokenMask(rawValue: 1 << 19)
+    public static let pinyin = TokenMask(rawValue: 1 << 0)
+    public static let initial = TokenMask(rawValue: 1 << 1)
+    public static let number = TokenMask(rawValue: 1 << 2)
+    public static let transform = TokenMask(rawValue: 1 << 3)
 
-    public static let `default`: TokenMask = .init(rawValue: 0)
-    public static let all: TokenMask = .init(rawValue: 0xFFFFFFFF)
-    public static let allPinyin: TokenMask = [.pinyin, .initial]
+    public static let `default` = TokenMask([])
+    public static let all = TokenMask(rawValue: 0xFFFFFFFF)
 }
 
 private enum TokenType: Int {
@@ -86,9 +84,10 @@ private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String =
             return true
         }
     }
+    guard mask.contains(.number) else { return results }
     let cs = cursors(of: bytes)
-    let others = allOtherTokens(of: bytes, cursors: cs, mask: mask)
-    return results + others
+    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    return results + numberTks
 }
 
 /// CoreFundation分词
@@ -120,9 +119,10 @@ private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "
         results.append(token)
         tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
     }
+    guard mask.contains(.number) else { return results }
     let cs = cursors(of: bytes)
-    let others = allOtherTokens(of: bytes, cursors: cs, mask: mask)
-    return results + others
+    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    return results + numberTks
 }
 
 /// SQLiteORM分词
@@ -130,9 +130,10 @@ private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     guard bytes.count > 0 else { return [] }
 
     let cs = cursors(of: bytes)
-    let tks = ormTokens(of: bytes, cursors: cs, mask: mask)
-    let others = allOtherTokens(of: bytes, cursors: cs, mask: mask)
-    return tks + others
+    let results = ormTokens(of: bytes, cursors: cs, mask: mask)
+    guard mask.contains(.number) else { return results }
+    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    return results + numberTks
 }
 
 private var symbolsSet: NSCharacterSet = {
@@ -215,7 +216,7 @@ private func cursors(of bytes: [UInt8]) -> [TokenCursor] {
     return cursors
 }
 
-private func wordTokens(of bytes: [UInt8], cursors sources: [TokenCursor], encoding: String.Encoding) -> [Token] {
+private func wordTokens(of bytes: [UInt8], cursors sources: [TokenCursor], encoding: String.Encoding, mask: TokenMask) -> [Token] {
     guard bytes.count > 0, sources.count > 0 else { return [] }
 
     let count = sources.count
@@ -349,7 +350,6 @@ private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMas
 
     var results: [Token] = []
     var last: TokenType = .none
-    let flag = mask.contains(.charater)
 
     var subs: [TokenCursor] = []
     for c in cursors {
@@ -357,41 +357,17 @@ private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMas
         var encoding: String.Encoding = .init(rawValue: UInt.max)
         if change {
             switch last {
-            case .letter, .digit:
-                encoding = .ascii
-            default:
-                if !flag { encoding = .utf8 }
+            case .letter, .digit: encoding = .ascii
+            default: encoding = .utf8
             }
             if encoding.rawValue != .max {
-                let tokens = wordTokens(of: bytes, cursors: subs, encoding: encoding)
+                let tokens = wordTokens(of: bytes, cursors: subs, encoding: encoding, mask: mask)
                 results.append(contentsOf: tokens)
             }
             last = c.type
             subs.removeAll()
         }
-        if flag {
-            encoding = .init(rawValue: UInt.max)
-            switch c.type {
-            case .symbol, .other, .auxiliary:
-                encoding = .utf8
-            default:
-                break
-            }
-            if encoding.rawValue != .max {
-                let sub = bytes[c.offset ..< (c.offset + c.len)]
-                if let str = String(bytes: sub, encoding: encoding) {
-                    let token = Token(str, len: Int32(sub.count), start: Int32(c.offset), end: Int32(c.offset + c.len))
-                    results.append(token)
-                }
-            }
-        }
         subs.append(c)
     }
     return results
-}
-
-private func allOtherTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
-    let pinyinTks = pinyinTokens(of: bytes, cursors: cursors, mask: mask)
-    let numberTks = numberTokens(of: bytes, cursors: cursors, mask: mask)
-    return pinyinTks + numberTks
 }
