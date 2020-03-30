@@ -248,8 +248,24 @@ extension SQLiteORMTests {
     }
 
     func testToken() {
-        let tokens = swift_tokenize("成都天气真好!", TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
-        print(tokens)
+        var results:[[Token]] = []
+        let sources = [
+            "成都天气真好!",
+            "音乐舞蹈",
+            "音乐123舞蹈",
+            "13188886666",
+            "jintiantianqizhenhao",
+            "hello world",
+            "饿了没",
+            "chengke",
+            "猛",
+            "me",
+        ]
+        for source in sources {
+            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
+            results.append(tokens as! [Token])
+        }
+        print(results)
     }
 
     func testRegisterTokenizer() {

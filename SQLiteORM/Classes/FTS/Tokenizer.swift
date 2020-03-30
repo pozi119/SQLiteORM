@@ -216,39 +216,29 @@ private func cursors(of bytes: [UInt8]) -> [TokenCursor] {
     return cursors
 }
 
-private func wordTokens(of bytes: [UInt8], cursors sources: [TokenCursor], encoding: String.Encoding, mask: TokenMask) -> [Token] {
-    guard bytes.count > 0, sources.count > 0 else { return [] }
+private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding, mask: TokenMask) -> [Token] {
+    guard bytes.count > 0, cursors.count > 0 else { return [] }
 
-    let count = sources.count
-    let last = sources.last!
+    let count = cursors.count
+    let last = cursors.last!
 
-    var cursors = sources
     var tokens: [Token] = []
 
-    let extCursor = TokenCursor(type: last.type, offset: last.offset, len: 0)
     let extIsChar = last.type.rawValue < TokenType.symbol.rawValue
-    let extString = extIsChar ? "®" : "圝"
     let extCount = extIsChar ? 2 : 1
-    for _ in 0 ..< extCount {
-        cursors.append(extCursor)
-    }
 
     for i in 0 ..< count {
         let c1 = cursors[i]
         let loc = c1.offset
         var len = c1.len
-        for j in 0 ..< extCount {
-            let c2 = cursors[i + j + 1]
+        for j in 1 ... extCount {
+            if i + j >= count { break }
+            let c2 = cursors[i + j]
             len += c2.len
         }
         let sub = [UInt8](bytes[loc ..< (loc + len)])
         if let text = String(bytes: sub, encoding: encoding) {
-            var str = text
-            let append = max(0, extCount - (count - 1 - i))
-            for _ in 0 ..< append {
-                str += extString
-            }
-            let token = Token(str, len: Int32(len), start: Int32(loc), end: Int32(loc + len))
+            let token = Token(text, len: Int32(len), start: Int32(loc), end: Int32(loc + len))
             tokens.append(token)
         }
     }
@@ -310,7 +300,7 @@ private func numberTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: Token
                 offset = i
             }
             if offset >= 0 {
-                str.append("\(ch)")
+                str.append("\(ch - 0x30)")
             }
         } else if offset >= 0 {
             switch ch {
