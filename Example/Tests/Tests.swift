@@ -248,8 +248,12 @@ extension SQLiteORMTests {
     }
 
     func testToken() {
-        var results:[[Token]] = []
+        var results: [[Token]] = []
         let sources = [
+            "234",
+            "1,234,567,890",
+            "12,345,678,901",
+            "一1,234,567,890二12,345,678,901",
             "成都天气真好!",
             "音乐舞蹈",
             "音乐123舞蹈",

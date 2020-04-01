@@ -52,7 +52,7 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"[%@-%@](%@) '%@'", @(_start), @(_end), @(_len), _token];
+    return [NSString stringWithFormat:@"[%2i-%2i|%2i|0x%09lx]: %@ ", _start, _end, _len, self.hash, _token];
 }
 
 @end

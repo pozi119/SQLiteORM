@@ -222,14 +222,9 @@ public extension String {
         return formatter
     }
 
-    var numberTokens: [String] {
+    var numberWithoutSeparator: String {
         let num = String.tokenFormatter.number(from: self)
-        if num != nil {
-            let unformatted = num!.stringValue
-            let formatted = String.tokenFormatter.string(from: num!)!
-            return [unformatted, formatted]
-        }
-        return []
+        return num?.stringValue ?? ""
     }
 
     var clean: String {

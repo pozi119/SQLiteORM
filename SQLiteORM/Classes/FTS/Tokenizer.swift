@@ -27,7 +27,7 @@ public struct TokenMask: OptionSet {
     public static let number = TokenMask(rawValue: 1 << 2)
     public static let transform = TokenMask(rawValue: 1 << 3)
 
-    public static let `default` = TokenMask([])
+    public static let `default` = TokenMask([.number, .transform])
     public static let all = TokenMask(rawValue: 0xFFFFFFFF)
 }
 
@@ -57,6 +57,7 @@ public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask:
     case .sqliteorm: tokens = ormTokenize(bytes, mask: mask)
     default: break
     }
+    tokens = Array(Set(tokens))
     tokens.sort { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
     return tokens
 }
@@ -85,8 +86,7 @@ private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String =
         }
     }
     guard mask.contains(.number) else { return results }
-    let cs = cursors(of: bytes)
-    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    let numberTks = numberTokens(of: bytes, mask: mask)
     return results + numberTks
 }
 
@@ -120,8 +120,7 @@ private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "
         tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
     }
     guard mask.contains(.number) else { return results }
-    let cs = cursors(of: bytes)
-    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    let numberTks = numberTokens(of: bytes, mask: mask)
     return results + numberTks
 }
 
@@ -132,7 +131,7 @@ private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     let cs = cursors(of: bytes)
     let results = ormTokens(of: bytes, cursors: cs, mask: mask)
     guard mask.contains(.number) else { return results }
-    let numberTks = numberTokens(of: bytes, cursors: cs, mask: mask)
+    let numberTks = numberTokens(of: bytes, mask: mask)
     return results + numberTks
 }
 
@@ -216,7 +215,7 @@ private func cursors(of bytes: [UInt8]) -> [TokenCursor] {
     return cursors
 }
 
-private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding, mask: TokenMask) -> [Token] {
+private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding) -> [Token] {
     guard bytes.count > 0, cursors.count > 0 else { return [] }
 
     let count = cursors.count
@@ -237,7 +236,7 @@ private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: Str
             len += c2.len
         }
         let sub = [UInt8](bytes[loc ..< (loc + len)])
-        if let text = String(bytes: sub, encoding: encoding) {
+        if let text = String(bytes: sub, encoding: encoding), text.count > 0 {
             let token = Token(text, len: Int32(len), start: Int32(loc), end: Int32(loc + len))
             tokens.append(token)
         }
@@ -285,51 +284,60 @@ private func pinyinTokens(bySplit fragment: String, start: Int) -> [Token] {
     return results
 }
 
-private func numberTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
-    guard mask.contains(.number), bytes.count > 0, cursors.count > 0 else { return [] }
+private func numberTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
+    guard mask.contains(.number), bytes.count > 3 else { return [] }
 
-    let len = bytes.count
     var array: [(String, Int)] = []
-    var str = ""
-    var offset = -1
+    var offset = 0
+    let copied = bytes + [0x0]
+    var container: [UInt8] = []
 
-    for i in 0 ..< len {
-        let ch = bytes[i]
-        if ch >= 0x30 && ch <= 0x39 {
-            if ch > 0x30 && offset < 0 {
-                offset = i
+    for i in 0 ..< copied.count {
+        let ch = copied[i]
+        let flag = (ch >= 0x30 && ch <= 0x39) || ch == 0x2C
+        if flag {
+            container.append(ch)
+            offset += 1
+        } else {
+            if offset > 0 {
+                let numberString = String(bytes: container, encoding: .ascii) ?? ""
+                array.append((numberString, i - offset))
             }
-            if offset >= 0 {
-                str.append("\(ch - 0x30)")
-            }
-        } else if offset >= 0 {
-            switch ch {
-            case 0x2C:
-                str.append(",")
-                break
-            default:
-                array.append((str, offset))
-                str = ""
-                offset = -1
-                break
-            }
+            offset = 0
+            container = []
         }
-    }
-    if offset >= 0 {
-        array.append((str, offset))
     }
 
     var results: [Token] = []
-    for (s, o) in array {
-        let tks = s.numberTokens
-        if tks.count < 2 {
-            continue
+    for (origin, offset) in array {
+        let num = origin.numberWithoutSeparator
+        if num.count <= 3 || num.count >= origin.count { continue }
+        let numbytes = num.bytes
+        let cs = cursors(of: numbytes)
+        let tokens = wordTokens(of: numbytes, cursors: cs, encoding: .ascii)
+        let count = tokens.count
+        assert(count == num.count, "Invalid tokens.")
+        var fill = 3 - count % 3
+        if fill == 3 { fill = 0 }
+        var sub: [Token] = []
+        for i in 0 ..< (count - 2) {
+            let token = tokens[i]
+            let comma1 = (i + fill) / 3
+            let comma2 = (i >= (count - 3) || ((i + fill) % 3 == 0)) ? 0 : 1
+            let pre = offset + comma1
+            token.start += Int32(pre)
+            token.end += Int32(pre + comma2)
+            sub.append(token)
+            if (i + fill) % 3 == 2 && token.token.count == 3 {
+                let tk = Token()
+                tk.start = token.start
+                tk.end = token.end - 1
+                tk.token = (token.token as NSString).substring(to: 2) as String
+                tk.len = 2
+                sub.append(tk)
+            }
         }
-        let l = s.count
-        for numstr in tks {
-            let _tk = Token(numstr, len: Int32(l), start: Int32(o), end: Int32(o + l))
-            results.append(_tk)
-        }
+        results += sub
     }
 
     return results
@@ -351,7 +359,7 @@ private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMas
             default: encoding = .utf8
             }
             if encoding.rawValue != .max {
-                let tokens = wordTokens(of: bytes, cursors: subs, encoding: encoding, mask: mask)
+                let tokens = wordTokens(of: bytes, cursors: subs, encoding: encoding)
                 results.append(contentsOf: tokens)
             }
             last = c.type
