@@ -73,6 +73,10 @@ public final class Upgrader {
     private var stages: [UInt] = []
     private var pretreated = false
 
+    var isUpgrading: Bool {
+        return pretreated && stagesItems.count > 0 && progress.completedUnitCount < progress.totalUnitCount
+    }
+
     var needUpgrade: Bool {
         pretreat()
         return stagesItems.count > 0
@@ -80,6 +84,14 @@ public final class Upgrader {
 
     init(versionKey: String) {
         self.versionKey = versionKey
+    }
+
+    func reset() {
+        pretreated = false
+        progress.completedUnitCount = 0
+        for item in items {
+            item.progress.completedUnitCount = 0
+        }
     }
 
     func add(target: NSObjectProtocol, action: Selector, for stage: UInt, version: String) {
