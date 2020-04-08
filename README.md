@@ -7,7 +7,7 @@ SQLiteORM is available through [CocoaPods](https://cocoapods.org). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
-pod 'SQLiteORM', '~> 0.1.0-beta5'
+pod 'SQLiteORM', '~> 0.1.0-beta6'
 ```
 
 ## Author

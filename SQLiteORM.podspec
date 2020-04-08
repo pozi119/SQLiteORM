@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SQLiteORM'
-  s.version          = '0.1.0-beta5'
+  s.version          = '0.1.0-beta6'
   s.summary          = 'The swift version of VVSequelize.'
 
   s.description      = <<-DESC
