@@ -50,6 +50,15 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
     return tk;
 }
 
+- (BOOL)isEqual:(id)object
+{
+    return object != nil && [object isKindOfClass:SQLiteORMToken.class] && [(SQLiteORMToken *)object hash] == self.hash;
+}
+
+- (NSUInteger)hash {
+    return _token.hash ^ @(_start).hash ^ @(_len).hash ^ @(_end).hash;
+}
+
 - (NSString *)description
 {
     return [NSString stringWithFormat:@"[%2i-%2i|%2i|0x%09lx]: %@ ", _start, _end, _len, self.hash, _token];
@@ -308,8 +317,17 @@ static int vv_fts5_xTokenize(
     __block int rc = SQLITE_OK;
     Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
 
+    uint32_t mask = tok->mask;
+    if ((mask & 0xFFFF) > 0) {
+        if (iUnused & FTS5_TOKENIZE_QUERY) {
+            mask = (mask & ~0x1FFFF) | (1 << 17);
+        } else if (iUnused & FTS5_TOKENIZE_DOCUMENT) {
+            mask = mask & ~(1 << 17);
+        }
+    }
+
     NSString *ocString = [NSString stringWithCString:pText];
-    NSArray *array = swift_tokenize(ocString, tok->method, tok->mask);
+    NSArray *array = swift_tokenize(ocString, tok->method, mask);
 
     for (SQLiteORMToken *tk in array) {
         rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);

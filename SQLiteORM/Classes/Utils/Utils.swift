@@ -85,6 +85,19 @@ fileprivate final class PinYin {
         return charset
     }()
 
+    lazy var syllables: [String: UInt32] = {
+        let path = PinYin.path(of: "syllables.txt")
+        let text = (try? String(contentsOfFile: path)) ?? ""
+        let array = text.split(separator: "\n").map { String($0) }
+        var results: [String: UInt32] = [:]
+        for line in array {
+            let kv = line.split(separator: ",")
+            if kv.count != 2 { continue }
+            results[String(kv[0])] = UInt32(kv[1])
+        }
+        return results
+    }()
+
     lazy var numberFormatter: NumberFormatter = {
         var formatter = NumberFormatter()
         formatter.numberStyle = .decimal
@@ -175,7 +188,6 @@ public extension String {
         }
         let trans = PinYin.shared.big52gbMap[single] ?? single
         ch = (trans as NSString).character(at: 0)
-        let zcs = ["z", "c", "s"]
         let key = String(format: "%X", ch)
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
         let fulls = NSMutableOrderedSet()
@@ -186,9 +198,6 @@ public extension String {
             let abbr = String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)])
             fulls.add(full)
             abbrs.add(abbr)
-            if zcs.contains(abbr) {
-                abbrs.add(abbr + "h")
-            }
         }
         return (fulls.array as! [String], abbrs.array as! [String])
     }
@@ -243,50 +252,8 @@ public extension String {
         return array.joined(separator: "")
     }
 
-    private var headPinyins: [String] {
-        let bytes = self.bytes
-        guard bytes.count > 0 else { return [] }
-        let s = String(bytes[0])
-        guard let array = PinYin.shared.pinyins[s], array.count > 0 else {
-            return []
-        }
-        var results: [String] = []
-        for pinyin in array {
-            let subbytes = pinyin.bytes
-            if bytes.count < subbytes.count {
-                continue
-            }
-            var eq = true
-            for i in 0 ..< subbytes.count {
-                if bytes[i] != subbytes[i] {
-                    eq = false
-                    break
-                }
-            }
-            if eq {
-                results.append(pinyin)
-            }
-        }
-        return results
-    }
-
-    private var _splitedPinyins: [[String]] {
-        var results: [[String]] = []
-        let heads = headPinyins
-        guard heads.count > 0 else { return [] }
-
-        for head in heads {
-            let tail = String(self[index(startIndex, offsetBy: head.count) ..< endIndex])
-            let tails = tail._splitedPinyins
-            for pinyins in tails {
-                results.append([head] + pinyins)
-            }
-        }
-        return results
-    }
-
-    var splitedPinyins: [[String]] {
-        return lowercased()._splitedPinyins
+    var pinyinSegmentation: [String] {
+        return Segmentor.segment(self)
     }
 
     /// 预加载拼音分词资源
@@ -411,5 +378,146 @@ public extension Array where Element == [String] {
             secRepeat = secRepeat * sub.count
         }
         return (0 ..< tiledCount).map { [String](dim[($0 * count) ..< ($0 * count + count)]) }
+    }
+}
+
+struct Segmentor {
+    // MARK: - Trie
+
+    private class Trie {
+        var frequency: UInt32 = 0
+        var next: Bool = false
+        var ch: UInt8 = 0
+        var childs: [UInt8: Trie] = [:]
+    }
+
+    private typealias Phone = (pinyin: String, frequency: UInt32)
+
+    private static let root: Trie = {
+        var trie = Trie()
+        for (pinyin, frequency) in PinYin.shared.syllables {
+            let bytes: [UInt8] = pinyin.utf8.map { UInt8($0) }
+            Segmentor.add(pinyin: bytes, frequency: frequency, to: trie)
+        }
+        return trie
+    }()
+
+    private static func add(char ch: UInt8, frequency: UInt32, to node: Trie) {
+        guard ch >= 97 && ch <= 123 else { return }
+        node.next = true
+        var next = node.childs[ch]
+        if next == nil {
+            next = Trie()
+            node.childs[ch] = next
+        }
+        next!.ch = ch
+        if frequency > next!.frequency {
+            next!.frequency = frequency
+        }
+    }
+
+    private static func add(pinyin: [UInt8], frequency: UInt32, to root: Trie) {
+        var node = root
+        for i in 0 ..< pinyin.count {
+            let ch = pinyin[i]
+            guard ch >= 97 || ch <= 123 else { break }
+            let freq = i == pinyin.count - 1 ? frequency : 0
+            add(char: ch, frequency: freq, to: node)
+            guard let n = node.childs[ch] else { break }
+            node = n
+        }
+    }
+
+    private static func retrieve(_ pinyin: [UInt8]) -> [Phone] {
+        var results: [Phone] = []
+        var node = Segmentor.root
+        let last = pinyin.count - 1
+        for i in 0 ..< pinyin.count {
+            let ch = pinyin[i]
+            guard ch >= 97 || ch <= 123, let child = node.childs[ch] else { break }
+            if child.frequency > 0 || i == last {
+                let freq = i == last ? 65535 : child.frequency
+                let str = String(bytes: [UInt8](pinyin[0 ... i]), encoding: .ascii) ?? ""
+                results.append((str, freq))
+            }
+            node = child
+        }
+        results.sort { $0.frequency > $1.frequency }
+        return results
+    }
+
+    private static func split(_ pinyin: [UInt8]) -> [String] {
+        let fronts = retrieve(pinyin)
+        let len = pinyin.count
+        for phone in fronts {
+            let pLen = phone.pinyin.count
+            let head = String(bytes: [UInt8](pinyin[0 ..< pLen]))
+            if len == pLen {
+                return [head]
+            } else {
+                let tail = [UInt8](pinyin[pLen ..< pinyin.count])
+                let rests = retrieve(tail)
+                if rests.count > 0 {
+                    let rights = split(tail)
+                    return [head] + rights
+                }
+            }
+        }
+        return []
+    }
+
+    // MARK: public
+
+    static func segment(_ pinyin: String) -> [String] {
+        return split(pinyin.lowercased().bytes)
+    }
+
+    // MARK: - recursion
+
+    private func firstPinyins(of source: String) -> [String] {
+        let bytes = source.bytes
+        guard bytes.count > 0 else { return [] }
+        let s = String(bytes[0])
+        guard let array = PinYin.shared.pinyins[s], array.count > 0 else {
+            return []
+        }
+        var results: [String] = []
+        for pinyin in array {
+            let subbytes = pinyin.bytes
+            if bytes.count < subbytes.count {
+                continue
+            }
+            var eq = true
+            for i in 0 ..< subbytes.count {
+                if bytes[i] != subbytes[i] {
+                    eq = false
+                    break
+                }
+            }
+            if eq {
+                results.append(pinyin)
+            }
+        }
+        return results
+    }
+
+    private func recursionSplit(_ source: String) -> [[String]] {
+        var results: [[String]] = []
+        let heads = firstPinyins(of: source)
+        guard heads.count > 0 else { return [] }
+
+        for head in heads {
+            let lower = source.index(source.startIndex, offsetBy: head.count)
+            let tail = String(source[lower ..< source.endIndex])
+            let tails = recursionSplit(tail)
+            for pinyins in tails {
+                results.append([head] + pinyins)
+            }
+        }
+        return results
+    }
+
+    func recursionSegment(_ source: String) -> [[String]] {
+        return recursionSplit(source.lowercased())
     }
 }

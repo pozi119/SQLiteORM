@@ -248,28 +248,28 @@ extension SQLiteORMTests {
     }
 
     func testToken() {
-        var results: [[Token]] = []
         let sources = [
-            "234",
-            "1,234,567,890",
-            "12,345,678,901",
-            "一1,234,567,890二12,345,678,901",
-            "成都天气真好!",
-            "音乐舞蹈",
-            "音乐123舞蹈",
-            "13188886666",
-            "jintiantianqizhenhao",
-            "hello world",
-            "饿了没",
-            "chengke",
-            "猛",
-            "me",
+            "第二章",
+            "dez",
+//            "234",
+//            "1,234,567,890",
+//            "12,345,678,901",
+//            "一1,234,567,890二12,345,678,901",
+//            "成都天气真好!",
+//            "音乐舞蹈",
+//            "音乐123舞蹈",
+//            "13188886666",
+//            "jintiantianqizhenhao",
+//            "hello world",
+//            "饿了没",
+//            "chengke",
+//            "猛",
+//            "me",
         ]
         for source in sources {
             let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
-            results.append(tokens as! [Token])
+            print(tokens)
         }
-        print(results)
     }
 
     func testRegisterTokenizer() {
@@ -365,5 +365,22 @@ extension SQLiteORMTests {
         let simplified = string.simplified
         let traditional = simplified.traditional
         if traditional.count > 0 {}
+    }
+
+    func testSyllable() {
+        let array = [
+            "jintiantianqizhenhaoa",
+            "jintiantianqizhenhao",
+            "jintiantianqizhenha",
+            "jintiantianqizhenh",
+            "jintiantianqizhen",
+            "helloworld",
+            "jin,tian,tian,qi,zhen,hao,a",
+            "jin'tian'tian'qi'zhen'hao'a",
+        ]
+        for string in array {
+            let seg = string.pinyinSegmentation
+            print(seg)
+        }
     }
 }

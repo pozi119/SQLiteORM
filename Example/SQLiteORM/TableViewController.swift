@@ -175,9 +175,10 @@ class TableViewController: UITableViewController {
                     startId += 1000
 
                     let progress = min(1.0, Float(startId) / Float(item.maxCount))
-                    let progressText = String(format: "%.2f%", progress * 100.0)
+                    let progressText = String(format: "%6.2f%", progress * 100.0)
 
-                    print("id: \(startId) - \(startId + 1000), progress: \(progressText)%, mock: \(mock), normal: \(normal), fts: \(fts)")
+                    let desc = String(format: "[%6llu-%6llu]:%6.2f%%,mock: %.6f,normal:%.6f,fts:%.6f", startId - 1000, startId, progress * 100.0, mock, normal, fts)
+                    print(desc)
                     DispatchQueue.main.async {
                         self.generateProgressView.progress = progress
                         self.generateProgressLabel.text = progressText
@@ -222,9 +223,8 @@ class TableViewController: UITableViewController {
 
         guard keyword.count > 0 else { return }
 
-        let highlighter = Highlighter(orm: item.ftsOrm, keyword: keyword + "*")
+        let highlighter = Highlighter(orm: item.ftsOrm, keyword: keyword)
         highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
-        highlighter.option = .token
 
         updateUI(action: false, search: true, log: "")
         DispatchQueue.global(qos: .background).async {
