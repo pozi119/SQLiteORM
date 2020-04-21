@@ -103,9 +103,6 @@ public final class Database {
             }
         #endif
 
-        setOptions(["PRAGMA synchronous='NORMAL'",
-                    "PRAGMA journal_mode=wal"])
-
         sqlite3_update_hook(handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
         sqlite3_commit_hook(handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
     }
@@ -128,6 +125,12 @@ public final class Database {
         for sql in sqls {
             _ = query(sql)
         }
+    }
+    
+    /// 设置默认参数
+    public func setDefaultOptions() {
+        setOptions(["PRAGMA synchronous='NORMAL'",
+                    "PRAGMA journal_mode=wal"])
     }
 
     // MARK: -

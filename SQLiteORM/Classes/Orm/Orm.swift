@@ -146,7 +146,7 @@ public final class Orm<T: Codable> {
     /// 创建表
     ///
     /// - Throws: 创建表过程中的错误
-    func createTable() throws {
+    public func createTable() throws {
         let sql = config.createSQL(with: table)
         try db.run(sql)
     }
