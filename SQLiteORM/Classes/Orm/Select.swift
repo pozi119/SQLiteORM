@@ -115,16 +115,14 @@ public final class Select {
 }
 
 extension Select {
-    public func allKeyValues<T: Codable>(_ orm: Orm<T>) -> [[String: Binding]] {
-        table = orm.table
-        return orm.db.query(sql)
+    public func allKeyValues(_ db: Database) -> [[String: Binding]] {
+        return db.query(sql)
     }
 
-    public func allItems<T: Codable>(_ orm: Orm<T>) -> [T] {
-        table = orm.table
-        let keyValues = orm.db.query(sql)
+    public func allItems<T: Codable>(_ db: Database, type: T.Type, decoder: OrmDecoder) -> [T] {
+        let keyValues = db.query(sql)
         do {
-            let array = try orm.decoder.decode([T].self, from: keyValues)
+            let array = try decoder.decode([T].self, from: keyValues)
             return array
         } catch {
             print(error)

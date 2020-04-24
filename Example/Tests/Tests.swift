@@ -17,6 +17,13 @@ final class SQLiteORMTests: XCTestCase {
         return orm
     }()
 
+    fileprivate lazy var view: View<Person> = {
+        let config = PlainConfig(Person.self)
+        config.primaries = ["id"]
+        let view = View<Person>("xx", condition: "age > 20", orm: self.orm)
+        return view
+    }()
+
     fileprivate lazy var ftsDb: Database = {
         let dir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last!
         let url = URL(fileURLWithPath: dir).appendingPathComponent("testFts.db")
@@ -243,7 +250,7 @@ extension SQLiteORMTests {
 extension SQLiteORMTests {
     func testPinyin() {
         let tokens = "成都".pinyins
-        XCTAssertEqual(tokens.abbrs, ["cd", "chd"])
+        XCTAssertEqual(tokens.abbrs, ["cd"])
         XCTAssertEqual(tokens.fulls, ["chengdou", "chengdu"])
     }
 
@@ -382,5 +389,17 @@ extension SQLiteORMTests {
             let seg = string.pinyinSegmentation
             print(seg)
         }
+    }
+}
+
+// MARK: - View
+
+extension SQLiteORMTests {
+    func testView() {
+        if !view.exist {
+            XCTAssert(view.create())
+        }
+        let p1 = view.xFindOne()
+        XCTAssert(p1 != nil)
     }
 }

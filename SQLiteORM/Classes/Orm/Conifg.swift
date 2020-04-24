@@ -396,3 +396,62 @@ extension Config: Equatable {
         }
     }
 }
+
+public extension Config {
+    /// 生成约束条件
+    ///
+    /// - Parameter item: 数据
+    /// - Returns: 约束条件
+    func constraint(for item: Any, properties: [String: PropertyInfo], unique: Bool = true) -> Where? {
+        var condition = [String: Binding]()
+        switch self {
+        case let self as PlainConfig:
+            if self.primaries.count > 0 {
+                var dic = [String: Binding]()
+                for pk in self.primaries {
+                    let prop = properties[pk]
+                    if let val = (try? prop?.get(from: item)) as? Binding {
+                        dic[pk] = val
+                    }
+                }
+                if (!unique && dic.count > 0) || dic.count == self.primaries.count {
+                    condition = dic
+                    break
+                }
+            }
+            for unique in self.uniques {
+                let prop = properties[unique]
+                if let val = (try? prop?.get(from: item)) as? Binding {
+                    condition = [unique: val]
+                    break
+                }
+            }
+        default: break
+        }
+        guard condition.count > 0 else { return nil }
+        return Where(condition)
+    }
+
+    func constraint(for KeyValues: [String: Binding], unique: Bool = true) -> Where? {
+        var condition = [String: Binding]()
+        switch self {
+        case let self as PlainConfig:
+            var dic = [String: Binding]()
+            self.primaries.forEach { dic[$0] = KeyValues[$0] }
+            if (!unique && dic.count > 0) || dic.count == self.primaries.count {
+                condition = dic
+                break
+            }
+
+            for col in self.uniques {
+                if let val = KeyValues[col] {
+                    condition = [col: val]
+                    break
+                }
+            }
+        default: break
+        }
+        guard condition.count > 0 else { return nil }
+        return Where(condition)
+    }
+}

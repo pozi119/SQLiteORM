@@ -156,7 +156,7 @@ public extension Orm {
     /// - Returns: 是否更新成功
     @discardableResult
     func update<T: Codable>(_ item: T) -> Bool {
-        guard let condition = constraint(for: item) else { return false }
+        guard let condition = config.constraint(for: item, properties: properties) else { return false }
         let bindings = try! encoder.encode(item) as! [String: Binding]
         return _update(bindings, type: .upsert, condition: condition)
     }
@@ -169,7 +169,7 @@ public extension Orm {
     /// - Returns: 是否更新成功
     @discardableResult
     func update<T: Codable>(_ item: T, fields: [String]) -> Bool {
-        guard let condition = constraint(for: item) else { return false }
+        guard let condition = config.constraint(for: item, properties: properties) else { return false }
         var bindings = try! encoder.encode(item) as! [String: Binding]
         let trashKeys = Array(Set(bindings.keys).subtracting(fields))
         bindings.removeValues(forKeys: trashKeys)
@@ -246,7 +246,7 @@ public extension Orm {
     ///   - orderBy: 排序方式
     /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
     func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
-        return Select().where(condition).orderBy(orderBy).limit(1).allKeyValues(self).first
+        return Select().table(table).where(condition).orderBy(orderBy).limit(1).allKeyValues(db).first
     }
 
     /// 查找一条数据
@@ -256,7 +256,7 @@ public extension Orm {
     ///   - orderBy: 排序方式
     /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
-        return Select().where(condition).orderBy(orderBy).limit(1).allItems(self).first
+        return Select().table(table).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self, decoder: decoder).first
     }
 
     /// 查询数据
@@ -279,9 +279,9 @@ public extension Orm {
               orderBy: OrderBy = OrderBy(""),
               limit: Int64 = 0,
               offset: Int64 = 0) -> [[String: Binding]] {
-        return Select().where(condition).distinct(distinct).fields(fields)
+        return Select().table(table).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allKeyValues(self)
+            .limit(limit).offset(offset).allKeyValues(db)
     }
 
     /// 查询数据
@@ -304,9 +304,9 @@ public extension Orm {
                orderBy: OrderBy = OrderBy(""),
                limit: Int64 = 0,
                offset: Int64 = 0) -> [T] {
-        return Select().where(condition).distinct(distinct).fields(fields)
+        return Select().table(table).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allItems(self)
+            .limit(limit).offset(offset).allItems(db, type: T.self, decoder: decoder)
     }
 
     /// 查询数据条数
@@ -322,12 +322,12 @@ public extension Orm {
     /// - Parameter item: 要查询的数据
     /// - Returns: 是否存在
     func exist<T: Codable>(_ item: T) -> Bool {
-        guard let condition = constraint(for: item) else { return false }
+        guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return count(condition) > 0
     }
 
     func exist(_ keyValues: [String: Binding]) -> Bool {
-        guard let condition = constraint(for: keyValues) else { return false }
+        guard let condition = config.constraint(for: keyValues) else { return false }
         return count(condition) > 0
     }
 
@@ -368,7 +368,7 @@ public extension Orm {
     ///   - condition: 查询条件
     /// - Returns: 函数执行结果
     func function(_ function: String, condition: Where = Where("")) -> Binding? {
-        let dic = Select().fields(Fields(function)).where(condition).allKeyValues(self).first
+        let dic = Select().table(table).fields(Fields(function)).where(condition).allKeyValues(db).first
         return dic?.values.first
     }
 }
@@ -398,7 +398,7 @@ public extension Orm {
     /// - Returns: 是否删除成功
     @discardableResult
     func delete(_ item: Codable) -> Bool {
-        guard let condition = constraint(for: item) else { return false }
+        guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return delete(where: condition)
     }
 
