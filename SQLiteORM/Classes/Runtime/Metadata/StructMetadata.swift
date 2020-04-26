@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Foundation
-
 struct StructMetadata: NominalMetadataType {
     
     var pointer: UnsafeMutablePointer<StructMetadataLayout>
@@ -30,7 +28,7 @@ struct StructMetadata: NominalMetadataType {
         var info = TypeInfo(metadata: self)
         info.properties = properties()
         info.mangledName = mangledName()
-        info.genericTypes = genericArguments()
+        info.genericTypes = Array(genericArguments())
         return info
     }
 }

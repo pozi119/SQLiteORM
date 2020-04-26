@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Foundation
-
 public struct TypeInfo {
     
     public var kind: Kind = .class
@@ -34,6 +32,8 @@ public struct TypeInfo {
     public var alignment: Int = 0
     public var stride: Int = 0
     public var cases: [Case] = []
+    public var numberOfEnumCases: Int = 0
+    public var numberOfPayloadEnumCases: Int = 0
     public var genericTypes: [Any.Type] = []
     
     init<Metadata: MetadataType>(metadata: Metadata) {

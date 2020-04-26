@@ -20,7 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Foundation
+#if canImport(CRuntime)
+import CRuntime
+#endif
 
 public func createInstance<T>(constructor: ((PropertyInfo) throws -> Any)? = nil) throws -> T {
     if let value = try createInstance(of: T.self, constructor: constructor) as? T {

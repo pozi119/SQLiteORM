@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Foundation
-
 func metadataPointer(type: Any.Type) -> UnsafeMutablePointer<Int> {
     return unsafeBitCast(type, to: UnsafeMutablePointer<Int>.self)
 }
@@ -50,4 +48,13 @@ func swiftObject() -> Any.Type {
     class Temp {}
     let md = ClassMetadata(type: Temp.self)
     return md.pointer.pointee.superClass
+}
+
+func classIsSwiftMask() -> Int {
+    #if canImport(Darwin)
+    if #available(macOS 10.14.4, iOS 12.2, tvOS 12.2, watchOS 5.2, *) {
+        return 2
+    }
+    #endif
+    return 1
 }
