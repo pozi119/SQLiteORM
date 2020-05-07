@@ -240,7 +240,7 @@ public class Highlighter {
                                     let upperBound = text.index(lowerBound, offsetBy: hlen)
 
                                     match.lv2 = lv2
-                                    match.range = lower ..< upper
+                                    match.range = hloc ..< (hloc + hlen)
                                     match.lv3 = i == 1 ? .medium : .low
                                     match.attrText = highlight(text: text, range: lowerBound ..< upperBound)
                                 }
@@ -296,7 +296,7 @@ public class Highlighter {
             let lower = clean.index(clean.startIndex, offsetBy: s1.count)
             let upper = clean.index(clean.startIndex, offsetBy: s1.count + sk.count)
             match.attrText = highlight(text: clean, range: lower ..< upper)
-            match.range = start ..< end
+            match.range = s1.count ..< (s1.count + sk.count)
             if match.lv2 == .none {
                 match.lv2 = .other
                 match.lv3 = .low
