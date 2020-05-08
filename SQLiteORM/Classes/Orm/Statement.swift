@@ -45,6 +45,7 @@ public final class Statement {
 
     deinit {
         sqlite3_finalize(handle)
+        handle = nil
     }
 
     // FIXME: columnCount is 0 and columnNames is [] when sql is `INSERT INTO table (col1,col2,col3) VALUES (?,?,?)`
