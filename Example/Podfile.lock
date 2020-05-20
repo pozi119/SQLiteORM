@@ -1,8 +1,8 @@
 PODS:
-  - SQLiteORM (0.1.0-beta4):
-    - SQLiteORM/system (= 0.1.0-beta4)
-  - SQLiteORM/common (0.1.0-beta4)
-  - SQLiteORM/system (0.1.0-beta4):
+  - SQLiteORM (0.1.0-beta7):
+    - SQLiteORM/system (= 0.1.0-beta7)
+  - SQLiteORM/common (0.1.0-beta7)
+  - SQLiteORM/system (0.1.0-beta7):
     - SQLiteORM/common
 
 DEPENDENCIES:
@@ -13,8 +13,8 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  SQLiteORM: a024663406a26b40bc17c7b95b3f5d1d26e7ca9f
+  SQLiteORM: ca7a856fbfd03a75d2e6b4f7e4b37730a2b62d47
 
 PODFILE CHECKSUM: 455c597c68e27aa490edc50e008d2e593dd447b0
 
-COCOAPODS: 1.8.4
+COCOAPODS: 1.9.1

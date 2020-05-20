@@ -7,9 +7,7 @@
 
 import Foundation
 
-#if SQLITE_SWIFT_STANDALONE
-    import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
+#if SQLITE_HAS_CODEC
     import SQLCipher
 #elseif os(Linux)
     import CSQLite
@@ -17,7 +15,7 @@ import Foundation
     import SQLite3
 #endif
 
-// #if SQLITE_SWIFT_SQLCIPHER
+// #if SQLITE_HAS_CODEC
 
 public final class Cipher {
     class func encrypt(_ path: String, key: String = "") -> Bool {

@@ -133,7 +133,7 @@ public class Highlighter {
     }
 
     public func highlight(_ source: String) -> Match {
-        guard source.count > 0 else { return Match(source: source) }
+        guard source.count > 0 && keyword.count > 0 else { return Match(source: source) }
 
         let clean = source.replacingOccurrences(of: "\n", with: " ")
         var text = clean.lowercased()

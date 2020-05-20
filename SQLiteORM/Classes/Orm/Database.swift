@@ -8,9 +8,7 @@
 import Dispatch
 import Foundation
 
-#if SQLITE_SWIFT_STANDALONE
-    import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
+#if SQLITE_HAS_CODEC
     import SQLCipher
 #elseif os(Linux)
     import CSQLite
@@ -97,12 +95,13 @@ public final class Database {
     /// - Throws: 打开过程中出现的错误
     public func open() throws {
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
-        #if SQLITE_SWIFT_SQLCIPHER
+        #if SQLITE_HAS_CODEC
             if encrypt.count > 0 {
-                // try check(key(encrypt))
+                try check(key(encrypt))
+                query(cipherOptions)
             }
         #endif
-
+        query(normalOptions)
         sqlite3_update_hook(handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
         sqlite3_commit_hook(handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
     }
@@ -116,21 +115,6 @@ public final class Database {
             sqlite3_close(_handle)
         }
         _handle = nil
-    }
-
-    /// 配置数据库
-    ///
-    /// - Parameter sqls: 配置数据库的sql语句.原生语句,未封装
-    public func setOptions(_ sqls: [String]) {
-        for sql in sqls {
-            _ = query(sql)
-        }
-    }
-    
-    /// 设置默认参数
-    public func setDefaultOptions() {
-        setOptions(["PRAGMA synchronous='NORMAL'",
-                    "PRAGMA journal_mode=wal"])
     }
 
     // MARK: -
@@ -152,6 +136,28 @@ public final class Database {
     public var totalChanges: Int {
         return Int(sqlite3_total_changes(handle))
     }
+
+    /// execute after sqlite3_key_v2()
+    ///
+    /// example: open 3.x ciphered database
+    ///
+    /// "pragma kdf_iter = 64000;"
+    ///
+    /// "pragma cipher_hmac_algorithm = HMAC_SHA1;"
+    ///
+    /// "pragma cipher_kdf_algorithm = PBKDF2_HMAC_SHA1;"
+    ///
+    public var cipherOptions: [String] = []
+
+    /// execute after cipherOptions
+    ///
+    /// example:
+    ///
+    /// "PRAGMA synchronous = NORMAL"
+    ///
+    /// "PRAGMA journal_mode = WAL"
+    ///
+    public var normalOptions: [String] = ["pragma synchronous = NORMAL;", "pragma journal_mode = WAL;"]
 
     // MARK: - queue
 
@@ -227,6 +233,15 @@ public final class Database {
     /// - Returns: 查询结果
     public func query(_ statement: String) -> [[String: Binding]] {
         return (try? prepare(statement).query()) ?? []
+    }
+
+    @discardableResult
+    public func query(_ statements: [String], inTransaction: Bool = false) -> [[[String: Binding]]] {
+        var results: [[[String: Binding]]] = []
+        for statement in statements {
+            results.append((try? prepare(statement).query()) ?? [])
+        }
+        return results
     }
 
     /// 执行语句
@@ -401,7 +416,7 @@ public final class Database {
 
     // MARK: - cipher
 
-    #if SQLITE_SWIFT_SQLCIPHER
+    #if SQLITE_HAS_CODEC
         public lazy var cipherVersion: String? = try? scalar("PRAGMA cipher_version") as? String
 
         public func key(_ key: String, db: String = "main") throws -> Void? {
