@@ -279,6 +279,22 @@ extension SQLiteORMTests {
         }
     }
 
+    func testToken1() {
+        register(TestTokenizer.self, for: .test)
+        let sources = [
+            "第二章",
+            "dez",
+            "234",
+            "1,234,567,890",
+            "12,345,678,901",
+            "一1,234,567,890二12,345,678,901",
+        ]
+        for source in sources {
+            let tokens = swift_tokenize(source as NSString, TokenMethod.test.rawValue, TokenMask.all.rawValue)
+            print(tokens)
+        }
+    }
+
     func testRegisterTokenizer() {
         let r = ftsDb.register(.natural, for: "nl")
         XCTAssert(r)

@@ -10,9 +10,18 @@ import NaturalLanguage
 
 public typealias Token = SQLiteORMToken
 
-public enum TokenMethod: Int {
-    case apple, natural, sqliteorm
-    case unknown = 0xFFFF
+public struct TokenMethod: OptionSet, Hashable {
+    public let rawValue: Int
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+
+    public static let apple = TokenMethod(rawValue: 1 << 0)
+    public static let natural = TokenMethod(rawValue: 1 << 1)
+    public static let sqliteorm = TokenMethod(rawValue: 1 << 2)
+
+    public static let unknown = TokenMethod(rawValue: 0xFFFFFFFF)
 }
 
 public struct TokenMask: OptionSet {
@@ -46,11 +55,20 @@ private struct TokenCursor {
     var len: Int = 0
 }
 
+public protocol Tokenizer {
+    static func tokenize(_ bytes: [UInt8], _ method: TokenMethod, _ mask: TokenMask) -> [Token]
+}
+
 @_silgen_name("swift_tokenize")
 public func swift_tokenize(_ source: NSString, _ method: Int, _ mask: UInt32) -> NSArray {
     guard source.length > 0 else { return [] as NSArray }
     let bytes = source.lowercased.bytes
-    return tokenize(bytes, TokenMethod(rawValue: method) ?? .unknown, .init(rawValue: mask)) as NSArray
+    return tokenize(bytes, TokenMethod(rawValue: method), .init(rawValue: mask)) as NSArray
+}
+
+private var tokenizers: [TokenMethod: Tokenizer.Type] = [:]
+public func register(_ tokenizer: Tokenizer.Type, for method: TokenMethod) {
+    tokenizers[method] = tokenizer
 }
 
 public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [Token] {
@@ -59,7 +77,11 @@ public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask:
     case .apple: tokens = appleTokenize(bytes, mask: mask)
     case .natural: tokens = naturalTokenize(bytes, mask: mask)
     case .sqliteorm: tokens = ormTokenize(bytes, mask: mask)
-    default: break
+    default:
+        if let tokenizer = tokenizers[method] {
+            tokens = tokenizer.tokenize(bytes, method, mask)
+        }
+        break
     }
     tokens = Array(Set(tokens))
     tokens.sort { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
@@ -131,8 +153,8 @@ private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     guard bytes.count > 0 else { return [] }
 
     let syllableTks = syllableTokens(of: bytes, mask: mask)
-    guard syllableTks.count == 0 else {return syllableTks }
-    
+    guard syllableTks.count == 0 else { return syllableTks }
+
     let cs = cursors(of: bytes)
     let ormTks = ormTokens(of: bytes, cursors: cs, mask: mask)
     let numberTks = numberTokens(of: bytes, mask: mask)

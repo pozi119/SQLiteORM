@@ -26,6 +26,6 @@ public extension Database {
     /// - Returns: 核心枚举方法
     func enumerator(for tokenizer: String) -> TokenMethod {
         let result = SQLiteORMFindEnumerator(handle, tokenizer)
-        return TokenMethod(rawValue: Int(result)) ?? .unknown
+        return TokenMethod(rawValue: Int(result))
     }
 }

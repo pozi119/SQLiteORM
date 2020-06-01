@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SQLiteORM
 
 struct Person: Codable, Equatable {
     enum Sex: Int, Codable {
@@ -43,5 +44,26 @@ class User: NSObject, Codable {
         self.name = name
         self.password = password
         self.person = person
+    }
+}
+
+public extension TokenMethod {
+    static let test = TokenMethod(rawValue: 1 << 3)
+}
+
+struct TestTokenizer: Tokenizer {
+    static func tokenize(_ bytes: [UInt8], _ method: TokenMethod, _ mask: TokenMask) -> [Token] {
+        let string: NSString = (String(bytes: bytes) as NSString)
+        var results: [Token] = []
+        let count = string.length
+        for i in 0 ..< count {
+            let start = Int32(string.substring(to: i).bytes.count)
+            let cur = string.substring(with: NSMakeRange(i, 1))
+            let cbytes = cur.bytes
+            let len = Int32(cbytes.count)
+            let token = Token(cur, len: len, start: start, end: start + len)
+            results.append(token)
+        }
+        return results
     }
 }
