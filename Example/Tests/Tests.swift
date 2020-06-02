@@ -243,6 +243,29 @@ extension SQLiteORMTests {
         XCTAssert(all.count > 0)
         XCTAssert(p1 != nil)
     }
+
+    func testRelativeOrm() {
+        let config = PlainConfig(Person.self)
+        config.primaries = ["id"]
+        let ftsconfig = FtsConfig(Person.self)
+        ftsconfig.blacks = ["id"]
+        ftsconfig.indexes = ["name", "intro"]
+        let orm = Orm<Person>(config: config, db: db, table: "relative_person")
+        let ftsorm = try! Orm<Person>(config: ftsconfig, relative: orm, content_rowid: "id")
+        orm.delete()
+        let p1 = Person(name: "张三", age: 21, id: 1, sex: .male, intro: "我是张三")
+        let p2 = Person(name: "李四", age: 22, id: 2, sex: .female, intro: "我是李四")
+        var p3 = Person(name: "王五", age: 23, id: 3, sex: .male, intro: "我是王五")
+        orm.insert(multi: [p1, p2, p3])
+        let r1 = ftsorm.find()
+        orm.delete(p2)
+        let r2 = ftsorm.find()
+        p3.name = "王六"
+        orm.update(p3)
+        let r3 = ftsorm.find()
+        //TODO: xFind()
+        if(r1.count + r2.count + r3.count > 0){}
+    }
 }
 
 // MARK: - FTS

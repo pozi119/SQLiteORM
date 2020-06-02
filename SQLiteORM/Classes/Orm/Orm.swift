@@ -37,6 +37,16 @@ public final class Orm<T: Codable> {
     /// Decoder
     public let decoder = OrmDecoder()
 
+    public private(set) var created = false
+
+    private var content_table: String? = nil
+
+    private var content_rowid: String? = nil
+
+    private weak var relative: Orm? = nil
+
+    private var tableConfig: Config
+
     /// 初始化ORM
     ///
     /// - Parameters:
@@ -64,8 +74,80 @@ public final class Orm<T: Codable> {
         } else {
             self.table = info?.name ?? ""
         }
+        tableConfig = Config.factory(self.table, db: db)
         if flag {
             try? setup()
+        }
+    }
+
+    public convenience init(config: FtsConfig,
+                            db: Database = Database(.temporary),
+                            table: String = "",
+                            content_table: String,
+                            content_rowid: String,
+                            setup flag: Bool = true) {
+        self.init(config: config, db: db, table: table, setup: false)
+        self.content_table = content_table
+        self.content_rowid = content_rowid
+        if flag {
+            try? setup()
+        }
+    }
+
+    public convenience init(config: FtsConfig,
+                            relative orm: Orm,
+                            content_rowid: String,
+                            setup flag: Bool = true) throws {
+        config.treate()
+        guard
+            let cfg = orm.config as? PlainConfig,
+            (cfg.primaries.count == 1 && cfg.primaries.first! == content_rowid) || cfg.uniques.contains(content_rowid),
+            Set(config.columns).isSubset(of: Set(cfg.columns)),
+            !config.columns.contains(content_rowid)
+        else {
+            let error = NSError(domain: "sqlitorm", code: -1, userInfo: [NSLocalizedFailureReasonErrorKey: "invalid relative orm"])
+            throw error
+        }
+
+        let fts_table = "fts_" + orm.table
+        self.init(config: config, db: orm.db, table: fts_table, setup: false)
+        content_table = orm.table
+        self.content_rowid = content_rowid
+
+        do {
+            if !orm.created { try orm.setup() }
+            if flag { try setup() }
+        } catch {
+            throw error
+        }
+
+        // trigger
+        let ins_rows = (["rowid"] + config.columns).joined(separator: ",")
+        let ins_vals = ([content_rowid] + config.columns).map { "new." + $0 }.joined(separator: ",")
+        let del_rows = ([fts_table, "rowid"] + config.columns).joined(separator: ",")
+        let del_vals = (["'delete'"] + ([content_rowid] + config.columns).map { "old." + $0 }).joined(separator: ",")
+
+        let ins_tri_name = fts_table + "_insert"
+        let del_tri_name = fts_table + "_delete"
+        let upd_tri_name = fts_table + "_update"
+
+        let ins_trigger = "CREATE TRIGGER IF NOT EXISTS \(ins_tri_name) AFTER INSERT ON \(orm.table) BEGIN \n"
+            + "INSERT INTO \(fts_table) (\(ins_rows)) VALUES (\(ins_vals)); \n"
+            + "END;"
+        let del_trigger = "CREATE TRIGGER IF NOT EXISTS \(del_tri_name) AFTER DELETE ON \(orm.table) BEGIN \n"
+            + "INSERT INTO \(fts_table) (\(del_rows)) VALUES (\(del_vals)); \n"
+            + "END;"
+        let upd_trigger = "CREATE TRIGGER IF NOT EXISTS \(upd_tri_name) AFTER UPDATE ON \(orm.table) BEGIN \n"
+            + "INSERT INTO \(fts_table) (\(del_rows)) VALUES (\(del_vals)); \n"
+            + "INSERT INTO \(fts_table) (\(ins_rows)) VALUES (\(ins_vals)); \n"
+            + "END;"
+
+        do {
+            try orm.db.run(ins_trigger)
+            try orm.db.run(del_trigger)
+            try orm.db.run(upd_trigger)
+        } catch {
+            throw error
         }
     }
 
@@ -88,7 +170,6 @@ public final class Orm<T: Codable> {
         }
         ins.insert(.exist)
 
-        let tableConfig = Config.factory(table, db: db)
         switch (tableConfig, config) {
         case let (tableConfig as PlainConfig, config as PlainConfig):
             if tableConfig != config {
@@ -112,6 +193,8 @@ public final class Orm<T: Codable> {
     /// - Parameter options: 检查结果
     /// - Throws: 创建/更新表过程中的错误
     public func setup(with options: Inspection) throws {
+        guard !created else { return }
+
         let exist = options.contains(.exist)
         let changed = options.contains(.tableChanged)
         let indexChanged = options.contains(.indexChanged)
@@ -132,6 +215,7 @@ public final class Orm<T: Codable> {
         if general && (indexChanged || !exist) {
             try rebuildIndex()
         }
+        created = true
     }
 
     /// 重命名表
@@ -147,7 +231,14 @@ public final class Orm<T: Codable> {
     ///
     /// - Throws: 创建表过程中的错误
     public func createTable() throws {
-        let sql = config.createSQL(with: table)
+        var sql = ""
+        switch config {
+        case let cfg as PlainConfig:
+            sql = cfg.createSQL(with: table)
+        case let cfg as FtsConfig:
+            sql = cfg.createSQL(with: table, content_table: content_table, content_rowid: content_rowid)
+        default: break
+        }
         try db.run(sql)
     }
 
@@ -157,7 +248,11 @@ public final class Orm<T: Codable> {
     /// - Attention: FTS表需手动迁移数据
     /// - Throws: 迁移过程中的错误
     func migrationData(from tempTable: String) throws {
-        let fields = config.columns.joined(separator: ",")
+        let columnsSet = NSMutableOrderedSet(array: config.columns)
+        columnsSet.intersectSet(Set(tableConfig.columns))
+        let columns = columnsSet.array as! [String]
+
+        let fields = columns.joined(separator: ",")
         guard fields.count > 0 else {
             return
         }
@@ -188,9 +283,9 @@ public final class Orm<T: Codable> {
             return
         }
         // 建立新索引
-        let indexName = "sqlite_orm_index_\(table)"
+        let indexName = "orm_index_\(table)"
         let indexesString = config.indexes.joined(separator: ",")
-        let createSQL = indexesSQL.count > 0 ? "CREATE INDEX \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""
+        let createSQL = indexesSQL.count > 0 ? "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""
         if indexesSQL.count > 0 {
             if dropIdxSQL.count > 0 {
                 try db.run(dropIdxSQL)

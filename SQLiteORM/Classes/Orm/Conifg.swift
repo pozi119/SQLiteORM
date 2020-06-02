@@ -82,17 +82,20 @@ public class Config {
     }
 
     /// 预处理
-    fileprivate func treate() {
+    public func treate() {
         whites = Array(Set(whites))
         blacks = Array(Set(blacks))
+        
+        let orderedSet = NSMutableOrderedSet(array: columns)
         if whites.count > 0 {
-            columns = Set(columns).intersection(whites).sorted(by: { $0 < $1 })
+            orderedSet.intersectSet(Set(whites))
         } else if blacks.count > 0 {
-            columns = Set(columns).subtracting(blacks).sorted(by: { $0 < $1 })
-        } else {
-            columns = Set(columns).sorted(by: { $0 < $1 })
+            orderedSet.minusSet(Set(blacks))
         }
-        indexes = Array(Set(indexes).intersection(columns))
+        columns = orderedSet.array as! [String]
+
+        orderedSet.intersectSet(Set(indexes))
+        indexes = orderedSet.array as! [String]
     }
 
     public func createSQL(with table: String) -> String {
@@ -202,10 +205,18 @@ public final class PlainConfig: Config {
     /// 预处理
     public override func treate() {
         super.treate()
-        primaries = Array(Set(primaries).intersection(columns))
+
+        let primariesSet = NSMutableOrderedSet(array: columns)
+        primariesSet.intersectSet(Set(primaries))
+        primaries = primariesSet.array as! [String]
+
         notnulls = Array(Set(notnulls).intersection(columns).subtracting(primaries))
         uniques = Array(Set(uniques).intersection(columns).subtracting(primaries))
-        indexes = Array(Set(indexes).subtracting(uniques).subtracting(primaries))
+
+        let indexesSet = NSMutableOrderedSet(array: columns)
+        indexesSet.minusSet(Set(uniques))
+        indexesSet.minusSet(Set(primaries))
+        indexes = indexesSet.array as! [String]
     }
 
     /// 比较两个配置的索引
@@ -245,11 +256,9 @@ public final class PlainConfig: Config {
             array.append("PRIMARY KEY (" + primaries.joined(separator: ",") + ")")
         }
 
+        guard array.count > 0 else { return "" }
+        
         let sql = array.joined(separator: ",")
-        guard sql.count > 0 else {
-            return sql
-        }
-
         return "CREATE TABLE IF NOT EXISTS \(table.quoted) (\(sql))".strip
     }
 }
@@ -342,28 +351,36 @@ public final class FtsConfig: Config {
     ///
     /// - Parameter table: 表名
     /// - Returns: SQL语句
-    public override func createSQL(with table: String) -> String {
+    public func createSQL(with table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
         treate()
-        let notindexeds = Set(columns).subtracting(indexes)
-        var sql = ""
-        for column in columns {
-            sql += ", \(column.quoted)"
-            if notindexeds.contains(column) && version >= 5 {
-                sql += " UNINDEXED"
+        let notindexedsSet = NSMutableOrderedSet(array: columns)
+        notindexedsSet.minusSet(Set(indexes))
+        let notindexeds = notindexedsSet.array as! [String]
+        
+        var rows: [String] = columns.map { $0.quoted }
+        if notindexeds.count > 0 {
+            if version >= 5 {
+                rows = columns.map { notindexeds.contains($0) ? $0.quoted + " UNINDEXED" : $0.quoted }
+            } else if version == 4 {
+                notindexeds.forEach { rows.append("notindexed=\($0.quoted)") }
             }
         }
-        if version == 4 && notindexeds.count > 0 {
-            for column in notindexeds {
-                sql += ", notindexed=\(column.quoted)"
-            }
-        }
-        guard sql.count > 2 else {
-            return ""
-        }
-        sql.removeFirst(2)
 
-        let tokenize = tokenizer.count == 0 ? "" : (version < 5 ? ", tokenize=\(tokenizer)" : ", tokenize = '\(tokenizer)'")
-        return "CREATE VIRTUAL TABLE IF NOT EXISTS \(table.quoted) USING \(module)(\(sql) \(tokenize))".strip
+        guard rows.count > 0 else { return "" }
+
+        if tokenizer.count > 0 {
+            rows.append(version < 5 ? "tokenize=\(tokenizer)" : "tokenize = '\(tokenizer)'")
+        }
+        if let con_tbl = content_table {
+            rows.append("content='\(con_tbl)'")
+            if let con_rowid = content_rowid, con_tbl.count > 0 && con_rowid.count > 0 {
+                rows.append("content_rowid='\(con_rowid)'")
+            }
+        }
+
+        let sql = rows.joined(separator: ",")
+
+        return "CREATE VIRTUAL TABLE IF NOT EXISTS \(table.quoted) USING \(module)(\(sql))".strip
     }
 }
 

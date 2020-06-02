@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14490.70" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="aK6-4t-8kd">
-    <device id="retina6_1" orientation="portrait">
-        <adaptation id="fullscreen"/>
-    </device>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="16097" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="aK6-4t-8kd">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14490.49"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16087"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -77,7 +75,7 @@
                                                     <nil key="highlightedColor"/>
                                                 </label>
                                                 <label opaque="NO" multipleTouchEnabled="YES" contentMode="left" insetsLayoutMarginsFromSafeArea="NO" text="[R] 100000000, [N] 999.0Gb, [FTS] 999.0Gb" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" id="dah-C4-6eH">
-                                                    <rect key="frame" x="61" y="14" width="309" height="18"/>
+                                                    <rect key="frame" x="61" y="14" width="301" height="18"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                     <fontDescription key="fontDescription" type="system" pointSize="15"/>
                                                     <color key="textColor" white="0.66666666669999997" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
@@ -139,7 +137,7 @@
                             <tableViewSection headerTitle="生成数据" id="O9b-CE-Pp3">
                                 <cells>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="none" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="80" id="ZgR-f8-GVR">
-                                        <rect key="frame" x="0.0" y="232" width="414" height="80"/>
+                                        <rect key="frame" x="0.0" y="260" width="414" height="80"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="ZgR-f8-GVR" id="G7F-x2-Xe8">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="80"/>
@@ -196,7 +194,7 @@
                             <tableViewSection headerTitle="搜索数据" id="7dS-8V-VXC">
                                 <cells>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="none" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" id="Znj-VA-jxQ">
-                                        <rect key="frame" x="0.0" y="340" width="414" height="44"/>
+                                        <rect key="frame" x="0.0" y="396" width="414" height="44"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Znj-VA-jxQ" id="8nd-VO-9hp">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="44"/>
@@ -232,7 +230,7 @@
                                         </tableViewCellContentView>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="none" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" id="pyT-F4-G7f">
-                                        <rect key="frame" x="0.0" y="384" width="414" height="44"/>
+                                        <rect key="frame" x="0.0" y="440" width="414" height="44"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="pyT-F4-G7f" id="lL7-CB-9tf">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="44"/>
@@ -271,7 +269,7 @@
                                         </tableViewCellContentView>
                                     </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="none" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="80" id="qMW-zG-aja">
-                                        <rect key="frame" x="0.0" y="428" width="414" height="80"/>
+                                        <rect key="frame" x="0.0" y="484" width="414" height="80"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="qMW-zG-aja" id="mP4-jI-pxm">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="80"/>
@@ -318,7 +316,7 @@
                             <tableViewSection headerTitle="日志" id="jhs-SN-A9r">
                                 <cells>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="none" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" rowHeight="200" id="Phi-2M-IJj">
-                                        <rect key="frame" x="0.0" y="536" width="414" height="200"/>
+                                        <rect key="frame" x="0.0" y="620" width="414" height="200"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Phi-2M-IJj" id="QCr-kH-PW4">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="200"/>
@@ -359,17 +357,17 @@
                         <outlet property="generateProgressLabel" destination="yNg-6u-hBR" id="frf-SK-zkv"/>
                         <outlet property="generateProgressView" destination="Ila-rr-I6b" id="2cf-g4-iLQ"/>
                         <outlet property="generateResultLabel" destination="8dH-Ef-yVc" id="fEN-P6-TqN"/>
-                        <outlet property="hundredMillionLabel" destination="jVT-X4-89e" id="nPc-2K-DBf"/>
-                        <outlet property="hundredThousandLabel" destination="DkJ-PA-asM" id="Clr-D0-NLA"/>
                         <outlet property="keywordTextField" destination="Hvw-Dm-iLA" id="Rhb-1s-8ge"/>
+                        <outlet property="l100kLabel" destination="DkJ-PA-asM" id="Clr-D0-NLA"/>
+                        <outlet property="l100mLabel" destination="jVT-X4-89e" id="nPc-2K-DBf"/>
+                        <outlet property="l10mLabel" destination="DZ7-Lx-pK2" id="Aql-W2-2Mq"/>
+                        <outlet property="l1mLabel" destination="dah-C4-6eH" id="oIa-q4-cHq"/>
                         <outlet property="logTextView" destination="rd1-18-gUT" id="t1I-Oq-aXR"/>
-                        <outlet property="millionLabel" destination="dah-C4-6eH" id="oIa-q4-cHq"/>
                         <outlet property="searchButton" destination="SBQ-gB-3na" id="0Wh-Kr-Fh7"/>
                         <outlet property="searchFtsButton" destination="Vrq-MO-qyl" id="2AS-WW-Yts"/>
                         <outlet property="searchIndicator" destination="UL3-mG-NH4" id="YgJ-zp-Kdk"/>
                         <outlet property="searchResultLabel" destination="yWM-4n-UBE" id="9Ix-du-e9f"/>
                         <outlet property="searchStatusLabel" destination="7dQ-Ew-aj1" id="HRK-Vv-NUO"/>
-                        <outlet property="tenMillionLabel" destination="DZ7-Lx-pK2" id="Aql-W2-2Mq"/>
                     </connections>
                 </tableViewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="xIO-Z2-ywM" userLabel="First Responder" sceneMemberID="firstResponder"/>

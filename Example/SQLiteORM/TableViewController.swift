@@ -10,10 +10,10 @@ import SQLiteORM
 import UIKit
 
 class TableViewController: UITableViewController {
-    @IBOutlet var hundredThousandLabel: UILabel!
-    @IBOutlet var millionLabel: UILabel!
-    @IBOutlet var tenMillionLabel: UILabel!
-    @IBOutlet var hundredMillionLabel: UILabel!
+    @IBOutlet var l100kLabel: UILabel!
+    @IBOutlet var l1mLabel: UILabel!
+    @IBOutlet var l10mLabel: UILabel!
+    @IBOutlet var l100mLabel: UILabel!
 
     @IBOutlet var generateButton: UIButton!
     @IBOutlet var generateResultLabel: UILabel!
@@ -58,10 +58,10 @@ class TableViewController: UITableViewController {
         let dir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last!
         let tableName = "message"
 
-        let item1 = Item(dir: dir, tableName: tableName, dbName: "100k.db", ftsDbName: "f-100k.db", label: hundredThousandLabel, maxCount: 100000)
-        let item2 = Item(dir: dir, tableName: tableName, dbName: "1m.db", ftsDbName: "f-1m.db", label: millionLabel, maxCount: 1000000)
-        let item3 = Item(dir: dir, tableName: tableName, dbName: "10m.db", ftsDbName: "f-10m.db", label: tenMillionLabel, maxCount: 10000000)
-        let item4 = Item(dir: dir, tableName: tableName, dbName: "100m.db", ftsDbName: "f-100m.db", label: hundredMillionLabel, maxCount: 100000000)
+        let item1 = Item(dir: dir, tableName: tableName, dbName: "100k.db", ftsDbName: "f-100k.db", label: l100kLabel, maxCount: 100000)
+        let item2 = Item(dir: dir, tableName: tableName, dbName: "1m.db", ftsDbName: "f-1m.db", label: l1mLabel, maxCount: 1000000)
+        let item3 = Item(dir: dir, tableName: tableName, dbName: "10m.db", ftsDbName: "f-10m.db", label: l10mLabel, maxCount: 10000000)
+        let item4 = Item(dir: dir, tableName: tableName, dbName: "100m.db", ftsDbName: "f-100m.db", label: l100mLabel, maxCount: 100000000)
         items = [item1, item2, item3, item4]
 
         let indexPath = IndexPath(row: selectedIndex, section: 0)
