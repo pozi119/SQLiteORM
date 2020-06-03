@@ -37,7 +37,7 @@ public final class Orm<T: Codable> {
     /// Decoder
     public let decoder = OrmDecoder()
 
-    public private(set) var created = false
+    private var created = false
 
     private var content_table: String? = nil
 
@@ -96,23 +96,22 @@ public final class Orm<T: Codable> {
 
     public convenience init(config: FtsConfig,
                             relative orm: Orm,
-                            content_rowid: String,
-                            setup flag: Bool = true) {
+                            content_rowid: String) {
         config.treate()
         if
             let cfg = orm.config as? PlainConfig,
             (cfg.primaries.count == 1 && cfg.primaries.first! == content_rowid) || cfg.uniques.contains(content_rowid),
             Set(config.columns).isSubset(of: Set(cfg.columns)),
-            !config.columns.contains(content_rowid) {
+            cfg.columns.contains(content_rowid) {
         } else {
             let message =
-            """
-             The following conditions must be met:
-             1. The relative ORM is the universal ORM
-             2. The relative ORM has uniqueness constraints
-             3. The relative ORM contains all fields of this ORM
-             4. The relative ORM contains the content_rowid
-            """
+                """
+                 The following conditions must be met:
+                 1. The relative ORM is the universal ORM
+                 2. The relative ORM has uniqueness constraints
+                 3. The relative ORM contains all fields of this ORM
+                 4. The relative ORM contains the content_rowid
+                """
             assert(false, message)
         }
 
@@ -120,13 +119,6 @@ public final class Orm<T: Codable> {
         self.init(config: config, db: orm.db, table: fts_table, setup: false)
         content_table = orm.table
         self.content_rowid = content_rowid
-
-        do {
-            if !orm.created { try orm.setup() }
-            if flag { try setup() }
-        } catch {
-            print(error)
-        }
 
         // trigger
         let ins_rows = (["rowid"] + config.columns).joined(separator: ",")
@@ -150,6 +142,8 @@ public final class Orm<T: Codable> {
             + "END;"
 
         do {
+            if !orm.created { try orm.setup() }
+            try setup()
             try orm.db.run(ins_trigger)
             try orm.db.run(del_trigger)
             try orm.db.run(upd_trigger)
