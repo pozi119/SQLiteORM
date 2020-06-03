@@ -251,7 +251,7 @@ extension SQLiteORMTests {
         ftsconfig.blacks = ["id"]
         ftsconfig.indexes = ["name", "intro"]
         let orm = Orm<Person>(config: config, db: db, table: "relative_person")
-        let ftsorm = try! Orm<Person>(config: ftsconfig, relative: orm, content_rowid: "id")
+        let ftsorm = Orm<Person>(config: ftsconfig, relative: orm, content_rowid: "id")
         orm.delete()
         let p1 = Person(name: "张三", age: 21, id: 1, sex: .male, intro: "我是张三")
         let p2 = Person(name: "李四", age: 22, id: 2, sex: .female, intro: "我是李四")

@@ -97,16 +97,23 @@ public final class Orm<T: Codable> {
     public convenience init(config: FtsConfig,
                             relative orm: Orm,
                             content_rowid: String,
-                            setup flag: Bool = true) throws {
+                            setup flag: Bool = true) {
         config.treate()
-        guard
+        if
             let cfg = orm.config as? PlainConfig,
             (cfg.primaries.count == 1 && cfg.primaries.first! == content_rowid) || cfg.uniques.contains(content_rowid),
             Set(config.columns).isSubset(of: Set(cfg.columns)),
-            !config.columns.contains(content_rowid)
-        else {
-            let error = NSError(domain: "sqlitorm", code: -1, userInfo: [NSLocalizedFailureReasonErrorKey: "invalid relative orm"])
-            throw error
+            !config.columns.contains(content_rowid) {
+        } else {
+            let message =
+            """
+             The following conditions must be met:
+             1. The relative ORM is the universal ORM
+             2. The relative ORM has uniqueness constraints
+             3. The relative ORM contains all fields of this ORM
+             4. The relative ORM contains the content_rowid
+            """
+            assert(false, message)
         }
 
         let fts_table = "fts_" + orm.table
@@ -118,7 +125,7 @@ public final class Orm<T: Codable> {
             if !orm.created { try orm.setup() }
             if flag { try setup() }
         } catch {
-            throw error
+            print(error)
         }
 
         // trigger
@@ -147,7 +154,7 @@ public final class Orm<T: Codable> {
             try orm.db.run(del_trigger)
             try orm.db.run(upd_trigger)
         } catch {
-            throw error
+            print(error)
         }
     }
 
