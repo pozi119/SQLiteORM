@@ -257,14 +257,13 @@ extension SQLiteORMTests {
         let p2 = Person(name: "李四", age: 22, id: 2, sex: .female, intro: "我是李四")
         var p3 = Person(name: "王五", age: 23, id: 3, sex: .male, intro: "我是王五")
         orm.insert(multi: [p1, p2, p3])
-        let r1 = ftsorm.find()
+        let r1 = ftsorm.xFind()
         orm.delete(p2)
-        let r2 = ftsorm.find()
+        let r2 = ftsorm.xFind(fields: "rowid as id, *")
         p3.name = "王六"
         orm.update(p3)
-        let r3 = ftsorm.find()
-        //TODO: xFind()
-        if(r1.count + r2.count + r3.count > 0){}
+        let r3 = ftsorm.xFind()
+        if r1.count + r2.count + r3.count > 0 {}
     }
 }
 

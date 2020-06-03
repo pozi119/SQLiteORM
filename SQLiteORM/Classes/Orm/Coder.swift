@@ -62,26 +62,27 @@ func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
         return value
     }
 
-    guard item != nil && item is Binding else {
+    guard let item = item, item is Binding else {
         throw OrmCodableError.cast
     }
 
+    let desc = String(describing: item)
     var value: T?
     switch type {
-    case is Int.Type: value = Int(String(describing: item!)) as? T
-    case is Int8.Type: value = Int8(String(describing: item!)) as? T
-    case is Int16.Type: value = Int16(String(describing: item!)) as? T
-    case is Int32.Type: value = Int32(String(describing: item!)) as? T
-    case is Int64.Type: value = Int64(String(describing: item!)) as? T
-    case is Int.Type: value = UInt(String(describing: item!)) as? T
-    case is UInt8.Type: value = UInt8(String(describing: item!)) as? T
-    case is UInt16.Type: value = UInt16(String(describing: item!)) as? T
-    case is UInt32.Type: value = UInt32(String(describing: item!)) as? T
-    case is UInt64.Type: value = UInt64(String(describing: item!)) as? T
-    case is Bool.Type: value = Bool(String(describing: item!)) as? T
-    case is Float.Type: value = Float(String(describing: item!)) as? T
-    case is Double.Type: value = Double(String(describing: item!)) as? T
-    case is String.Type: value = String(describing: item!) as? T
+    case is Int.Type: value = (Int(desc) ?? 0) as? T
+    case is Int8.Type: value = (Int8(desc) ?? 0) as? T
+    case is Int16.Type: value = (Int16(desc) ?? 0) as? T
+    case is Int32.Type: value = (Int32(desc) ?? 0) as? T
+    case is Int64.Type: value = (Int64(desc) ?? 0) as? T
+    case is Int.Type: value = (UInt(desc) ?? 0) as? T
+    case is UInt8.Type: value = (UInt8(desc) ?? 0) as? T
+    case is UInt16.Type: value = (UInt16(desc) ?? 0) as? T
+    case is UInt32.Type: value = (UInt32(desc) ?? 0) as? T
+    case is UInt64.Type: value = (UInt64(desc) ?? 0) as? T
+    case is Bool.Type: value = (Bool(desc) ?? false) as? T
+    case is Float.Type: value = (Float(desc) ?? 0) as? T
+    case is Double.Type: value = (Double(desc) ?? 0) as? T
+    case is String.Type: value = desc as? T
     default: value = nil
     }
 
@@ -456,7 +457,8 @@ extension OrmDecoder {
         func contains(_ key: Key) -> Bool { return container[key.stringValue] != nil }
 
         private func find(forKey key: CodingKey) throws -> Any {
-            return try container.tryValue(forKey: key.stringValue)
+            return container[key.stringValue] ?? ""
+            // return try container.tryValue(forKey: key.stringValue)
         }
 
         func _decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
