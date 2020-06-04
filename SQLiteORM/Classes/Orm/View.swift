@@ -19,11 +19,15 @@ public class View<T: Codable> {
     public let config: Config
     public let properties: [String: PropertyInfo]
 
-    private let encoder = OrmEncoder()
     private let decoder = OrmDecoder()
 
-    public init(_ name: String, temp: Bool = false, columns: [String]? = nil, condition: Where,
-                table: String = "", db: Database = Database(.temporary), config: Config) {
+    public init(_ name: String,
+                temp: Bool = false,
+                columns: [String]? = nil,
+                condition: Where,
+                table: String = "",
+                db: Database = Database(.temporary),
+                config: Config) {
         assert(config.type != nil && config.columns.count > 0, "invalid config")
 
         self.temp = temp
@@ -50,7 +54,11 @@ public class View<T: Codable> {
         }
     }
 
-    public convenience init<S>(_ name: String, temp: Bool = false, columns: [String]? = nil, condition: Where, orm: Orm<S>) {
+    public convenience init<S>(_ name: String,
+                               temp: Bool = false,
+                               columns: [String]? = nil,
+                               condition: Where,
+                               orm: Orm<S>) {
         self.init(name, temp: temp, columns: columns, condition: condition, table: orm.table, db: orm.db, config: orm.config)
     }
 
@@ -185,7 +193,7 @@ public extension View {
     ///
     /// - Parameter item: 要查询的数据
     /// - Returns: 是否存在
-    func exist<T: Codable>(_ item: T) -> Bool {
+    func exist(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return count(condition) > 0
     }

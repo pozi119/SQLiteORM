@@ -80,7 +80,7 @@ public extension Orm {
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入成功
     @discardableResult
-    func insert<T: Codable>(_ item: T) -> Bool {
+    func insert(_ item: T) -> Bool {
         let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding])
     }
@@ -95,7 +95,7 @@ public extension Orm {
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入成功的数量
     @discardableResult
-    func insert<T: Codable>(multi items: [T]) -> Int64 {
+    func insert(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array)
     }
@@ -110,7 +110,7 @@ public extension Orm {
     /// - Parameter item: 要插入的数据
     /// - Returns: 是否插入或更新成功
     @discardableResult
-    func upsert<T: Codable>(_ item: T) -> Bool {
+    func upsert(_ item: T) -> Bool {
         let dic = try? encoder.encode(item)
         return _update(dic as! [String: Binding], type: .upsert)
     }
@@ -125,7 +125,7 @@ public extension Orm {
     /// - Parameter items: 要插入的数据
     /// - Returns: 插入或更新成功的数量
     @discardableResult
-    func upsert<T: Codable>(multi items: [T]) -> Int64 {
+    func upsert(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
         return _update(multi: array, type: .upsert)
     }
@@ -155,7 +155,7 @@ public extension Orm {
     /// - Parameter item: 要更新的数据
     /// - Returns: 是否更新成功
     @discardableResult
-    func update<T: Codable>(_ item: T) -> Bool {
+    func update(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         let bindings = try! encoder.encode(item) as! [String: Binding]
         return _update(bindings, type: .upsert, condition: condition)
@@ -168,7 +168,7 @@ public extension Orm {
     ///   - fields: 指定字段
     /// - Returns: 是否更新成功
     @discardableResult
-    func update<T: Codable>(_ item: T, fields: [String]) -> Bool {
+    func update(_ item: T, fields: [String]) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         var bindings = try! encoder.encode(item) as! [String: Binding]
         let trashKeys = Array(Set(bindings.keys).subtracting(fields))
@@ -181,7 +181,7 @@ public extension Orm {
     /// - Parameter items: 要更新的数据
     /// - Returns: 更新成功的数量
     @discardableResult
-    func update<T: Codable>(multi items: [T]) -> Int64 {
+    func update(multi items: [T]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(.immediate) {
@@ -203,7 +203,7 @@ public extension Orm {
     ///   - fields: 指定字段
     /// - Returns: 更新成功的数量
     @discardableResult
-    func update<T: Codable>(multi items: [T], fields: [String]) -> Int64 {
+    func update(multi items: [T], fields: [String]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(.immediate) {
@@ -321,7 +321,7 @@ public extension Orm {
     ///
     /// - Parameter item: 要查询的数据
     /// - Returns: 是否存在
-    func exist<T: Codable>(_ item: T) -> Bool {
+    func exist(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return count(condition) > 0
     }
@@ -397,7 +397,7 @@ public extension Orm {
     /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
     /// - Returns: 是否删除成功
     @discardableResult
-    func delete(_ item: Codable) -> Bool {
+    func delete(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return delete(where: condition)
     }
@@ -408,7 +408,7 @@ public extension Orm {
     /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
     /// - Returns: 是否删除成功
     @discardableResult
-    func delete(_ items: [Codable]) -> Int64 {
+    func delete(_ items: [T]) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(block: {
