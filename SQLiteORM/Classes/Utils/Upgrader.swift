@@ -10,179 +10,236 @@ import Foundation
 fileprivate extension String {
     private static let delimiterSet = CharacterSet(charactersIn: ".-_")
 
-    func versionCompare(_ other: String) -> ComparisonResult {
+    func compare(version other: String) -> Int {
         let array1 = components(separatedBy: String.delimiterSet)
         let array2 = other.components(separatedBy: String.delimiterSet)
         let count = min(array1.count, array2.count)
         for i in 0 ..< count {
             let str1 = array1[i]
             let str2 = array2[i]
-            let ret = str1.versionCompare(str2)
-            guard ret == .orderedSame else { return ret }
+            let ret = str1.compare(str2)
+            guard ret == .orderedSame else { return ret.rawValue }
         }
 
-        return array1.count < array2.count ? .orderedAscending : array1.count == array2.count ? .orderedSame : .orderedDescending
+        return array1.count < array2.count ? -1 : array1.count == array2.count ? 0 : 1
     }
 }
 
-public final class Upgrader {
-    struct Item {
-        var target: NSObjectProtocol?
-        var action: Selector?
-        var handler: ((Progress) -> Void)?
-        var version: String = ""
-        var stage: UInt = 0
-        var progress: Progress = Progress(totalUnitCount: 100)
+public extension Upgrader {
+    class Item: Comparable, CustomStringConvertible {
+        public var id: String = ""
+        public var version: String = ""
+        public var stage: UInt = 0
 
-        init() {}
+        public var priority: Float = 0.5
+        public var weight: Float = 1.0
+        public var progress: Float = 0.0 { didSet { observer?(self) } }
 
-        func compare(_ other: Item) -> ComparisonResult {
-            let result = version.versionCompare(other.version)
-            guard result != .orderedSame else { return result }
-            return stage < other.stage ? .orderedAscending : (stage == other.stage ? .orderedSame : .orderedDescending)
+        public var reserved: Any?
+
+        public var handler: (Item) -> Bool
+        fileprivate var observer: ((Item) -> Void)?
+
+        init(id: String, version: String, stage: UInt = 0, handler: @escaping (Item) -> Bool) {
+            self.id = id
+            self.version = version
+            self.stage = stage
+            self.handler = handler
         }
 
-        static func < (lhs: Item, rhs: Item) -> Bool {
-            return lhs.compare(rhs) == .orderedAscending
+        public func copy() -> Item {
+            let item = Item(id: id, version: version, stage: stage, handler: handler)
+            item.progress = 0
+            item.priority = priority
+            item.weight = weight
+            item.reserved = reserved
+            return item
         }
 
-        static func > (lhs: Item, rhs: Item) -> Bool {
-            return lhs.compare(rhs) == .orderedDescending
+        public var description: String {
+            return String(format: "id:'%@', stage:%i, version:'%@', priority:%.2f, weight:%.2f, progress:%.2f", id, stage, version, priority, weight, progress)
         }
 
-        static func == (lhs: Item, rhs: Item) -> Bool {
-            return lhs.compare(rhs) == .orderedSame
+        // MARK: Comparable
+
+        func compare(_ other: Item) -> Int {
+            var result = stage < other.stage ? -1 : (stage == other.stage ? 0 : 1)
+            guard result == 0 else { return result }
+            result = version.compare(version: other.version)
+            guard result == 0 else { return result }
+            return priority > other.priority ? -1 : (stage == other.stage ? 0 : 1)
         }
 
-        static func <= (lhs: Item, rhs: Item) -> Bool {
-            let result = lhs.compare(rhs)
-            return result == .orderedAscending || result == .orderedSame
+        public static func < (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) < 0
         }
 
-        static func >= (lhs: Item, rhs: Item) -> Bool {
-            let result = lhs.compare(rhs)
-            return result == .orderedDescending || result == .orderedSame
+        public static func > (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) > 0
+        }
+
+        public static func == (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) == 0
+        }
+
+        public static func <= (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) <= 0
+        }
+
+        public static func >= (lhs: Item, rhs: Item) -> Bool {
+            return lhs.compare(rhs) >= 0
         }
     }
+}
 
-    var versionKey = "sqliteorm.upgrader.lastversion"
-    var progress = Progress(totalUnitCount: 100)
-
-    private var items: [Item] = []
+public class Upgrader: NSObject {
+    private let completeInfoKeySuffix = "-lastCompleted"
+    private var completeInfoKey: String = "com.valo.upgrader.lastversion-lastCompleted"
     private var stagesItems: [UInt: [Item]] = [:]
-    private var stages: [UInt] = []
+    private var updateItems: [UInt: [Item]] = [:]
+    private var completedInfo: [String: Bool] = [:]
+    private var versions: Set<String> = Set()
+    private var stages: Set<UInt> = Set()
     private var pretreated = false
+    private static let accuracy: Float = 100.0
 
-    var isUpgrading: Bool {
-        return pretreated && stagesItems.count > 0 && progress.completedUnitCount < progress.totalUnitCount
+    public var versionKey = "com.valo.upgrader.lastversion" {
+        didSet { completeInfoKey = versionKey + completeInfoKeySuffix }
     }
 
-    var needUpgrade: Bool {
+    public let progress = Progress(totalUnitCount: 100)
+
+    private(set) var upgrading = false
+
+    public var needUpgrade: Bool {
         pretreat()
         return stagesItems.count > 0
     }
 
-    init(versionKey: String) {
+    public override init() {}
+
+    public init(versionKey: String) {
         self.versionKey = versionKey
     }
 
-    func reset() {
+    public func reset() {
         pretreated = false
         progress.completedUnitCount = 0
-        for item in items {
-            item.progress.completedUnitCount = 0
+        updateItems.values.forEach { $0.forEach { $0.progress = 0.0 } }
+    }
+
+    public func add(_ item: Item) {
+        item.observer = { _ in
+            let items = self.updateItems.values.reduce([]) { $0 + $1 }
+            let completedWeight = items.reduce(0.0) { $0 + $1.weight * $1.progress }
+            self.progress.completedUnitCount = Int64(completedWeight * Upgrader.accuracy)
+        }
+        add(item, to: &stagesItems)
+        versions.insert(item.version)
+        stages.insert(item.stage)
+        pretreated = false
+    }
+
+    public func add(_ items: [Item]) {
+        items.forEach { add($0) }
+    }
+
+    private func add(_ item: Item, to container: inout [UInt: [Item]]) {
+        assert(item.version.count > 0, "Invalid upgrade item.")
+        if let items = container[item.stage] {
+            container[item.stage] = items + [item]
+        } else {
+            container[item.stage] = [item]
         }
     }
 
-    func add(target: NSObjectProtocol, action: Selector, for stage: UInt, version: String) {
-        var item = Item()
-        item.target = target
-        item.action = action
-        item.stage = stage
-        item.version = version
-        items.append(item)
-    }
-
-    func add(handler: @escaping (Progress) -> Void, for stage: UInt, version: String) {
-        var item = Item()
-        item.handler = handler
-        item.stage = stage
-        item.version = version
-        items.append(item)
-    }
-
-    func upgradeAll() {
+    public func upgrade() {
         pretreat()
-        for stage in stages {
-            upgrade(stage: stage)
-        }
+        updateItems.keys.sorted().forEach { upgrade(stage: $0) }
     }
 
-    func upgrade(stage: UInt, from fromVersion: String = "", to toVersion: String = "") {
+    public func upgrade(stage: UInt) {
         pretreat()
-
-        let subItems = stagesItems[stage] ?? []
-        var todos: [Item] = []
-        for item in subItems {
-            if (fromVersion.count > 0 && item.version.compare(fromVersion).rawValue < ComparisonResult.orderedSame.rawValue)
-                || (toVersion.count > 0 && item.version.compare(toVersion).rawValue > ComparisonResult.orderedSame.rawValue) {
-                continue
-            }
-            todos.append(item)
-        }
-
-        guard todos.count > 0 else { return }
-
-        for item in todos {
-            if item.target != nil && item.action != nil {
-                if item.target!.responds(to: item.action!) {
-                    item.target!.perform(item.action!, with: item.progress)
-                }
-            } else if item.handler != nil {
-                item.handler!(item.progress)
-            }
-            item.progress.completedUnitCount = item.progress.totalUnitCount
-        }
-
-        // record last version
-        if stage == stages.last! {
-            let last = stagesItems[stage]!.last!
-            if last == todos.last! {
-                progress.completedUnitCount = progress.totalUnitCount
-                UserDefaults.standard.set(last.version, forKey: versionKey)
-            }
-        }
+        upgrade(items: updateItems[stage] ?? [])
     }
+
+    public func debug(upgrade items: [Item], progress: Progress) {
+        guard !upgrading else { return }
+        upgrading = true
+        let sorted = items.map { $0.copy() }.sorted()
+        sorted.forEach { item in
+            item.observer = { _ in
+                let completedWeight = sorted.reduce(0.0) { $0 + $1.weight * $1.progress }
+                progress.completedUnitCount = Int64(completedWeight * Upgrader.accuracy)
+            }
+        }
+        let totalWeight = sorted.reduce(0.0) { $0 + $1.weight }
+        progress.totalUnitCount = Int64(totalWeight * Upgrader.accuracy)
+        progress.completedUnitCount = 0
+        sorted.forEach { _ = upgrade(item: $0) }
+        upgrading = false
+    }
+
+    // MARK: - private
 
     private func pretreat() {
-        guard pretreated == false else { return }
+        guard !pretreated else { return }
 
+        updateItems.removeAll()
         let defaults = UserDefaults.standard
-        let lastVersion = defaults.object(forKey: versionKey) as? String ?? ""
+        let from = defaults.string(forKey: versionKey) ?? ""
+        let to = versions.sorted { $0.compare(version: $1) >= 0 }.first ?? ""
 
-        items.sort { $0 < $1 }
-
-        var dic: [UInt: [Item]] = [:]
-        for item in items {
-            let result = item.version.versionCompare(lastVersion)
-            if result.rawValue <= ComparisonResult.orderedSame.rawValue { continue }
-            var sub = dic[item.stage] ?? [Item]()
-            sub.append(item)
-            dic[item.stage] = sub
+        guard from.count > 0, to.count > 0, from.compare(version: to) < 0 else {
+            pretreated = true
+            return
         }
-
-        stagesItems = dic
-        stages = dic.keys.sorted { $0 < $1 }
-
-        for stage in stages {
-            let stageProgress = Progress(totalUnitCount: 100)
-            progress.addChild(stageProgress, withPendingUnitCount: Int64(100 / stages.count))
-            let subItems = dic[stage]!
-            for item in subItems {
-                stageProgress.addChild(item.progress, withPendingUnitCount: Int64(100 / subItems.count))
+        
+        completedInfo = (defaults.object(forKey: completeInfoKey) as? [String: Bool]) ?? [:]
+        var totalWeight: Float = 0.0
+        for (_, items) in stagesItems {
+            for item in items {
+                let completed = completedInfo[item.id] ?? false
+                if completed {
+                    item.progress = 1.0
+                } else {
+                    add(item, to: &updateItems)
+                    totalWeight = totalWeight + item.weight
+                }
             }
         }
-
+        progress.totalUnitCount = Int64(totalWeight * Upgrader.accuracy)
+        progress.completedUnitCount = 0
         pretreated = true
+    }
+
+    private func upgrade(items: [Item]) {
+        guard !upgrading else { return }
+        upgrading = true
+        pretreat()
+        let sorted = items.sorted()
+        sorted.forEach { if upgrade(item: $0) { complete($0) } }
+        upgrading = false
+    }
+
+    private func upgrade(item: Item) -> Bool {
+        guard item.progress < 1.0 else { return true }
+        let ret = item.handler(item)
+        if ret { item.progress = 1.0 }
+        return ret
+    }
+
+    private func complete(_ item: Item) {
+        completedInfo[item.id] = true
+        var incompleted = 0
+        updateItems.values.forEach { $0.forEach { if $0.progress < 1.0 { incompleted += 1 } } }
+        if incompleted == 0 {
+            let last = versions.sorted().last ?? ""
+            UserDefaults.standard.set(last, forKey: versionKey)
+            UserDefaults.standard.removeObject(forKey: completeInfoKey)
+        } else {
+            UserDefaults.standard.set(completedInfo, forKey: completeInfoKey)
+        }
+        UserDefaults.standard.synchronize()
     }
 }

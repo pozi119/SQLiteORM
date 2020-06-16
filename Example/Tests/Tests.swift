@@ -441,3 +441,44 @@ extension SQLiteORMTests {
         XCTAssert(p1 != nil)
     }
 }
+
+// MARK: Utils
+
+extension SQLiteORMTests {
+    func testUpgrade() {
+        let upgrader = Upgrader()
+        UserDefaults.standard.set("0.1.0", forKey: upgrader.versionKey)
+        let handler: ((Upgrader.Item) -> Bool) = { item -> Bool in
+            print(item)
+            for i in 1 ... 10 {
+                item.progress = Float(i) * 0.1
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            return true
+        }
+        let item1 = Upgrader.Item(id: "1", version: "0.1.1", stage: 0, handler: handler)
+        item1.weight = 5.0
+        let item2 = Upgrader.Item(id: "2", version: "0.1.4", stage: 0, handler: handler)
+        item2.weight = 2.0
+        let item3 = Upgrader.Item(id: "3", version: "0.1.1", stage: 1, handler: handler)
+        item3.weight = 3.0
+        let item4 = Upgrader.Item(id: "4", version: "0.1.3", stage: 1, handler: handler)
+        item4.weight = 10.0
+        let item5 = Upgrader.Item(id: "5", version: "0.1.2", stage: 0, handler: handler)
+        item5.weight = 7.0
+        upgrader.add([item1, item2, item3, item4, item5])
+        upgrader.progress.addObserver(self, forKeyPath: "fractionCompleted", options: .new, context: nil)
+        upgrader.upgrade()
+
+        print("\n===============\n")
+        
+        let progress = Progress(totalUnitCount: 100)
+        progress.addObserver(self, forKeyPath: "fractionCompleted", options: .new, context: nil)
+        upgrader.debug(upgrade: [item3,item4,item5], progress: progress)
+    }
+            
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+        guard keyPath == "fractionCompleted", let progress = object as? Progress else { return }
+        print(String(format: "progress: %.2f%%", progress.fractionCompleted * 100.0))
+    }
+}
