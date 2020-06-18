@@ -194,7 +194,7 @@ public class Upgrader: NSObject {
             pretreated = true
             return
         }
-        
+
         completedInfo = (defaults.object(forKey: completeInfoKey) as? [String: Bool]) ?? [:]
         var totalWeight: Float = 0.0
         for (_, items) in stagesItems {
@@ -202,7 +202,7 @@ public class Upgrader: NSObject {
                 let completed = completedInfo[item.id] ?? false
                 if completed {
                     item.progress = 1.0
-                } else {
+                } else if from.compare(version: item.version) < 0 {
                     add(item, to: &updateItems)
                     totalWeight = totalWeight + item.weight
                 }
