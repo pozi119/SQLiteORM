@@ -34,6 +34,7 @@ public extension Upgrader {
         public var priority: Float = 0.5
         public var weight: Float = 1.0
         public var progress: Float = 0.0 { didSet { observer?(self) } }
+        public var record: Bool = true
 
         public var reserved: Any?
 
@@ -52,6 +53,7 @@ public extension Upgrader {
             item.progress = 0
             item.priority = priority
             item.weight = weight
+            item.record = record
             item.reserved = reserved
             return item
         }
@@ -199,13 +201,16 @@ public class Upgrader: NSObject {
         var totalWeight: Float = 0.0
         for (_, items) in stagesItems {
             for item in items {
-                let completed = completedInfo[item.id] ?? false
-                if completed {
-                    item.progress = 1.0
-                } else if from.compare(version: item.version) < 0 {
-                    add(item, to: &updateItems)
-                    totalWeight = totalWeight + item.weight
+                if from.compare(version: item.version) >= 0 { continue }
+                if item.record {
+                    let completed = completedInfo[item.id] ?? false
+                    if completed {
+                        item.progress = 1.0
+                        continue
+                    }
                 }
+                add(item, to: &updateItems)
+                totalWeight = totalWeight + item.weight
             }
         }
         progress.totalUnitCount = Int64(totalWeight * Upgrader.accuracy)
@@ -230,16 +235,25 @@ public class Upgrader: NSObject {
     }
 
     private func complete(_ item: Item) {
-        completedInfo[item.id] = true
-        var incompleted = 0
-        updateItems.values.forEach { $0.forEach { if $0.progress < 1.0 { incompleted += 1 } } }
-        if incompleted == 0 {
-            let last = versions.sorted().last ?? ""
-            UserDefaults.standard.set(last, forKey: versionKey)
-            UserDefaults.standard.removeObject(forKey: completeInfoKey)
-        } else {
-            UserDefaults.standard.set(completedInfo, forKey: completeInfoKey)
+        var completedAll = true
+        for (_, items) in updateItems {
+            for item in items {
+                if item.progress < 1.0 {
+                    completedAll = false
+                    break
+                }
+            }
         }
-        UserDefaults.standard.synchronize()
+        let defaults = UserDefaults.standard
+        if completedAll {
+            let last = versions.sorted().last ?? ""
+            defaults.set(last, forKey: versionKey)
+            defaults.removeObject(forKey: completeInfoKey)
+            defaults.synchronize()
+        } else if item.record {
+            completedInfo[item.id] = true
+            defaults.set(completedInfo, forKey: completeInfoKey)
+            defaults.synchronize()
+        }
     }
 }
