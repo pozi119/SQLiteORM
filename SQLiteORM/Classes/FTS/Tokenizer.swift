@@ -83,8 +83,7 @@ public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask:
         }
         break
     }
-    tokens = Array(Set(tokens))
-    tokens.sort { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
+    tokens = Set(tokens).sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
     return tokens
 }
 

@@ -442,6 +442,25 @@ extension SQLiteORMTests {
     }
 }
 
+// MARK: Highlight
+
+extension SQLiteORMTests {
+    func testHighlight() {
+        let string = "媒体重组"
+        let source = "媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组研究公司"
+        for i in 1 ... string.count {
+            let keyword = String(string[string.startIndex ..< string.index(string.startIndex, offsetBy: i)])
+            let highlighter = Highlighter(keyword: keyword)
+            highlighter.option = .all
+            highlighter.mask = .all
+            highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
+            let match = highlighter.highlight(source)
+            print("\n\(keyword) : \(match)")
+        }
+        print("\n");
+    }
+}
+
 // MARK: Utils
 
 extension SQLiteORMTests {
@@ -471,13 +490,13 @@ extension SQLiteORMTests {
         upgrader.upgrade()
 
         print("\n===============\n")
-        
+
         let progress = Progress(totalUnitCount: 100)
         progress.addObserver(self, forKeyPath: "fractionCompleted", options: .new, context: nil)
-        upgrader.debug(upgrade: [item3,item4,item5], progress: progress)
+        upgrader.debug(upgrade: [item3, item4, item5], progress: progress)
     }
-            
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         guard keyPath == "fractionCompleted", let progress = object as? Progress else { return }
         print(String(format: "progress: %.2f%%", progress.fractionCompleted * 100.0))
     }

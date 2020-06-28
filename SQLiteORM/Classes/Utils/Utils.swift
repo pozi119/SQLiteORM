@@ -296,6 +296,36 @@ public extension String {
     }
 }
 
+public extension NSAttributedString {
+    func trim(to maxLen: Int, with attrs: [NSAttributedString.Key: Any]) -> NSAttributedString {
+        guard length > length else { return copy() as! NSAttributedString }
+        let attributes = attrs as NSDictionary
+
+        var first: NSRange = NSRange()
+        enumerateAttributes(in: NSRange(location: 0, length: length), options: []) { sAttrs, range, stop in
+            let tAttrs = sAttrs as NSDictionary
+            if tAttrs == attributes {
+                first = range
+                stop.assign(repeating: true, count: 1)
+            }
+        }
+
+        let attrText = mutableCopy() as! NSMutableAttributedString
+        let lower = first.location
+        let upper = first.upperBound
+        let len = first.length
+
+        if upper > maxLen && lower > 2 {
+            let rlen = (2 + len > maxLen) ? (lower - 2) : (upper - length)
+            attrText.deleteCharacters(in: NSRange(location: 0, length: rlen))
+            let ellipsis = NSAttributedString(string: "...")
+            attrText.insert(ellipsis, at: 0)
+        }
+
+        return attrText
+    }
+}
+
 public extension Dictionary {
     static func === (lhs: Dictionary, rhs: Dictionary) -> Bool {
         guard Set(lhs.keys) == Set(rhs.keys) else {
