@@ -78,7 +78,7 @@ extension Match: Comparable {
 extension Match: CustomStringConvertible {
     public var description: String {
         let range = ranges.first ?? NSRange(location: 0, length: 0)
-        return "[\(lv1)|\(lv2)|\(lv3)|\(range)|" + String(format: "0x%llx", weight) + "]: " + attrText.description.replacingOccurrences(of: "\n", with: " ").strip
+        return "[\(lv1)|\(lv2)|\(lv3)|\(range)|" + String(format: "0x%llx", weight) + "]: " + attrText.description.replacingOccurrences(of: "\n", with: "").strip
     }
 }
 

@@ -298,7 +298,7 @@ public extension String {
 
 public extension NSAttributedString {
     func trim(to maxLen: Int, with attrs: [NSAttributedString.Key: Any]) -> NSAttributedString {
-        guard length > length else { return copy() as! NSAttributedString }
+        guard length > maxLen else { return copy() as! NSAttributedString }
         let attributes = attrs as NSDictionary
 
         var first: NSRange = NSRange()
@@ -316,7 +316,7 @@ public extension NSAttributedString {
         let len = first.length
 
         if upper > maxLen && lower > 2 {
-            let rlen = (2 + len > maxLen) ? (lower - 2) : (upper - length)
+            let rlen = (2 + len > maxLen) ? (lower - 2) : (upper - maxLen)
             attrText.deleteCharacters(in: NSRange(location: 0, length: rlen))
             let ellipsis = NSAttributedString(string: "...")
             attrText.insert(ellipsis, at: 0)

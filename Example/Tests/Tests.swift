@@ -446,16 +446,19 @@ extension SQLiteORMTests {
 
 extension SQLiteORMTests {
     func testHighlight() {
-        let string = "媒体重组"
+        let string = "研究"
         let source = "媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组研究公司"
-        for i in 1 ... string.count {
+        for i in string.count ... string.count {
             let keyword = String(string[string.startIndex ..< string.index(string.startIndex, offsetBy: i)])
             let highlighter = Highlighter(keyword: keyword)
             highlighter.option = .all
             highlighter.mask = .all
+            highlighter.quantity = 3
             highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
             let match = highlighter.highlight(source)
             print("\n\(keyword) : \(match)")
+            let attrText = highlighter.trim(matched: match.attrText, maxLength: 7)
+            print("\n\(attrText.string)")
         }
         print("\n");
     }
