@@ -21,7 +21,7 @@ public struct TokenMethod: OptionSet, Hashable {
     public static let natural = TokenMethod(rawValue: 1 << 1)
     public static let sqliteorm = TokenMethod(rawValue: 1 << 2)
 
-    public static let unknown = TokenMethod(rawValue: 0xFFFFFFFF)
+    public static let unknown = TokenMethod([])
 }
 
 public struct TokenMask: OptionSet {
