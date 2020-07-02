@@ -160,11 +160,11 @@ public class Highlighter {
         let match = Match(source: source)
         match.lv1 = lv1
 
-        let pattern = keyword.replacingOccurrences(of: " +", with: " +", options: .regularExpression)
-        let expression = try! NSRegularExpression(pattern: pattern, options: [])
+        guard let expression = try? NSRegularExpression(pattern: keyword.regexPattern, options: []) else {
+            return Match(source: source)
+        }
 
         var results = expression.matches(in: comparison, options: [], range: NSRange(location: 0, length: comparison.count))
-
         guard results.count > 0 else {
             return Match(source: source)
         }
@@ -196,8 +196,9 @@ public class Highlighter {
         let match = Match(source: source)
         match.lv1 = lv1
 
-        let pattern = keyword.replacingOccurrences(of: " +", with: " +", options: .regularExpression)
-        let expression = try! NSRegularExpression(pattern: pattern, options: [])
+        guard let expression = try? NSRegularExpression(pattern: keyword.regexPattern, options: []) else {
+            return Match(source: source)
+        }
 
         var ranges: Set<NSRange> = Set()
         let matrix = comparison.pinyinMatrix

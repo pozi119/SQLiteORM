@@ -252,6 +252,20 @@ public extension String {
         return array.joined(separator: "")
     }
 
+    var regexPattern: String {
+        var result = lowercased()
+        let pattern = "\\.|\\^|\\$|\\\\|\\[|\\]|\\(|\\)|\\||\\{|\\}|\\*|\\+|\\?"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return result
+        }
+        let array = regex.matches(in: result, options: [], range: NSRange(location: 0, length: count)).reversed()
+        for r in array {
+            result.insert("\\", at: result.index(result.startIndex, offsetBy: r.range.location))
+        }
+        result = result.replacingOccurrences(of: " +", with: " +", options: .regularExpression)
+        return result
+    }
+
     var pinyinSegmentation: [String] {
         return Segmentor.segment(self)
     }
