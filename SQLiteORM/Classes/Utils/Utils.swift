@@ -252,8 +252,16 @@ public extension String {
         return array.joined(separator: "")
     }
 
+    var matchingPattern: String {
+        guard count > 0 else { return self }
+        let string = (lowercased() as NSString).mutableCopy() as! NSMutableString
+        CFStringTransform(string as CFMutableString, nil, kCFStringTransformFullwidthHalfwidth, false)
+        _ = string.replaceOccurrences(of: "\\n|\\r|\\t| ", with: " ", options: .regularExpression, range: NSRange(location: 0, length: string.length))
+        return string as String
+    }
+
     var regexPattern: String {
-        var result = lowercased()
+        var result = matchingPattern
         let pattern = "\\.|\\^|\\$|\\\\|\\[|\\]|\\(|\\)|\\||\\{|\\}|\\*|\\+|\\?"
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
             return result
