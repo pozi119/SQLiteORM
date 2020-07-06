@@ -83,6 +83,8 @@ extension Match: CustomStringConvertible {
 }
 
 public class Highlighter {
+    private static let hlMaxLen = 256
+
     private var _keyword: String = ""
     public var keyword: String {
         set { _keyword = newValue.trim; refresh() }
@@ -144,8 +146,8 @@ public class Highlighter {
     public func highlight(_ source: String) -> Match {
         guard source.count > 0 && keyword.count > 0 else { return Match(source: source) }
 
-        let clean = source.matchingPattern
-        var text = clean
+        let temp = source.count > Highlighter.hlMaxLen ? String(source.prefix(Highlighter.hlMaxLen)) : source
+        var text = temp.matchingPattern
         var kw = keyword.lowercased()
         if mask.contains(.transform) {
             text = text.simplified
@@ -290,7 +292,7 @@ public class Highlighter {
         }
         guard matchedSet.count > 0 else { return nomatch }
 
-        var array = matchedSet.sorted { $0.start == $1.start ? $0.end < $1.end : $0.start < $1.start }
+        var array = matchedSet.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
         if quantity > 0 && array.count > quantity {
             array = Array(array[0 ..< quantity])
         }
