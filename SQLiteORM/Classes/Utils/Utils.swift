@@ -242,7 +242,7 @@ public extension String {
         return formatter
     }
 
-    var numberWithoutSeparator: String {
+    var cleanNumberString: String {
         let num = String.tokenFormatter.number(from: self)
         return num?.stringValue ?? ""
     }
@@ -256,7 +256,7 @@ public extension String {
         guard count > 0 else { return self }
         let string = (lowercased() as NSString).mutableCopy() as! NSMutableString
         CFStringTransform(string as CFMutableString, nil, kCFStringTransformFullwidthHalfwidth, false)
-        _ = string.replaceOccurrences(of: "\\n|\\r|\\t| ", with: " ", options: .regularExpression, range: NSRange(location: 0, length: string.length))
+        _ = string.replaceOccurrences(of: "\\s| ", with: " ", options: .regularExpression, range: NSRange(location: 0, length: string.length))
         return string as String
     }
 

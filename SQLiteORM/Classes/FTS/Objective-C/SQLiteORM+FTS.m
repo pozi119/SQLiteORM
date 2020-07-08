@@ -320,9 +320,9 @@ static int vv_fts5_xTokenize(
     uint32_t mask = tok->mask;
     if ((mask & 0xFFFF) > 0) {
         if (iUnused & FTS5_TOKENIZE_QUERY) {
-            mask = (mask & ~0x1FFFF) | (1 << 17);
+            mask = (mask & ~0x1FFFF) | (1 << 24) | (1 << 25);
         } else if (iUnused & FTS5_TOKENIZE_DOCUMENT) {
-            mask = mask & ~(1 << 17);
+            mask = mask & ~(1 << 24);
         }
     }
 

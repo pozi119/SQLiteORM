@@ -35,13 +35,15 @@ public struct TokenMask: OptionSet {
 
     public static let pinyin = TokenMask(rawValue: 0xFFFF)
     public static let abbreviation = TokenMask(rawValue: 1 << 16)
-    public static let syllable = TokenMask(rawValue: 1 << 17)
-    public static let number = TokenMask(rawValue: 1 << 18)
-    public static let transform = TokenMask(rawValue: 1 << 19)
+    public static let number = TokenMask(rawValue: 1 << 17)
+    public static let transform = TokenMask(rawValue: 1 << 18)
 
     public static let `default` = TokenMask([.number, .transform])
     public static let allPinYin = TokenMask([.pinyin, .abbreviation])
-    public static let all = TokenMask(rawValue: 0xFFFFFFFF)
+    public static let all = TokenMask(rawValue: 0xFFFFFF)
+
+    public static let syllable = TokenMask(rawValue: 1 << 24)
+    public static let query = TokenMask(rawValue: 1 << 25)
 }
 
 private enum TokenType: Int {
@@ -53,6 +55,45 @@ private struct TokenCursor {
     var type: TokenType = .none
     var offset: Int = 0
     var len: Int = 0
+}
+
+private class CursorTuple {
+    var cursors: [TokenCursor]
+    var type: TokenType
+    var encoding: String.Encoding
+    var syllable: Bool = false
+
+    init(cursors: [TokenCursor], type: TokenType, encoding: String.Encoding) {
+        self.cursors = cursors
+        self.type = type
+        self.encoding = encoding
+    }
+
+    class func group(_ cursors: [TokenCursor]) -> [CursorTuple] {
+        guard cursors.count > 0 else { return [] }
+
+        var results: [CursorTuple] = []
+        var last: TokenType = .none
+        var subs: [TokenCursor] = []
+        for c in cursors {
+            let change = c.type != last
+            var encoding: String.Encoding = .init(rawValue: UInt.max)
+            if change {
+                switch last {
+                case .letter, .digit: encoding = .ascii
+                default: encoding = .utf8
+                }
+                if encoding.rawValue != .max {
+                    let tuple = CursorTuple(cursors: subs, type: last, encoding: encoding)
+                    results.append(tuple)
+                }
+                last = c.type
+                subs.removeAll()
+            }
+            subs.append(c)
+        }
+        return results
+    }
 }
 
 public protocol Tokenizer {
@@ -109,8 +150,12 @@ private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String =
             return true
         }
     }
-    let otherTks = allOtherTokens(of: bytes, mask: mask)
-    return results + otherTks
+
+    if mask.rawValue > 0 {
+        let extras = extraTokens(of: bytes, mask: mask)
+        results += extras
+    }
+    return results
 }
 
 /// CoreFundation分词
@@ -142,27 +187,44 @@ private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "
         results.append(token)
         tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
     }
-    let otherTks = allOtherTokens(of: bytes, mask: mask)
-    return results + otherTks
+
+    if mask.rawValue > 0 {
+        let extras = extraTokens(of: bytes, mask: mask)
+        results += extras
+    }
+    return results
 }
 
 /// SQLiteORM分词
 private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     guard bytes.count > 0 else { return [] }
 
-    let syllableTks = syllableTokens(of: bytes, mask: mask)
-    guard syllableTks.count == 0 else { return syllableTks }
-
+    var results: [Token] = []
     let cs = cursors(of: bytes)
-    let ormTks = ormTokens(of: bytes, cursors: cs, mask: mask)
-    let numberTks = numberTokens(of: bytes, mask: mask)
-    return ormTks + numberTks
+    let tuples = CursorTuple.group(cs)
+
+    if mask.rawValue > 0 {
+        let extras = extraTokens(of: bytes, tuples: tuples, mask: mask)
+        results += extras
+    }
+
+    let ormTks = ormTokens(of: bytes, tuples: tuples, mask: mask)
+    results += ormTks
+
+    return results
 }
 
-private func allOtherTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
+private func extraTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
+    let cs = cursors(of: bytes)
+    let tuples = CursorTuple.group(cs)
+    return extraTokens(of: bytes, tuples: tuples, mask: mask)
+}
+
+private func extraTokens(of bytes: [UInt8], tuples: [CursorTuple], mask: TokenMask) -> [Token] {
+    let pinyinTks = pinyinTokens(of: bytes, tuples: tuples, mask: mask)
+    let syllableTks = syllableTokens(of: bytes, tuples: tuples, mask: mask)
     let numberTks = numberTokens(of: bytes, mask: mask)
-    let syllableTks = syllableTokens(of: bytes, mask: mask)
-    return numberTks + syllableTks
+    return pinyinTks + numberTks + syllableTks
 }
 
 private var symbolsSet: NSCharacterSet = {
@@ -245,25 +307,20 @@ private func cursors(of bytes: [UInt8]) -> [TokenCursor] {
     return cursors
 }
 
-private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding) -> [Token] {
-    guard bytes.count > 0, cursors.count > 0 else { return [] }
-
-    let count = cursors.count
-    let last = cursors.last!
-
+private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: String.Encoding, quantity: Int = 3, tail: Bool = false) -> [Token] {
+    guard bytes.count > 0, cursors.count > 0, quantity > 0 else { return [] }
     var tokens: [Token] = []
-
-    let extIsChar = last.type.rawValue < TokenType.symbol.rawValue
-    let extCount = extIsChar ? 2 : 1
-
-    for i in 0 ..< count {
+    let count = cursors.count
+    let loop = tail ? count : (max(count - quantity, 0) + 1)
+    for i in 0 ..< loop {
         let c1 = cursors[i]
         let loc = c1.offset
         var len = c1.len
-        for j in 1 ... extCount {
-            if i + j >= count { break }
+        var j = 1
+        while j < quantity && i + j < count {
             let c2 = cursors[i + j]
             len += c2.len
+            j += 1
         }
         let sub = [UInt8](bytes[loc ..< (loc + len)])
         if let text = String(bytes: sub, encoding: encoding), text.count > 0 {
@@ -275,65 +332,63 @@ private func wordTokens(of bytes: [UInt8], cursors: [TokenCursor], encoding: Str
     return tokens
 }
 
-private func pinyinTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
-    guard mask.pinyin > 0, bytes.count > 0, cursors.count > 0,
-        mask.pinyin >= bytes.count, cursors.last!.type == .other else { return [] }
-    let fills = mask.contains(.abbreviation) ? [1, 2] : [1]
-    let cnt = cursors.count
+private func pinyinTokens(of bytes: [UInt8], tuples: [CursorTuple], mask: TokenMask) -> [Token] {
+    guard mask.pinyin > 0, bytes.count > 0, tuples.count > 0, mask.pinyin >= bytes.count else { return [] }
+    let abbr = mask.contains(.abbreviation)
+
     var results: [Token] = []
-    for fill in fills {
-        for i in 0 ..< cnt {
-            let c1 = cursors[i]
-            let offset = c1.offset
-            var len = c1.len
-            var j = 1
-            while j <= fill && i + j < cnt {
-                let c2 = cursors[i + j]
-                len += c2.len
-                j += 1
+    for tuple in tuples {
+        if tuple.type != .other || tuple.cursors.count == 0 { continue }
+        let forfulls = wordTokens(of: bytes, cursors: tuple.cursors, encoding: tuple.encoding, quantity: 2, tail: false)
+        for tk in forfulls {
+            let fruit = tk.token.pinyins
+            for pinyin in fruit.fulls {
+                let fulltk = Token(pinyin, len: Int32(pinyin.count), start: tk.start, end: tk.end)
+                results.append(fulltk)
             }
-            let subBytes = [UInt8](bytes[offset ..< (offset + len)])
-            let string = String(bytes: subBytes)
-            let valid = (fill == 1 && ((cursors.count >= 2 && string.count == 2) || (cursors.count < 2 && string.count == cursors.count))) || (fill == 2 && ((cursors.count >= 3 && string.count == 3) || (cursors.count < 3 && string.count == cursors.count)))
-            if valid {
-                let fruit = string.pinyins
-                let pinyins = fill == 1 ? fruit.fulls : fruit.abbrs
-                for pinyin in pinyins {
-                    let tk = Token(pinyin, len: Int32(pinyin.count), start: Int32(offset), end: Int32(offset + len))
-                    results.append(tk)
-                }
+        }
+        if !abbr { continue }
+        let forabbrs = wordTokens(of: bytes, cursors: tuple.cursors, encoding: tuple.encoding, quantity: 3, tail: true)
+        for tk in forabbrs {
+            let fruit = tk.token.pinyins
+            for pinyin in fruit.abbrs {
+                let abbrtk = Token(pinyin, len: Int32(pinyin.count), start: tk.start, end: tk.end)
+                results.append(abbrtk)
             }
         }
     }
+
     return results
 }
 
-private func syllableTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
+private func syllableTokens(of bytes: [UInt8], tuples: [CursorTuple], mask: TokenMask) -> [Token] {
     guard mask.contains(.syllable), bytes.count > 0 else { return [] }
-    let source = String(bytes: bytes)
-    let splited = source.pinyinSegmentation
 
-    switch splited.count {
-    case 0: return []
-    case 1:
-        let pinyin = splited.first!
-        let len = Int32(pinyin.count)
-        let tk = Token(pinyin, len: len, start: 0, end: len)
-        return [tk]
+    var results: [Token] = []
+    for tuple in tuples {
+        if tuple.type != .letter || tuple.cursors.count == 0 { continue }
+        let offset = tuple.cursors.first!.offset
+        let len = tuples.count
+        let sub = [UInt8](bytes[offset ..< (offset + len)])
+        let str = String(bytes: sub, encoding: tuple.encoding) ?? ""
+        let pinyins = str.pinyinSegmentation
 
-    default:
-        var results: [Token] = []
-        var loc: Int32 = 0
-        for i in 0 ..< (splited.count - 1) {
-            let first = splited[i]
-            let second = splited[i + 1]
-            let len = Int32(first.count + second.count)
-            let tk = Token(first + second, len: len, start: loc, end: loc + len)
-            loc += Int32(first.count)
-            results.append(tk)
+        var start = offset
+        for i in 0 ..< pinyins.count {
+            var tk = pinyins[i]
+            let flen = tk.count
+            if i + 1 < pinyins.count {
+                let second = pinyins[i + 1]
+                tk += second
+            }
+            let tklen = tk.count
+            let token = Token(tk, len: Int32(tklen), start: Int32(start), end: Int32(start + tklen))
+            results.append(token)
+            tuple.syllable = true
+            start += flen
         }
-        return results
     }
+    return results
 }
 
 private func numberTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
@@ -346,7 +401,14 @@ private func numberTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
 
     for i in 0 ..< copied.count {
         let ch = copied[i]
-        let flag = (ch >= 0x30 && ch <= 0x39) || ch == 0x2C
+        var flag = false
+
+        switch ch {
+        case 0x30 ... 0x39, 0x2B ... 0x2E, 0x45, 0x65:
+            flag = true
+        default: break
+        }
+
         if flag {
             container.append(ch)
             offset += 1
@@ -361,67 +423,47 @@ private func numberTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
     }
 
     var results: [Token] = []
+
     for (origin, offset) in array {
-        let num = origin.numberWithoutSeparator
-        if num.count <= 3 || num.count >= origin.count { continue }
-        let numbytes = num.bytes
-        let cs = cursors(of: numbytes)
-        let tokens = wordTokens(of: numbytes, cursors: cs, encoding: .ascii)
-        let count = tokens.count
-        assert(count == num.count, "Invalid tokens.")
-        var fill = 3 - count % 3
-        if fill == 3 { fill = 0 }
-        var sub: [Token] = []
-        for i in 0 ..< (count - 2) {
-            let token = tokens[i]
-            let comma1 = (i + fill) / 3
-            let comma2 = (i >= (count - 3) || ((i + fill) % 3 == 0)) ? 0 : 1
-            let pre = offset + comma1
-            token.start += Int32(pre)
-            token.end += Int32(pre + comma2)
-            sub.append(token)
-            if (i + fill) % 3 == 2 && token.token.count == 3 {
-                let tk = Token()
-                tk.start = token.start
-                tk.end = token.end - 1
-                tk.token = (token.token as NSString).substring(to: 2) as String
-                tk.len = 2
-                sub.append(tk)
+        let num = origin.cleanNumberString
+        if num.count <= 0 { continue }
+
+        let bytes = origin.bytes
+        let len = bytes.count
+
+        let loop = max(len - 3, 0) + 1
+
+        for j in 0 ..< loop {
+            var k = 0
+            var l = 0
+            var tkbytes: [UInt8] = []
+            while l < 3 && j + k < len {
+                let ch = bytes[j + k]
+                if ch != 0x2C {
+                    tkbytes.append(ch)
+                    l += 1
+                }
+                k += 1
             }
+            let tkstr = String(bytes: tkbytes)
+            let token = Token(tkstr, len: Int32(l), start: Int32(offset + j), end: Int32(offset + j + k))
+            results.append(token)
         }
-        results += sub
     }
 
     return results
 }
 
-private func ormTokens(of bytes: [UInt8], cursors: [TokenCursor], mask: TokenMask) -> [Token] {
-    guard bytes.count > 0, cursors.count > 0 else { return [] }
-
+private func ormTokens(of bytes: [UInt8], tuples: [CursorTuple], mask: TokenMask) -> [Token] {
+    guard bytes.count > 0, tuples.count > 0 else { return [] }
+    let tail = !mask.contains(.query)
     var results: [Token] = []
-    var last: TokenType = .none
 
-    var subs: [TokenCursor] = []
-    for c in cursors {
-        let change = c.type != last
-        var encoding: String.Encoding = .init(rawValue: UInt.max)
-        if change {
-            switch last {
-            case .letter, .digit: encoding = .ascii
-            default: encoding = .utf8
-            }
-            if encoding.rawValue != .max {
-                let tokens = wordTokens(of: bytes, cursors: subs, encoding: encoding)
-                results.append(contentsOf: tokens)
-                if last == .other {
-                    let pytks = pinyinTokens(of: bytes, cursors: subs, mask: mask)
-                    results.append(contentsOf: pytks)
-                }
-            }
-            last = c.type
-            subs.removeAll()
-        }
-        subs.append(c)
+    for tuple in tuples {
+        if tuple.syllable { continue }
+        let quantity = tuple.encoding == .ascii ? 3 : 2
+        let tokens = wordTokens(of: bytes, cursors: tuple.cursors, encoding: tuple.encoding, quantity: quantity, tail: tail)
+        results += tokens
     }
     return results
 }

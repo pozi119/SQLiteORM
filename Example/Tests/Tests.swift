@@ -296,8 +296,12 @@ extension SQLiteORMTests {
 //            "me",
         ]
         for source in sources {
-            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue)
-            print(tokens)
+            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue) as! [Token]
+            let sorted = tokens.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
+            print("-> \(source) :")
+            for token in sorted {
+                print(token)
+            }
         }
     }
 
@@ -428,6 +432,31 @@ extension SQLiteORMTests {
             print(seg)
         }
     }
+
+    func testNumber() {
+        let numbers = [
+            "1,234,567.89",
+            "-1,234,567.89",
+            "1,234,567.89.123",
+            "1234567.89",
+            "-1234567.89",
+            "123,4567",
+            ".1234567",
+            ",1234567",
+            "123456E7",
+            "123456E-7",
+            "1,234,567.89哈-1,234,567.89哈",
+        ]
+        for source in numbers {
+            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.number.rawValue) as! [Token]
+            let sorted = tokens.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
+            print("-> \(source) :")
+            for token in sorted {
+                print(token)
+            }
+        }
+
+    }
 }
 
 // MARK: - View
@@ -460,7 +489,7 @@ extension SQLiteORMTests {
             let attrText = highlighter.trim(matched: match.attrText, maxLength: 7)
             print("\n\(attrText.string)")
         }
-        print("\n");
+        print("\n")
     }
 }
 
