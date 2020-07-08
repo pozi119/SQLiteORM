@@ -19,6 +19,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) int end; ///< 分词对应原始字符串的结束位置
 
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end;
+
++ (NSArray<SQLiteORMToken *> *)sortedTokens:(NSArray<SQLiteORMToken *> *)tokens;
+
 @end
 
 /**

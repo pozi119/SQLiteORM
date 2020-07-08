@@ -348,7 +348,7 @@ private func pinyinTokens(of bytes: [UInt8], tuples: [CursorTuple], mask: TokenM
             }
         }
         if !abbr { continue }
-        let forabbrs = wordTokens(of: bytes, cursors: tuple.cursors, encoding: tuple.encoding, quantity: 3, tail: true)
+        let forabbrs = wordTokens(of: bytes, cursors: tuple.cursors, encoding: tuple.encoding, quantity: 3, tail: false)
         for tk in forabbrs {
             let fruit = tk.token.pinyins
             for pinyin in fruit.abbrs {

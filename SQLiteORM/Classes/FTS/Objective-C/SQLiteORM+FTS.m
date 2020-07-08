@@ -50,6 +50,15 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
     return tk;
 }
 
++ (NSArray<SQLiteORMToken *> *)sortedTokens:(NSArray<SQLiteORMToken *> *)tokens
+{
+    return [tokens sortedArrayUsingComparator:^NSComparisonResult (SQLiteORMToken *tk1, SQLiteORMToken *tk2) {
+        uint64_t h1 = ((uint64_t)tk1.start) << 32 | ((uint64_t)tk1.end) | ((uint64_t)tk1.len);
+        uint64_t h2 = ((uint64_t)tk2.start) << 32 | ((uint64_t)tk2.end) | ((uint64_t)tk2.len);
+        return h1 == h2 ? [tk1.token compare:tk2.token] : (h1 < h2 ? NSOrderedAscending : NSOrderedDescending);
+    }];
+}
+
 - (BOOL)isEqual:(id)object
 {
     return object != nil && [object isKindOfClass:SQLiteORMToken.class] && [(SQLiteORMToken *)object hash] == self.hash;
@@ -61,7 +70,7 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"[%2i-%2i|%2i|0x%09lx]: %@ ", _start, _end, _len, self.hash, _token];
+    return [NSString stringWithFormat:@"[%2i-%2i|%2i|0x%09lx]: %@ ", _start, _end, _len, (unsigned long)self.hash, _token];
 }
 
 @end

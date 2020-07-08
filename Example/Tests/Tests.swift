@@ -278,26 +278,21 @@ extension SQLiteORMTests {
 
     func testToken() {
         let sources = [
-            "第二章",
-            "dez",
-//            "234",
-//            "1,234,567,890",
-//            "12,345,678,901",
-//            "一1,234,567,890二12,345,678,901",
-//            "成都天气真好!",
-//            "音乐舞蹈",
-//            "音乐123舞蹈",
-//            "13188886666",
-//            "jintiantianqizhenhao",
-//            "hello world",
-//            "饿了没",
-//            "chengke",
-//            "猛",
-//            "me",
+        "陕西",
+        "西安",
+        "中国电信",
+        "中国移动",
+        "会计",
+        "体育运动",
+        "保健",
+        "保险业",
+        "健康",
+        "公益组织",
         ]
+        let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
         for source in sources {
-            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.all.rawValue) as! [Token]
-            let sorted = tokens.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
+            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, mask.rawValue) as! [Token]
+            let sorted = Token.sortedTokens(tokens)
             print("-> \(source) :")
             for token in sorted {
                 print(token)
