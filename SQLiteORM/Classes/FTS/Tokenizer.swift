@@ -103,7 +103,8 @@ public protocol Tokenizer {
 @_silgen_name("swift_tokenize")
 public func swift_tokenize(_ source: NSString, _ method: Int, _ mask: UInt32) -> NSArray {
     guard source.length > 0 else { return [] as NSArray }
-    let bytes = source.lowercased.bytes
+    let text = source.length <= 4096 ? source : source.substring(to: 4096) as NSString
+    let bytes = text.lowercased.bytes
     return tokenize(bytes, TokenMethod(rawValue: method), .init(rawValue: mask)) as NSArray
 }
 
