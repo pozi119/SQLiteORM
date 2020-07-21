@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SQLiteORM'
-  s.version          = '0.1.2'
+  s.version          = '0.1.3'
   s.summary          = 'The swift version of VVSequelize.'
 
   s.description      = <<-DESC
@@ -17,29 +17,43 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
   
-  s.default_subspec = 'system'
-  
-  s.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
+  s.default_subspec = 'cipher'
   s.swift_version = '5.0'
 
   s.subspec 'system' do |ss|
-      ss.dependency 'SQLiteORM/common'
+      ss.dependency 'SQLiteORM/core'
+      ss.dependency 'SQLiteORM/fts'
+      ss.dependency 'SQLiteORM/util'
       ss.libraries = 'sqlite3'
   end
   
   s.subspec 'cipher' do |ss|
-      ss.dependency 'SQLiteORM/common'
+      ss.dependency 'SQLiteORM/core'
+      ss.dependency 'SQLiteORM/fts'
+      ss.dependency 'SQLiteORM/util'
       ss.dependency 'SQLCipher'
-      ss.pod_target_xcconfig = {
-          'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC=1 -DHAVE_USLEEP=1',
+      ss.xcconfig = {
+          'OTHER_CFLAGS' => '-DSQLITE_HAS_CODEC=1 -DHAVE_USLEEP=1',
           'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/SQLCipher'
       }
   end
 
-  s.subspec 'common' do |ss|
-      ss.source_files = 'SQLiteORM/Classes/**/*'
-      # ss.private_header_files = 'SQLiteORM/Classes/**/*.h'
-      ss.public_header_files = 'SQLiteORM/Classes/**/*.h'
+  s.subspec 'core' do |ss|
+      ss.source_files = 'SQLiteORM/Core/**/*'
       ss.resource = ['SQLiteORM/Assets/PinYin.bundle']
+      ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
+  end
+
+  s.subspec 'fts' do |ss|
+      ss.source_files = 'SQLiteORM/FTS/**/*'
+      ss.public_header_files = 'SQLiteORM/FTS/**/*.h'
+      ss.resource = ['SQLiteORM/Assets/PinYin.bundle']
+      ss.dependency 'SQLiteORM/core'
+      ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
+  end
+
+  s.subspec 'util' do |ss|
+      ss.source_files = 'SQLiteORM/Util/**/*'
+      ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   end
 end
