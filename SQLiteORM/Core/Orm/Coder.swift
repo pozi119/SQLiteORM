@@ -53,8 +53,6 @@ fileprivate struct OrmCodingKey: CodingKey {
 
 fileprivate enum OrmCodableError: Error {
     case cast
-    case unwrapped
-    case tryValue
 }
 
 func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
@@ -91,15 +89,6 @@ func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
         throw OrmCodableError.cast
     }
     return value!
-}
-
-fileprivate extension Dictionary {
-    func tryValue(forKey key: Key) throws -> Value {
-        guard let value = self[key] else {
-            throw OrmCodableError.tryValue
-        }
-        return value
-    }
 }
 
 open class OrmEncoder: Encoder {
@@ -357,15 +346,6 @@ extension OrmEncoder {
             storage = encoder.storage
         }
 
-//        private func push(_ value: Any) {
-//            guard var array = storage.popContainer() as? [Any] else {
-//                assertionFailure()
-//                return
-//            }
-//            array.append(value)
-//            storage.push(array)
-//        }
-
         func encodeNil() throws { storage.push(NSNull()) }
         func encode(_ value: Bool) throws { storage.push(value) }
         func encode(_ value: Int) throws { storage.push(value) }
@@ -492,7 +472,6 @@ extension OrmDecoder {
 
         private func find(forKey key: CodingKey) throws -> Any {
             return container[key.stringValue] ?? ""
-            // return try container.tryValue(forKey: key.stringValue)
         }
 
         func _decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
@@ -534,6 +513,7 @@ extension OrmDecoder {
 
         func decodeIfPresent<T>(_ type: T.Type, forKey key: Key) throws -> T? where T: Decodable {
             let item = try find(forKey: key)
+            if let string = item as? String, string == "" { return nil }
             decoder.codingPath.append(key)
             defer { decoder.codingPath.removeLast() }
             return try decoder.unwrap(item, type: T.self)

@@ -221,8 +221,10 @@ extension SQLiteORMTests {
         let p3 = Person(name: "王五", age: 21, id: 3, sex: .male, intro: "呵呵呵")
         let r1 = orm.insert(p1)
         let r2 = orm.insert(multi: [p2, p3])
+        let s1 = orm.xFindOne()
         XCTAssert(r1)
         XCTAssert(r2 > 0)
+        XCTAssert(p1 == s1!)
     }
 
     func testUpsert() {
