@@ -65,10 +65,14 @@ final class SQLiteORMTests: XCTestCase {
 
 extension SQLiteORMTests {
     func testCoder() {
-        let person: Person? = Person(name: "张三", age: 22, id: 1, sex: .male, intro: "哈哈哈哈")
+        let data = Data([0x31, 0x32, 0x33, 0x34, 0x35, 0xF, 0x41, 0x42, 0x43])
+        var person: Person? = Person(name: "张三", age: 22, id: 1, sex: .male, intro: "哈哈哈哈")
+        person?.data = data
+        
         let user: User? = User(id: 2, name: "zhangsan", person: person)
         user?.list = [1, 2, 3, 4, 5]
-
+        user?.data = data
+        
         do {
             let dic = try OrmEncoder().encode(person)
             let decoded = try OrmDecoder().decode(type(of: person), from: dic as Any)
@@ -78,11 +82,17 @@ extension SQLiteORMTests {
             let decoded1 = try OrmDecoder().decode(type(of: user), from: dic1 as Any)
             XCTAssert(user != nil && decoded1 != nil && user! == decoded1!)
 
+            let dic3 = try JSONEncoder().encode(user)
+            let json3 = try JSONSerialization.jsonObject(with: dic3, options: [])
+            let decoded3 = try JSONDecoder().decode(type(of: user), from: dic3)
+            print(json3)
+            XCTAssert(user != nil && decoded3 != nil && user! == decoded3!)
+
             let array2 = [user, nil]
-            let dic2 = try? OrmEncoder().encode(array2)
-            let decoded2 = try? OrmDecoder().decode(type(of: array2), from: dic2 as Any)
-            let user2 = decoded2?.first!
-            XCTAssert(decoded2 != nil && decoded2!.count == 2 && user! == user2!)
+            let dic2 = OrmEncoder().encode(array2)
+            let decoded2 = try OrmDecoder().decode(type(of: array2), from: dic2 as Any)
+            let user2 = decoded2.first!
+            XCTAssert(decoded2.count == 2 && user! == user2!)
         } catch {
             XCTAssertThrowsError(error)
         }
@@ -278,16 +288,16 @@ extension SQLiteORMTests {
 
     func testToken() {
         let sources = [
-        "陕西",
-        "西安",
-        "中国电信",
-        "中国移动",
-        "会计",
-        "体育运动",
-        "保健",
-        "保险业",
-        "健康",
-        "公益组织",
+            "陕西",
+            "西安",
+            "中国电信",
+            "中国移动",
+            "会计",
+            "体育运动",
+            "保健",
+            "保险业",
+            "健康",
+            "公益组织",
         ]
         let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
         for source in sources {
@@ -450,7 +460,6 @@ extension SQLiteORMTests {
                 print(token)
             }
         }
-
     }
 }
 

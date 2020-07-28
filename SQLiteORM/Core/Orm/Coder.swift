@@ -18,7 +18,7 @@ fileprivate final class Storage {
         return containers.last
     }
 
-    func push(container: Any) {
+    func push(_ container: Any) {
         containers.append(container)
     }
 
@@ -62,7 +62,7 @@ func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
         return value
     }
 
-    guard let item = item, item is Binding else {
+    guard let item = item as? Binding else {
         throw OrmCodableError.cast
     }
 
@@ -83,6 +83,7 @@ func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
     case is Float.Type: value = (Float(desc) ?? 0) as? T
     case is Double.Type: value = (Double(desc) ?? 0) as? T
     case is String.Type: value = desc as? T
+    case is Data.Type: value = Data(hex: desc) as? T
     default: value = nil
     }
 
@@ -101,7 +102,6 @@ fileprivate extension Dictionary {
     }
 }
 
-/// 编码器, 将Struct/Class编码生成[[String:Binding]]数组,子Struct/Class将转换为Data
 open class OrmEncoder: Encoder {
     open var codingPath: [CodingKey] = []
     open var userInfo: [CodingUserInfoKey: Any] = [:]
@@ -128,20 +128,32 @@ open class OrmEncoder: Encoder {
 }
 
 extension OrmEncoder {
-    open func encode<T: Encodable>(_ value: T) throws -> [String: Any] {
+    open func encode<T: Encodable>(_ value: T) throws -> [String: Binding] {
         do {
-            return try cast(try box(value), as: [String: Any].self)
+            let temp = try cast(try box(value), as: [String: Any].self)
+            var encoded: [String: Binding] = [:]
+            for (key, value) in temp {
+                switch value {
+                case let value as Binding:
+                    encoded[key] = value
+                default:
+                    let data = try JSONSerialization.data(withJSONObject: value, options: [])
+                    let string = String(bytes: data.bytes)
+                    encoded[key] = string
+                }
+            }
+            return encoded
         } catch let error {
             let context = EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values.", underlyingError: error)
             throw EncodingError.invalidValue(value, context)
         }
     }
 
-    open func encode<T: Encodable>(_ values: [T]) throws -> [[String: Any]] {
-        var array = [[String: Any]]()
+    open func encode<T: Encodable>(_ values: [T]) -> [[String: Binding]] {
+        var array = [[String: Binding]]()
         for value in values {
             do {
-                let encoded = try cast(try box(value), as: [String: Any].self)
+                let encoded = try encode(value)
                 array.append(encoded)
             } catch _ {
                 array.append([:])
@@ -162,43 +174,40 @@ extension OrmEncoder {
             self.codingPath = codingPath
             storage = encoder.storage
 
-            storage.push(container: [:] as [String: Any])
+            storage.push([:] as [String: Any])
         }
 
         deinit {
             guard let dictionary = storage.popContainer() as? [String: Any] else {
-                assertionFailure(); return
+                assertionFailure()
+                return
             }
-            storage.push(container: dictionary)
+            storage.push(dictionary)
         }
 
         private func set(_ value: Any, forKey key: String) {
-            guard var dictionary = storage.popContainer() as? [String: Any] else { assertionFailure(); return }
+            guard var dictionary = storage.popContainer() as? [String: Any] else {
+                assertionFailure()
+                return
+            }
             dictionary[key] = value
-            storage.push(container: dictionary)
+            storage.push(dictionary)
         }
 
-        private func warp<T: Encodable>(_ value: T) throws -> Binding {
-            do {
-                return try JSONEncoder().encode(value)
-            } catch {
-                let depth = storage.count
-                do {
-                    try value.encode(to: encoder)
-                } catch {
-                    if storage.count > depth {
-                        _ = storage.popContainer()
-                    }
-
-                    throw error
-                }
-
-                guard storage.count > depth else {
-                    throw error
-                }
-
-                return storage.popContainer() as! Binding
+        private func wrap<T: Encodable>(_ value: T) throws -> Any {
+            if let data = value as? Data {
+                return data
             }
+            let depth = storage.count
+            do {
+                try value.encode(to: encoder)
+            } catch {
+                if storage.count > depth {
+                    _ = storage.popContainer()
+                }
+                throw error
+            }
+            return storage.popContainer()
         }
 
         func encodeNil(forKey key: Key) throws { set(NSNull(), forKey: key.stringValue) }
@@ -219,19 +228,23 @@ extension OrmEncoder {
         func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
             encoder.codingPath.append(key)
             defer { encoder.codingPath.removeLast() }
-            set(try warp(value), forKey: key.stringValue)
+            set(try wrap(value), forKey: key.stringValue)
         }
 
         func encodeIfPresent<T>(_ value: T?, forKey key: Key) throws where T: Encodable {
             encoder.codingPath.append(key)
             defer { encoder.codingPath.removeLast() }
-            set(try warp(value), forKey: key.stringValue)
+            if let data = value as? Data {
+                set(data.hex, forKey: key.stringValue)
+            } else {
+                set(try wrap(value), forKey: key.stringValue)
+            }
         }
 
         func encodeConditional<T>(_ object: T, forKey key: Key) throws where T: AnyObject, T: Encodable {
             encoder.codingPath.append(key)
             defer { encoder.codingPath.removeLast() }
-            set(try warp(object), forKey: key.stringValue)
+            set(try wrap(object), forKey: key.stringValue)
         }
 
         func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
@@ -266,24 +279,28 @@ extension OrmEncoder {
             self.codingPath = codingPath
             storage = encoder.storage
 
-            storage.push(container: [] as [Any])
+            storage.push([] as [Any])
         }
 
         deinit {
             guard let array = storage.popContainer() as? [Any] else {
-                assertionFailure(); return
+                assertionFailure()
+                return
             }
-            storage.push(container: array)
+            storage.push(array)
         }
 
         private func push(_ value: Any) {
-            guard var array = storage.popContainer() as? [Any] else { assertionFailure(); return }
+            guard var array = storage.popContainer() as? [Any] else {
+                assertionFailure()
+                return
+            }
             array.append(value)
-            storage.push(container: array)
+            storage.push(array)
         }
 
         func encodeNil() throws { push(NSNull()) }
-        func encode(_ value: Bool) throws {}
+        func encode(_ value: Bool) throws { push(try encoder.box(value)) }
         func encode(_ value: Int) throws { push(try encoder.box(value)) }
         func encode(_ value: Int8) throws { push(try encoder.box(value)) }
         func encode(_ value: Int16) throws { push(try encoder.box(value)) }
@@ -300,13 +317,13 @@ extension OrmEncoder {
         func encode<T: Encodable>(_ value: T) throws {
             encoder.codingPath.append(OrmCodingKey(index: count))
             defer { encoder.codingPath.removeLast() }
-            push(try JSONEncoder().encode(value))
+            push(try encoder.box(value))
         }
 
         func encodeConditional<T>(_ object: T) throws where T: AnyObject, T: Encodable {
             encoder.codingPath.append(OrmCodingKey(index: count))
             defer { encoder.codingPath.removeLast() }
-            push(try JSONEncoder().encode(object))
+            push(try encoder.box(object))
         }
 
         func nestedContainer<NestedKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> where NestedKey: CodingKey {
@@ -338,32 +355,34 @@ extension OrmEncoder {
             storage = encoder.storage
         }
 
-        private func push(_ value: Any) {
-            guard var array = storage.popContainer() as? [Any] else { assertionFailure(); return }
-            array.append(value)
-            storage.push(container: array)
-        }
+//        private func push(_ value: Any) {
+//            guard var array = storage.popContainer() as? [Any] else {
+//                assertionFailure()
+//                return
+//            }
+//            array.append(value)
+//            storage.push(array)
+//        }
 
-        func encodeNil() throws { storage.push(container: NSNull()) }
-        func encode(_ value: Bool) throws { storage.push(container: value) }
-        func encode(_ value: Int) throws { storage.push(container: value) }
-        func encode(_ value: Int8) throws { storage.push(container: value) }
-        func encode(_ value: Int16) throws { storage.push(container: value) }
-        func encode(_ value: Int32) throws { storage.push(container: value) }
-        func encode(_ value: Int64) throws { storage.push(container: value) }
-        func encode(_ value: UInt) throws { storage.push(container: value) }
-        func encode(_ value: UInt8) throws { storage.push(container: value) }
-        func encode(_ value: UInt16) throws { storage.push(container: value) }
-        func encode(_ value: UInt32) throws { storage.push(container: value) }
-        func encode(_ value: UInt64) throws { storage.push(container: value) }
-        func encode(_ value: Float) throws { storage.push(container: value) }
-        func encode(_ value: Double) throws { storage.push(container: value) }
-        func encode(_ value: String) throws { storage.push(container: value) }
-        func encode<T: Encodable>(_ value: T) throws { storage.push(container: try encoder.box(value)) }
+        func encodeNil() throws { storage.push(NSNull()) }
+        func encode(_ value: Bool) throws { storage.push(value) }
+        func encode(_ value: Int) throws { storage.push(value) }
+        func encode(_ value: Int8) throws { storage.push(value) }
+        func encode(_ value: Int16) throws { storage.push(value) }
+        func encode(_ value: Int32) throws { storage.push(value) }
+        func encode(_ value: Int64) throws { storage.push(value) }
+        func encode(_ value: UInt) throws { storage.push(value) }
+        func encode(_ value: UInt8) throws { storage.push(value) }
+        func encode(_ value: UInt16) throws { storage.push(value) }
+        func encode(_ value: UInt32) throws { storage.push(value) }
+        func encode(_ value: UInt64) throws { storage.push(value) }
+        func encode(_ value: Float) throws { storage.push(value) }
+        func encode(_ value: Double) throws { storage.push(value) }
+        func encode(_ value: String) throws { storage.push(value) }
+        func encode<T: Encodable>(_ value: T) throws { storage.push(try encoder.box(value)) }
     }
 }
 
-/// 解码器, 将[String:Binding]转换为Struct/Class
 open class OrmDecoder: Decoder {
     open var codingPath: [CodingKey]
     open var userInfo: [CodingUserInfoKey: Any] = [:]
@@ -374,7 +393,7 @@ open class OrmDecoder: Decoder {
     }
 
     public init(container: Any, codingPath: [CodingKey] = []) {
-        storage.push(container: container)
+        storage.push(container)
         self.codingPath = codingPath
     }
 
@@ -400,29 +419,42 @@ open class OrmDecoder: Decoder {
         do {
             return try unboxRawType(value, as: T.self)
         } catch {
-            storage.push(container: value)
+            storage.push(value)
             defer { storage.popContainer() }
             return try T(from: self)
         }
     }
 
-    private func unwarp<T: Decodable>(_ item: Any, type: T.Type) throws -> T {
-        var result: T
+    private func unwrap<T: Decodable>(_ item: Any, type: T.Type) throws -> T {
         do {
-            switch item {
-            case let item as Data:
-                result = try JSONDecoder().decode(type, from: item)
-            case let item as [String: Any]:
-                result = try decode(type, from: item)
-            default:
-                storage.push(container: item)
-                result = try T(from: self)
-                storage.popContainer()
+            var result: T
+            switch (item, type) {
+                case (let data as Data, is Data.Type):
+                    result = data as! T
+                
+                case (let string as String, is Data.Type):
+                    result = Data(hex: string) as! T
+                
+                case let (string as String, _):
+                    let data = string.data(using: .utf8) ?? Data()
+                    let json = try JSONSerialization.jsonObject(with: data, options: [])
+                    result = try decode(type, from: json)
+                
+                case let (array as [Any], _):
+                    result = try decode(type, from: array)
+                
+                case let (dictionary as [String: Any], _):
+                    result = try decode(type, from: dictionary)
+                
+                default:
+                    storage.push(item)
+                    result = try T(from: self)
+                    storage.popContainer()
             }
+            return result
         } catch _ {
             return try cast(nil, as: T.self)
         }
-        return result
     }
 
     private func lastContainer<T>(forType type: T.Type) throws -> Any {
@@ -469,7 +501,7 @@ extension OrmDecoder {
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
-            guard let entry = self.container[key.stringValue] else {
+            guard let entry = container[key.stringValue] else {
                 let error = DecodingError.Context(codingPath: codingPath, debugDescription: "No value associated with key \(key) (\"\(key.stringValue)\").")
                 throw DecodingError.keyNotFound(key, error)
             }
@@ -495,14 +527,14 @@ extension OrmDecoder {
             let item = try find(forKey: key)
             decoder.codingPath.append(key)
             defer { decoder.codingPath.removeLast() }
-            return try decoder.unwarp(item, type: T.self)
+            return try decoder.unwrap(item, type: T.self)
         }
 
         func decodeIfPresent<T>(_ type: T.Type, forKey key: Key) throws -> T? where T: Decodable {
             let item = try find(forKey: key)
             decoder.codingPath.append(key)
             defer { decoder.codingPath.removeLast() }
-            return try decoder.unwarp(item, type: T.self)
+            return try decoder.unwrap(item, type: T.self)
         }
 
         func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey: CodingKey {
@@ -579,7 +611,7 @@ extension OrmDecoder {
         func decodeNil() throws -> Bool {
             try checkIndex(Any?.self)
 
-            if container[self.currentIndex] is NSNull {
+            if container[currentIndex] is NSNull {
                 currentIndex += 1
                 return true
             } else {
@@ -608,7 +640,7 @@ extension OrmDecoder {
                 decoder.codingPath.removeLast()
                 currentIndex += 1
             }
-            return try decoder.unwarp(container[currentIndex], type: type)
+            return try decoder.unwrap(container[currentIndex], type: type)
         }
 
         func decodeIfPresent<T>(_ type: T.Type) throws -> T? where T: Decodable {
@@ -618,7 +650,7 @@ extension OrmDecoder {
                 decoder.codingPath.removeLast()
                 currentIndex += 1
             }
-            return try decoder.unwarp(container[currentIndex], type: type)
+            return try decoder.unwrap(container[currentIndex], type: type)
         }
 
         func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type) throws -> KeyedDecodingContainer<NestedKey> {
@@ -689,7 +721,7 @@ extension OrmDecoder {
         func decode(_ type: Double.Type) throws -> Double { return try _decode(type) }
         func decode(_ type: String.Type) throws -> String { return try _decode(type) }
         func decode<T: Decodable>(_ type: T.Type) throws -> T {
-            return try decoder.unwarp(decoder.lastContainer(forType: type), type: type)
+            return try decoder.unwrap(decoder.lastContainer(forType: type), type: type)
         }
     }
 }

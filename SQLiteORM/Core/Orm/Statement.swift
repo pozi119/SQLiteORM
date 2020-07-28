@@ -185,7 +185,8 @@ extension Cursor: Sequence {
                 return sqlite3_column_int64(handle, Int32(idx)) as Int64
             case SQLITE_NULL:
                 return nil
-            case SQLITE_TEXT:
+            case SQLITE_TEXT: fallthrough
+            case SQLITE3_TEXT:
                 return String(cString: UnsafePointer(sqlite3_column_text(handle, Int32(idx))))
             case let type:
                 assert(false, "unsupported column type: \(type)")

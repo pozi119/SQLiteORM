@@ -18,6 +18,7 @@ struct Person: Codable, Equatable {
     var id: Int64
     var sex: Sex
     var intro: String
+    var data: Data?
 }
 
 struct Event {
@@ -38,6 +39,7 @@ class User: NSObject, Codable {
     var password: String?
     var person: Person?
     var list: [Int] = []
+    var data: Data = Data()
 
     init(id: Int64 = 0, name: String = "", password: String? = nil, person: Person? = nil) {
         self.id = id

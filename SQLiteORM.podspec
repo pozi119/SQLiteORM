@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
   
-  s.default_subspec = 'cipher'
+  s.default_subspec = 'system'
   s.swift_version = '5.0'
 
   s.subspec 'system' do |ss|
@@ -40,7 +40,6 @@ Pod::Spec.new do |s|
 
   s.subspec 'core' do |ss|
       ss.source_files = 'SQLiteORM/Core/**/*'
-      ss.resource = ['SQLiteORM/Assets/PinYin.bundle']
       ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   end
 

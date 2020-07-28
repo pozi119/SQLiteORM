@@ -81,8 +81,12 @@ public extension Orm {
     /// - Returns: 是否插入成功
     @discardableResult
     func insert(_ item: T) -> Bool {
-        let dic = try? encoder.encode(item)
-        return _update(dic as! [String: Binding])
+        do {
+            let encoded = try encoder.encode(item)
+            return _update(encoded, type: .insert)
+        } catch {
+            return false
+        }
     }
 
     @discardableResult
@@ -111,8 +115,12 @@ public extension Orm {
     /// - Returns: 是否插入或更新成功
     @discardableResult
     func upsert(_ item: T) -> Bool {
-        let dic = try? encoder.encode(item)
-        return _update(dic as! [String: Binding], type: .upsert)
+        do {
+            let encoded = try encoder.encode(item)
+            return _update(encoded, type: .upsert)
+        } catch {
+            return false
+        }
     }
 
     @discardableResult
@@ -157,8 +165,12 @@ public extension Orm {
     @discardableResult
     func update(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
-        let bindings = try! encoder.encode(item) as! [String: Binding]
-        return _update(bindings, type: .upsert, condition: condition)
+        do {
+            let encoded = try encoder.encode(item)
+            return _update(encoded, type: .upsert, condition: condition)
+        } catch {
+            return false
+        }
     }
 
     /// 更新一条数据,指定要更新的字段
@@ -170,10 +182,14 @@ public extension Orm {
     @discardableResult
     func update(_ item: T, fields: [String]) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
-        var bindings = try! encoder.encode(item) as! [String: Binding]
-        let trashKeys = Array(Set(bindings.keys).subtracting(fields))
-        bindings.removeValues(forKeys: trashKeys)
-        return _update(bindings, type: .upsert, condition: condition)
+        do {
+            var encoded = try encoder.encode(item)
+            let trashKeys = Array(Set(encoded.keys).subtracting(fields))
+            encoded.removeValues(forKeys: trashKeys)
+            return _update(encoded, type: .upsert, condition: condition)
+        } catch {
+            return false
+        }
     }
 
     /// 更新多条数据

@@ -1,35 +1,24 @@
 PODS:
-  - SQLCipher (4.4.0):
-    - SQLCipher/standard (= 4.4.0)
-  - SQLCipher/common (4.4.0)
-  - SQLCipher/standard (4.4.0):
-    - SQLCipher/common
   - SQLiteORM (0.1.3):
-    - SQLiteORM/cipher (= 0.1.3)
-  - SQLiteORM/cipher (0.1.3):
-    - SQLCipher
-    - SQLiteORM/core
-    - SQLiteORM/fts
-    - SQLiteORM/util
+    - SQLiteORM/system (= 0.1.3)
   - SQLiteORM/core (0.1.3)
   - SQLiteORM/fts (0.1.3):
     - SQLiteORM/core
+  - SQLiteORM/system (0.1.3):
+    - SQLiteORM/core
+    - SQLiteORM/fts
+    - SQLiteORM/util
   - SQLiteORM/util (0.1.3)
 
 DEPENDENCIES:
   - SQLiteORM (from `../`)
-
-SPEC REPOS:
-  trunk:
-    - SQLCipher
 
 EXTERNAL SOURCES:
   SQLiteORM:
     :path: "../"
 
 SPEC CHECKSUMS:
-  SQLCipher: e434ed542b24f38ea7b36468a13f9765e1b5c072
-  SQLiteORM: cc10248d9151123606376f45c75a423e0cc8e0ae
+  SQLiteORM: 8a70fac0587bc3d73af3f7d1b30c3fd9f10f9976
 
 PODFILE CHECKSUM: 455c597c68e27aa490edc50e008d2e593dd447b0
 
