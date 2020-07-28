@@ -8,16 +8,16 @@
 import Foundation
 
 extension Database {
-    /// 数据库对象池
+    /// database pool
     private static let pool = NSMapTable<NSString, Database>.strongToWeakObjects()
 
-    /// 从数据库对象池创建数据库.若池中存在,则直接取出.否则创建并放入池中
+    /// create database from the pool,  if it exists, take it out directly. Otherwise, create it and put it into the pool
     ///
     /// - Parameters:
-    ///   - location: 数据库位置/路径
-    ///   - flags: 打开数据库的flags
-    ///   - encrypt: 加密字符串
-    /// - Returns: 数据库
+    ///   - location: database file path
+    ///   - flags: flags for opening database
+    ///   - encrypt: encryption key
+    /// - Returns: database
     public class func fromPool(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") -> Database {
         let udid = location.description + "\(flags)" + encrypt as NSString
         if let db = pool.object(forKey: udid) {

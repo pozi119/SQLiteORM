@@ -16,20 +16,20 @@ import Foundation
     import SQLite3
 #endif
 
-/// sqlite3 数据库
+/// sqlite3 database
 public final class Database {
-    /// 数据库位置
+    /// database location
     ///
-    /// - memory: 内存数据库
-    /// - temporary: 临时数据库
-    /// - uri: 指定路径
+    /// - memory: memory database
+    /// - temporary: temporary database
+    /// - uri: special database path
     public enum Location {
         case memory
         case temporary
         case uri(String)
     }
 
-    /// sqlite3 db句柄
+    /// sqlite3 database handle
     var handle: OpaquePointer {
         if _handle == nil {
             try! open()
@@ -37,10 +37,10 @@ public final class Database {
         return _handle!
     }
 
-    /// 数据库路径
+    /// database path
     public private(set) var path: String
 
-    /// 默认Open flags
+    /// default open flags
     private let _essential: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
     private var _flags: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
 
@@ -57,7 +57,7 @@ public final class Database {
 
     private static var _caches = [String: Cache<String, [[String: Binding]]>]()
 
-    /// query缓存
+    /// query results cache
     lazy var cache: Cache<String, [[String: Binding]]> = {
         if let _cache = Database._caches[path] {
             return _cache
@@ -67,21 +67,14 @@ public final class Database {
         return _cache
     }()
 
-    /// 初始化数据库
-    ///
-    /// - Parameters:
-    ///   - location: 位置
-    ///   - flags: sqlite3 open flags
-    ///   - encrypt: 加密密码
+    /// initialize database
     public required init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {
         path = location.description
         self.flags = flags
         self.encrypt = encrypt
     }
 
-    /// 从指定路径创建
-    ///
-    /// - Parameter path: 数据库文件路径
+    /// initialize database from file
     public convenience init(with path: String) {
         self.init(.uri(path), flags: 0, encrypt: "")
     }
@@ -90,9 +83,7 @@ public final class Database {
         close()
     }
 
-    /// 打开数据库
-    ///
-    /// - Throws: 打开过程中出现的错误
+    /// open database
     public func open() throws {
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
         #if SQLITE_HAS_CODEC
@@ -106,10 +97,10 @@ public final class Database {
         sqlite3_commit_hook(handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
     }
 
-    /// 数据库是否打开
+    /// is the database open?
     public var isOpen: Bool { return _handle != nil }
 
-    /// 关闭数据库
+    /// close database
     public func close() {
         if _handle != nil {
             sqlite3_close(_handle)
@@ -119,20 +110,20 @@ public final class Database {
 
     // MARK: -
 
-    /// 数据库是否只读.目前默认`open flags`设置为可读写
+    /// Is the database read-only? the default is read-write
     public var readonly: Bool { return sqlite3_db_readonly(handle, nil) == 1 }
 
-    /// 最后一次插入操作的rowid
+    /// last insert rowid
     public var lastInsertRowid: Int64 {
         return sqlite3_last_insert_rowid(handle)
     }
 
-    /// 最后一次操作影响的数据条数
+    /// number of last changes
     public var changes: Int {
         return Int(sqlite3_changes(handle))
     }
 
-    /// 打开数据库后修改/更新的数据总数??
+    /// total number of changes after opening database
     public var totalChanges: Int {
         return Int(sqlite3_total_changes(handle))
     }
@@ -191,32 +182,19 @@ public final class Database {
 
     // MARK: - Execute
 
-    /// 执行指定sql语句
-    ///
-    /// - Parameter SQL: sql语句
-    /// - Throws: 执行过程中的错误
+    /// execute sql statement directly
     public func execute(_ SQL: String) throws {
         _ = try check(sqlite3_exec(handle, SQL, nil, nil, nil))
     }
 
     // MARK: - Prepare
 
-    /// 准备statement
-    ///
-    /// - Parameter statement: sql语句
-    /// - Returns: 准备好的sqlite3 statement
-    /// - Throws: 准备过程中出现的错误
+    /// prepare sql statement
     public func prepare(_ statement: String) throws -> Statement {
         return try Statement(self, statement)
     }
 
-    /// 准备statement
-    ///
-    /// - Parameters:
-    ///   - statement: sql语句
-    ///   - bindings: 绑定的数据,需和sql语句对应
-    /// - Returns: 准备好的sqlite3 statement
-    /// - Throws: 准备过程中出现的错误
+    /// prepare sql statement, with values
     public func prepare(_ statement: String, _ bindings: [Binding]) throws -> Statement {
         return try prepare(statement).bind(bindings)
     }
@@ -227,10 +205,7 @@ public final class Database {
 
     // MARK: - Run
 
-    /// 查询数据
-    ///
-    /// - Parameter statement: sql语句
-    /// - Returns: 查询结果
+    /// query  with native sql statement
     public func query(_ statement: String) -> [[String: Binding]] {
         return (try? prepare(statement).query()) ?? []
     }
@@ -244,20 +219,12 @@ public final class Database {
         return results
     }
 
-    /// 执行语句
-    ///
-    /// - Parameter statement: sql语句
-    /// - Throws: 准备过程中的错误
+    /// execute native sql statement
     public func run(_ statement: String) throws {
         return try prepare(statement).run()
     }
 
-    /// 执行语句
-    ///
-    /// - Parameters:
-    ///   - statement: sql语句
-    ///   - bindings: 绑定的数据,需和sql语句对应
-    /// - Throws: 准备过程中出现的错误
+    /// execute native sql statement, with values
     public func run(_ statement: String, _ bindings: [Binding]) throws {
         return try prepare(statement).run(bindings)
     }
@@ -280,22 +247,12 @@ public final class Database {
         case exclusive = "EXCLUSIVE"
     }
 
-    /// 事务操作
-    ///
-    /// - Parameters:
-    ///   - mode: 模式
-    ///   - block: 具体操作
-    /// - Throws: 事务操作过程中的错误
+    /// sqlite transaction
     public func transaction(_ mode: TransactionMode = .deferred, block: () throws -> Void) throws {
         try transaction("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
     }
 
-    /// 检查点
-    ///
-    /// - Parameters:
-    ///   - name: 检查点名称
-    ///   - block: 具体操作
-    /// - Throws: 事务操作过程中的错误
+    /// sqlite checkpoint
     public func savepoint(_ name: String = UUID().uuidString, block: () throws -> Void) throws {
         let name = name.quote("'")
         let savepoint = "SAVEPOINT \(name)"
@@ -303,14 +260,7 @@ public final class Database {
         try transaction(savepoint, block, "RELEASE \(savepoint)", or: "ROLLBACK TO \(savepoint)")
     }
 
-    /// 事务操作
-    ///
-    /// - Parameters:
-    ///   - begin: 开始事务的sql语句
-    ///   - block: 具体c操作
-    ///   - commit: 提交事务的sql语句
-    ///   - rollback: 回滚事务的sql语句
-    /// - Throws: 事务操作过程中的错误
+    /// sqlite transaction
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
         try prepare(begin).run()
         do {
@@ -322,17 +272,14 @@ public final class Database {
         }
     }
 
-    /// 中断当前sqlite3操作
+    /// sqlite3_interrupt()
     public func interrupt() {
         sqlite3_interrupt(handle)
     }
 
     // MARK: - API
 
-    /// 是否存在某张表
-    ///
-    /// - Parameter table: 表名
-    /// - Returns: 是否存在
+    /// check if the table exists
     public func exists(_ table: String) -> Bool {
         let value = ((try? scalar("SELECT count(*) as 'count' FROM sqlite_master WHERE type ='table' and tbl_name = \(table.quoted)")) as Binding??)
         guard let count = value as? Int64 else {
@@ -341,10 +288,7 @@ public final class Database {
         return count > 0
     }
 
-    /// 是否FTS数据表
-    ///
-    /// - Parameter table: 表名
-    /// - Returns: 是否FTS数据表
+    /// fts table or not
     public func isFts(_ table: String) -> Bool {
         let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
         let array = query(sql)
@@ -481,12 +425,12 @@ extension Database: CustomStringConvertible {
 extension Database.Location: CustomStringConvertible {
     public var description: String {
         switch self {
-        case .memory:
-            return ":memory:"
-        case .temporary:
-            return ""
-        case let .uri(URI):
-            return URI
+            case .memory:
+                return ":memory:"
+            case .temporary:
+                return ""
+            case let .uri(URI):
+                return URI
         }
     }
 }
@@ -510,12 +454,12 @@ public enum Result: Error {
 extension Result: CustomStringConvertible {
     public var description: String {
         switch self {
-        case let .error(message, errorCode, statement):
-            if let statement = statement {
-                return "\(message) (\(statement)) (code: \(errorCode))"
-            } else {
-                return "\(message) (code: \(errorCode))"
-            }
+            case let .error(message, errorCode, statement):
+                if let statement = statement {
+                    return "\(message) (\(statement)) (code: \(errorCode))"
+                } else {
+                    return "\(message) (code: \(errorCode))"
+                }
         }
     }
 }

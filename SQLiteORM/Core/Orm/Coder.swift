@@ -413,21 +413,21 @@ open class OrmDecoder: Decoder {
             switch (item, type) {
                 case (let data as Data, is Data.Type):
                     result = data as! T
-                
+
                 case (let string as String, is Data.Type):
                     result = Data(hex: string) as! T
-                
+
                 case let (string as String, _):
                     let data = string.data(using: .utf8) ?? Data()
                     let json = try JSONSerialization.jsonObject(with: data, options: [])
                     result = try decode(type, from: json)
-                
+
                 case let (array as [Any], _):
                     result = try decode(type, from: array)
-                
+
                 case let (dictionary as [String: Any], _):
                     result = try decode(type, from: dictionary)
-                
+
                 default:
                     storage.push(item)
                     result = try T(from: self)

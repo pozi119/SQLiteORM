@@ -177,9 +177,9 @@ public class Highlighter {
 
         let found = results.first!.range
         switch (found.location, found.length) {
-        case (0, comparison.count): match.lv2 = .full
-        case (0, _): match.lv2 = .prefix
-        default: match.lv2 = .nonprefix
+            case (0, comparison.count): match.lv2 = .full
+            case (0, _): match.lv2 = .prefix
+            default: match.lv2 = .nonprefix
         }
         match.lv3 = lv1 == .origin ? .high : .medium
 
@@ -214,9 +214,9 @@ public class Highlighter {
                 let range = results.first!.range
                 var lv2: Match.LV2 = .none
                 switch (range.lowerBound, range.upperBound) {
-                case (0, pinyin.count): lv2 = keyword.count == 1 ? .prefix : .full
-                case (0, _): lv2 = .prefix
-                default: lv2 = .nonprefix
+                    case (0, pinyin.count): lv2 = keyword.count == 1 ? .prefix : .full
+                    case (0, _): lv2 = .prefix
+                    default: lv2 = .nonprefix
                 }
                 if match.lv2.rawValue < lv2.rawValue { match.lv2 = lv2 }
 

@@ -7,28 +7,34 @@
 
 import Foundation
 
-/// 表检查结果选项
+/// table inspection results
 public struct Inspection: OptionSet {
     public let rawValue: UInt8
+    /// table exists
     public static let exist = Inspection(rawValue: 1 << 0)
+
+    /// table modified
     public static let tableChanged = Inspection(rawValue: 1 << 1)
+
+    /// index modified
     public static let indexChanged = Inspection(rawValue: 1 << 2)
+
     public init(rawValue: UInt8) {
         self.rawValue = rawValue
     }
 }
 
 public final class Orm<T: Codable> {
-    /// 配置
+    /// configuration
     public let config: Config
 
-    /// 数据库
+    /// database
     public let db: Database
 
-    /// 表名
+    /// table name
     public let table: String
 
-    /// 属性
+    /// property corresponding to the field
     public let properties: [String: PropertyInfo]
 
     /// Encoder
@@ -47,13 +53,10 @@ public final class Orm<T: Codable> {
 
     private var tableConfig: Config
 
-    /// 初始化ORM
+    /// initialize orm
     ///
     /// - Parameters:
-    ///   - config: 配置
-    ///   - db: 数据库
-    ///   - table: 表
-    ///   - flag: 是否检查并创建表.某些场景需延迟创建表
+    ///   - flag: create table immediately? in some sences, table creation  may be delayed
     public init(config: Config, db: Database = Database(.temporary), table: String = "", setup flag: Bool = true) {
         assert(config.type != nil && config.columns.count > 0, "invalid config")
 
@@ -152,17 +155,13 @@ public final class Orm<T: Codable> {
         }
     }
 
-    /// 创建表
-    ///
-    /// - Throws: 创建表过程中的错误
+    /// table creation
     public func setup() throws {
         let ins = inspect()
         try setup(with: ins)
     }
 
-    /// 检查表配置
-    ///
-    /// - Returns: 检查结果
+    /// inspect table
     public func inspect() -> Inspection {
         var ins: Inspection = .init()
         let exist = db.exists(table)
@@ -172,27 +171,24 @@ public final class Orm<T: Codable> {
         ins.insert(.exist)
 
         switch (tableConfig, config) {
-        case let (tableConfig as PlainConfig, config as PlainConfig):
-            if tableConfig != config {
-                ins.insert(.tableChanged)
-            }
-            if !tableConfig.isIndexesEqual(config) {
-                ins.insert(.indexChanged)
-            }
-        case let (tableConfig as FtsConfig, config as FtsConfig):
-            if tableConfig != config {
-                ins.insert(.tableChanged)
-            }
-        default:
-            ins.insert([.tableChanged, .indexChanged])
+            case let (tableConfig as PlainConfig, config as PlainConfig):
+                if tableConfig != config {
+                    ins.insert(.tableChanged)
+                }
+                if !tableConfig.isIndexesEqual(config) {
+                    ins.insert(.indexChanged)
+                }
+            case let (tableConfig as FtsConfig, config as FtsConfig):
+                if tableConfig != config {
+                    ins.insert(.tableChanged)
+                }
+            default:
+                ins.insert([.tableChanged, .indexChanged])
         }
         return ins
     }
 
-    /// 根据检查结果创建或更新表
-    ///
-    /// - Parameter options: 检查结果
-    /// - Throws: 创建/更新表过程中的错误
+    /// create table with inspection
     public func setup(with options: Inspection) throws {
         guard !created else { return }
 
@@ -219,35 +215,26 @@ public final class Orm<T: Codable> {
         created = true
     }
 
-    /// 重命名表
-    ///
-    /// - Parameter tempTable: 临时表名
-    /// - Throws: 重命名过程中的错误
+    /// rename table
     func rename(to tempTable: String) throws {
         let sql = "ALTER TABLE \(table.quoted) RENAME TO \(tempTable.quoted)"
         try db.run(sql)
     }
 
-    /// 创建表
-    ///
-    /// - Throws: 创建表过程中的错误
+    /// create table
     public func createTable() throws {
         var sql = ""
         switch config {
-        case let cfg as PlainConfig:
-            sql = cfg.createSQL(with: table)
-        case let cfg as FtsConfig:
-            sql = cfg.createSQL(with: table, content_table: content_table, content_rowid: content_rowid)
-        default: break
+            case let cfg as PlainConfig:
+                sql = cfg.createSQL(with: table)
+            case let cfg as FtsConfig:
+                sql = cfg.createSQL(with: table, content_table: content_table, content_rowid: content_rowid)
+            default: break
         }
         try db.run(sql)
     }
 
-    /// 从旧表迁移数据至新表
-    ///
-    /// - Parameter tempTable: 旧表(临时表)
-    /// - Attention: FTS表需手动迁移数据
-    /// - Throws: 迁移过程中的错误
+    /// migrating data from old table to new table
     func migrationData(from tempTable: String) throws {
         let columnsSet = NSMutableOrderedSet(array: config.columns)
         columnsSet.intersectSet(Set(tableConfig.columns))
@@ -263,14 +250,12 @@ public final class Orm<T: Codable> {
         try db.run(drop)
     }
 
-    /// 重建索引
-    ///
-    /// - Throws: 重建索引过程中的错误
+    /// rebuild indexes
     func rebuildIndex() throws {
         guard config is PlainConfig else {
             return
         }
-        // 删除旧索引
+        // delete old indexes
         var dropIdxSQL = ""
         let indexesSQL = "SELECT name FROM sqlite_master WHERE type ='index' and tbl_name = \(table.quoted)"
         let array = db.query(indexesSQL)
@@ -283,7 +268,7 @@ public final class Orm<T: Codable> {
         guard config.indexes.count > 0 else {
             return
         }
-        // 建立新索引
+        // create new indexes
         let indexName = "orm_index_\(table)"
         let indexesString = config.indexes.joined(separator: ",")
         let createSQL = indexesSQL.count > 0 ? "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""

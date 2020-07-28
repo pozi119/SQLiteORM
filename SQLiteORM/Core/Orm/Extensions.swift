@@ -11,15 +11,15 @@ public extension String {
     var trim: String {
         return trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    
+
     var strip: String {
         return replacingOccurrences(of: " +", with: " ", options: .regularExpression)
     }
-    
+
     var quoted: String {
         return quote()
     }
-    
+
     func quote(_ mark: Character? = "\"") -> String {
         guard mark != nil else {
             return self
@@ -34,7 +34,7 @@ public extension String {
         }
         return "\(ch)\(escaped)\(ch)"
     }
-    
+
     func match(_ regex: String) -> Bool {
         let r = range(of: regex, options: [.regularExpression, .caseInsensitive])
         return r != nil
@@ -46,7 +46,6 @@ public extension Array where Element: Binding {
         return map { $0.sqlValue }.joined(separator: ",")
     }
 }
-
 
 public extension Array where Element: Hashable {
     static func === (lhs: Array, rhs: Array) -> Bool {
@@ -84,7 +83,7 @@ public extension Dictionary {
         }
         return true
     }
-    
+
     mutating func removeValues(forKeys: [Key]) {
         for key in forKeys {
             removeValue(forKey: key)

@@ -118,7 +118,7 @@ public class Upgrader: NSObject {
         return stagesItems.count > 0
     }
 
-    public override init() {}
+    override public init() {}
 
     public init(versionKey: String) {
         self.versionKey = versionKey

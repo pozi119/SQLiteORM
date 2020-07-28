@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol SQLable: CustomStringConvertible {
-    /// sql语句
+    /// sql statement
     var sql: String { get }
 }
 
@@ -137,19 +137,19 @@ public func !< (lhs: Where, value: Binding) -> Where {
 
 public func && (lhs: Where, rhs: Where) -> Where {
     switch (lhs.sql.count, rhs.sql.count) {
-    case (0, 0): return lhs
-    case (_, 0): return lhs
-    case (0, _): return rhs
-    case (_, _): return Where("(\(lhs))" + " AND " + "(\(rhs))")
+        case (0, 0): return lhs
+        case (_, 0): return lhs
+        case (0, _): return rhs
+        case (_, _): return Where("(\(lhs))" + " AND " + "(\(rhs))")
     }
 }
 
 public func || (lhs: Where, rhs: Where) -> Where {
     switch (lhs.sql.count, rhs.sql.count) {
-    case (0, 0): return lhs
-    case (_, 0): return lhs
-    case (0, _): return rhs
-    case (_, _): return Where("(\(lhs))" + " OR " + "(\(rhs))")
+        case (0, 0): return lhs
+        case (_, 0): return lhs
+        case (0, _): return rhs
+        case (_, _): return Where("(\(lhs))" + " OR " + "(\(rhs))")
     }
 }
 

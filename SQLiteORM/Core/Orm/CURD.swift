@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: - 私有函数
+// MARK: - private functions
 
 extension Orm {
     fileprivate enum Update {
@@ -20,33 +20,33 @@ extension Orm {
         }
         var dic = bindings
         switch config {
-        case let config as PlainConfig:
-            if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
-                dic.removeValues(forKeys: config.primaries)
-            }
-            if config.logAt {
-                let now = NSDate().timeIntervalSince1970
-                if type != .update {
-                    dic[Config.createAt] = now
+            case let config as PlainConfig:
+                if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
+                    dic.removeValues(forKeys: config.primaries)
                 }
-                dic[Config.updateAt] = now
-            }
-        default:
-            break
+                if config.logAt {
+                    let now = NSDate().timeIntervalSince1970
+                    if type != .update {
+                        dic[Config.createAt] = now
+                    }
+                    dic[Config.updateAt] = now
+                }
+            default:
+                break
         }
         var sql = ""
         let fields = dic.keys
         let values = fields.map { dic[$0] } as! [Binding]
         switch type {
-        case .insert, .upsert:
-            let keys = fields.map { $0.quoted }.joined(separator: ",")
-            let marks = Array(repeating: "?", count: dic.count).joined(separator: ",")
-            sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keys)) VALUES (\(marks))"
-        case .update:
-            let sets = fields.map { $0.quoted + "=?" }.joined(separator: ",")
-            var whereClause = condition.sql
-            whereClause = whereClause.count > 0 ? "WHERE \(whereClause)" : ""
-            sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
+            case .insert, .upsert:
+                let keys = fields.map { $0.quoted }.joined(separator: ",")
+                let marks = Array(repeating: "?", count: dic.count).joined(separator: ",")
+                sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keys)) VALUES (\(marks))"
+            case .update:
+                let sets = fields.map { $0.quoted + "=?" }.joined(separator: ",")
+                var whereClause = condition.sql
+                whereClause = whereClause.count > 0 ? "WHERE \(whereClause)" : ""
+                sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
         }
         do {
             try db.prepare(sql, values).run()
@@ -72,13 +72,10 @@ extension Orm {
     }
 }
 
-// MARK: - 创建数据
+// MARK: - insert
 
 public extension Orm {
-    /// 插入一条数据
-    ///
-    /// - Parameter item: 要插入的数据
-    /// - Returns: 是否插入成功
+    /// insert a item
     @discardableResult
     func insert(_ item: T) -> Bool {
         do {
@@ -94,10 +91,9 @@ public extension Orm {
         return _update(keyValues)
     }
 
-    /// 插入多条数据
+    /// insert multiple items
     ///
-    /// - Parameter items: 要插入的数据
-    /// - Returns: 插入成功的数量
+    /// - Returns: number of successes
     @discardableResult
     func insert(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
@@ -109,10 +105,7 @@ public extension Orm {
         return _update(multi: multiKeyValues)
     }
 
-    /// 插入或更新一条数据
-    ///
-    /// - Parameter item: 要插入的数据
-    /// - Returns: 是否插入或更新成功
+    /// insert or update a item
     @discardableResult
     func upsert(_ item: T) -> Bool {
         do {
@@ -128,10 +121,9 @@ public extension Orm {
         return _update(keyValues, type: .upsert)
     }
 
-    /// 插入或更新多条数据
+    /// insert or update multiple records
     ///
-    /// - Parameter items: 要插入的数据
-    /// - Returns: 插入或更新成功的数量
+    /// - Returns: number of successes
     @discardableResult
     func upsert(multi items: [T]) -> Int64 {
         let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
@@ -147,21 +139,17 @@ public extension Orm {
 // MARK: - Update
 
 public extension Orm {
-    /// 更新数据
+    /// update datas
     ///
     /// - Parameters:
-    ///   - condition: 条件
-    ///   - bindings: [字段:数据]
-    /// - Returns: 是否更新成功
+    ///   - condition: condit
+    ///   - bindings: [filed:data]
     @discardableResult
     func update(_ condition: Where, with bindings: [String: Binding]) -> Bool {
         return _update(bindings, type: .upsert, condition: condition)
     }
 
-    /// 更新一条数据
-    ///
-    /// - Parameter item: 要更新的数据
-    /// - Returns: 是否更新成功
+    /// update a item
     @discardableResult
     func update(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
@@ -173,12 +161,7 @@ public extension Orm {
         }
     }
 
-    /// 更新一条数据,指定要更新的字段
-    ///
-    /// - Parameters:
-    ///   - item: 要更新的数据
-    ///   - fields: 指定字段
-    /// - Returns: 是否更新成功
+    /// update a item, special the fields
     @discardableResult
     func update(_ item: T, fields: [String]) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
@@ -192,10 +175,9 @@ public extension Orm {
         }
     }
 
-    /// 更新多条数据
+    /// update multple items
     ///
-    /// - Parameter items: 要更新的数据
-    /// - Returns: 更新成功的数量
+    /// - Returns: number of successes
     @discardableResult
     func update(multi items: [T]) -> Int64 {
         var count: Int64 = 0
@@ -212,12 +194,9 @@ public extension Orm {
         return count
     }
 
-    /// 更新多条数据,指定要更新的字段
+    /// update multple items, special the fileds
     ///
-    /// - Parameters:
-    ///   - items: 要更新的数据
-    ///   - fields: 指定字段
-    /// - Returns: 更新成功的数量
+    /// - Returns: number of successes
     @discardableResult
     func update(multi items: [T], fields: [String]) -> Int64 {
         var count: Int64 = 0
@@ -234,13 +213,10 @@ public extension Orm {
         return count
     }
 
-    /// 对指定字段进行`加/减`操作
+    /// plus / minus on the specified field
     ///
     /// - Parameters:
-    ///   - condition: 更新条件
-    ///   - field: 指定字段
-    ///   - value: 更新的值,比如: 2表示加2, -2表示减2
-    /// - Returns: 是否更新成功
+    ///   - value: update value, example: 2 means plus 2, -2 means minus 2
     @discardableResult
     func increase(_ condition: Where, field: String, value: Int) -> Bool {
         return _update([field: value], type: .update, condition: condition)
@@ -250,43 +226,36 @@ public extension Orm {
 // MARK: - Retrieve
 
 public extension Orm {
-    /// 最大rowid. 此rowid,自增主键和数据条数不一定一致
+    /// maximum rowid. the maximum rowid, auto increment primary key and records count may not be the same
     var maxRowId: Int64 {
         return max(of: "rowid") as? Int64 ?? 0
     }
 
-    /// 查找一条数据
+    /// find a record, not decoded
     ///
     /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - orderBy: 排序方式
-    /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
+    /// - Returns: [String:Binding], decoding with ORMDecoder
     func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
         return Select().table(table).where(condition).orderBy(orderBy).limit(1).allKeyValues(db).first
     }
 
-    /// 查找一条数据
-    ///
-    /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - orderBy: 排序方式
-    /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
+    /// find a record, decoded
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
         return Select().table(table).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self, decoder: decoder).first
     }
 
-    /// 查询数据
+    /// find data, not decoded
     ///
     /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - distinct: 是否去重
-    ///   - fields: 指定字段
-    ///   - groupBy: 分组字段
-    ///   - having: 分组条件
-    ///   - orderBy: 排序条件
-    ///   - limit: 查询数量
-    ///   - offset: 起始位置
-    /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
+    ///   - condition: query terms
+    ///   - distinct: remove duplicate or not
+    ///   - fields: special fields
+    ///   - groupBy: fields for group
+    ///   - having: condition for group
+    ///   - orderBy: sort criteria
+    ///   - limit: maximum number of queries
+    ///   - offset: startint position
+    /// - Returns: [String:Binding], decoding with ORMDecoder
     func find(_ condition: Where = Where(""),
               distinct: Bool = false,
               fields: Fields = Fields("*"),
@@ -300,18 +269,7 @@ public extension Orm {
             .limit(limit).offset(offset).allKeyValues(db)
     }
 
-    /// 查询数据
-    ///
-    /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - distinct: 是否去重
-    ///   - fields: 指定字段
-    ///   - groupBy: 分组字段
-    ///   - having: 分组条件
-    ///   - orderBy: 排序条件
-    ///   - limit: 查询数量
-    ///   - offset: 起始位置
-    /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
+    /// find data, decoded
     func xFind(_ condition: Where = Where(""),
                distinct: Bool = false,
                fields: Fields = Fields("*"),
@@ -325,64 +283,43 @@ public extension Orm {
             .limit(limit).offset(offset).allItems(db, type: T.self, decoder: decoder)
     }
 
-    /// 查询数据条数
-    ///
-    /// - Parameter condition: 查询条件
-    /// - Returns: 数据条数
+    /// get number of records
     func count(_ condition: Where = Where("")) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
-    /// 是否存在某条数据
-    ///
-    /// - Parameter item: 要查询的数据
-    /// - Returns: 是否存在
+    /// check if a record exists
     func exist(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return count(condition) > 0
     }
 
+    /// check if a record exists
     func exist(_ keyValues: [String: Binding]) -> Bool {
         guard let condition = config.constraint(for: keyValues) else { return false }
         return count(condition) > 0
     }
 
-    /// 获取某个字段的最大值
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 最大值
+    /// get the maximum value of a field
     func max(of field: String, condition: Where = Where("")) -> Binding? {
         return function("max(\(field))", condition: condition)
     }
 
-    /// 获取某个字段的最小值
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 最小值
+    /// get the minimum value of a field
     func min(of field: String, condition: Where = Where("")) -> Binding? {
         return function("min(\(field))", condition: condition)
     }
 
-    /// 获取某个字段的数据的总和
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 求和
+    /// get the sum value of a field
     func sum(of field: String, condition: Where = Where("")) -> Binding? {
         return function("sum(\(field))", condition: condition)
     }
 
-    /// 执行某些简单函数,如max(),min(),sum()
+    /// execute a function, such as: max(),min(),sum()
     ///
     /// - Parameters:
-    ///   - function: 函数名
-    ///   - condition: 查询条件
-    /// - Returns: 函数执行结果
+    ///   - function: function name
+    /// - Returns: function result
     func function(_ function: String, condition: Where = Where("")) -> Binding? {
         let dic = Select().table(table).fields(Fields(function)).where(condition).allKeyValues(db).first
         return dic?.values.first
@@ -392,10 +329,9 @@ public extension Orm {
 // MARK: - Delete
 
 public extension Orm {
-    /// 删除表
+    /// delete a table
     ///
-    /// - Attention: 删除表后,若需重新访问,请重新生成Orm.请慎用
-    /// - Returns: 是否删除成功
+    /// - Attention: ffter deleting the table, if you need to access it again, please regenerate orm; **use caution**
     @discardableResult
     func drop() -> Bool {
         let sql = "DROP TABLE IF EXISTS \(table.quoted)"
@@ -407,22 +343,18 @@ public extension Orm {
         return true
     }
 
-    /// 删除数据
+    /// delete a record
     ///
-    /// - Parameter item: 要删除的数据
-    /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
-    /// - Returns: 是否删除成功
+    /// - Attention: if the table has no primary key, all data in the table may be deleted;**use caution**
     @discardableResult
     func delete(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return delete(where: condition)
     }
 
-    /// 删除多条数据
+    /// delete multi records
     ///
-    /// - Parameter items: 要删除的数据
-    /// - Attention: 若数据无主键,则可能删除该表所有数据,请慎用
-    /// - Returns: 是否删除成功
+    /// - Attention: if the table has no primary key, all data in the table may be deleted;**use caution**
     @discardableResult
     func delete(_ items: [T]) -> Int64 {
         var count: Int64 = 0
@@ -439,10 +371,7 @@ public extension Orm {
         return count
     }
 
-    /// 删除数据
-    ///
-    /// - Parameter condition: 删除条件
-    /// - Returns: 是否删除成功
+    /// delete records according to condition
     @discardableResult
     func delete(where condition: Where = Where("")) -> Bool {
         let clause = condition.sql

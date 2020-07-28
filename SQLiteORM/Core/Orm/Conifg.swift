@@ -11,33 +11,31 @@ public class Config {
     public static let createAt: String = "createAt"
     public static let updateAt: String = "updateAt"
 
-    /// 生成config的Struct/Class. 从数据表创建则为nil
+    /// type of struct / class that generates config. Nil for creating from table
     public var type: Codable.Type?
 
-    /// 是否从数据表创建
+    /// create from table or not
     public var fromTable: Bool = false
 
-    /// 所有字段
+    /// all fileds
     public var columns: [String] = []
 
-    /// 主键,可多个. FTS仅供外部增删使用
+    /// primary keys
     public var primaries: [String] = []
 
-    /// 白名单
+    /// white list
     public var whites: [String] = []
 
-    /// 黑名单
+    /// black list
     public var blacks: [String] = []
 
-    /// 索引字段
+    /// index fileds
     public var indexes: [String] = []
 
-    /// 字段:存储类型
+    /// the storage type corresponding to the field
     public var types: [String: String] = [:]
 
-    /// 从数据类型创建配置
-    ///
-    /// - Parameter type: 数据类型
+    /// initialize from some type
     public init(_ type: Codable.Type) {
         self.type = type
         let info: TypeInfo = try! typeInfo(of: type)
@@ -45,34 +43,26 @@ public class Config {
         var columns = [String]()
         var types = [String: String]()
         switch info.kind {
-        case .class, .struct:
-            for prop in info.properties {
-                columns.append(prop.name)
-                types[prop.name] = sqlType(of: prop.type)
-            }
+            case .class, .struct:
+                for prop in info.properties {
+                    columns.append(prop.name)
+                    types[prop.name] = sqlType(of: prop.type)
+                }
 
-        default:
-            assert(false, "unsupported type")
+            default:
+                assert(false, "unsupported type")
         }
         self.columns = columns
         self.types = types
     }
 
-    /// 从数据表创建配置
-    ///
-    /// - Parameters:
-    ///   - table: 表名
-    ///   - db: 数据库
+    /// initilalize form table
     init(table: String, db: Database) {
         fromTable = true
     }
 
-    /// 从数据表创建配置,工厂方法
-    ///
-    /// - Parameters:
-    ///   - table: 表名
-    ///   - db: 数据库
-    /// - Returns: 普通配置/FTS配置
+    /// initilalize form table, class function
+    /// - Returns: general configuration / fts configuration
     public class func factory(_ table: String, db: Database) -> Config {
         let fts = db.isFts(table)
         if fts {
@@ -81,11 +71,11 @@ public class Config {
         return PlainConfig(table: table, db: db)
     }
 
-    /// 预处理
+    /// pretreatement
     public func treate() {
         whites = Array(Set(whites))
         blacks = Array(Set(blacks))
-        
+
         let orderedSet = NSMutableOrderedSet(array: columns)
         if whites.count > 0 {
             orderedSet.intersectSet(Set(whites))
@@ -103,35 +93,29 @@ public class Config {
     }
 }
 
-/// 普通表配置
+/// general configuration
 public final class PlainConfig: Config {
-    /// 是否记录数据创建/修改时间
+    /// record creation / modification time or not
     public var logAt: Bool = false
 
-    /// 是否自增主键,仅当主键数量为1时有效
+    /// is it an auto increment primary key, only valid if the number of primary keys is 1
     public var pkAutoInc: Bool = false
 
-    /// 非空字段
+    /// not null fileds
     public var notnulls: [String] = []
 
-    /// 唯一性约束字段
+    /// unique fileds
     public var uniques: [String] = []
 
-    /// 默认值配置
+    /// default value corresponding to the field
     public var defaultValues: [String: Binding] = [:]
 
-    /// 从数据类型创建
-    ///
-    /// - Parameter type: 数据类型,Struct/Class
-    public override init(_ type: Codable.Type) {
+    /// initialize from some type
+    override public init(_ type: Codable.Type) {
         super.init(type)
     }
 
-    /// 从数据表创建
-    ///
-    /// - Parameters:
-    ///   - table: 表名
-    ///   - db: 数据库
+    /// initialize from table
     override init(table: String, db: Database) {
         super.init(table: table, db: db)
         var columns = [String]()
@@ -143,7 +127,7 @@ public final class PlainConfig: Config {
         var types = [String: String]()
         var defaultValues = [String: Binding]()
 
-        // 获取表配置
+        // get table configuration
         let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
         let infos = db.query(tableInfoSql)
         for dic in infos {
@@ -160,7 +144,7 @@ public final class PlainConfig: Config {
             if notnull { notnulls.append(name) }
         }
 
-        // 获取索引配置
+        // get index configuration
         let indexListSql = "PRAGMA index_list(\(table.quoted));"
         let indexList = db.query(indexListSql)
         for dic in indexList {
@@ -179,7 +163,7 @@ public final class PlainConfig: Config {
             }
         }
 
-        // 获取主键配置
+        // get primary key configuration
         var pkAutoInc = false
         if primaries.count > 0 {
             let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
@@ -202,8 +186,8 @@ public final class PlainConfig: Config {
         self.defaultValues = defaultValues
     }
 
-    /// 预处理
-    public override func treate() {
+    /// pretreatement
+    override public func treate() {
         super.treate()
 
         let primariesSet = NSMutableOrderedSet(array: columns)
@@ -219,19 +203,14 @@ public final class PlainConfig: Config {
         indexes = indexesSet.array as! [String]
     }
 
-    /// 比较两个配置的索引
-    ///
-    /// - Parameter other: 比较的配置
-    /// - Returns: true-索引相同,false-索引不同
+    /// compare index configuration
     func isIndexesEqual(_ other: PlainConfig) -> Bool {
         treate()
         return uniques == other.uniques && indexes == other.indexes
     }
 
-    /// 生成单个字段的创建SQL
-    ///
-    /// - Parameter column: 字段
-    /// - Returns: SQL子句
+    /// generate create sql for field
+    /// - Returns: sql caluse
     func createSQL(of column: String) -> String {
         let typeString = types[column] ?? ""
         var pkString = ""
@@ -245,11 +224,8 @@ public final class PlainConfig: Config {
         return "\(column.quoted) " + typeString + pkString + nullString + uniqueString + dfltString
     }
 
-    /// 生成完整的普通表创建语句
-    ///
-    /// - Parameter table: 表名
-    /// - Returns: SQL语句
-    public override func createSQL(with table: String) -> String {
+    /// generate create sql for table
+    override public func createSQL(with table: String) -> String {
         treate()
         var array = columns.map { createSQL(of: $0) }
         if primaries.count > 1 {
@@ -257,7 +233,7 @@ public final class PlainConfig: Config {
         }
 
         guard array.count > 0 else { return "" }
-        
+
         let sql = array.joined(separator: ",")
         return "CREATE TABLE IF NOT EXISTS \(table.quoted) (\(sql))".strip
     }
@@ -265,36 +241,30 @@ public final class PlainConfig: Config {
 
 /// FTS表配置
 public final class FtsConfig: Config {
-    /// fts 模块: fts3/fts4/fts5
+    /// fts module: fts3/fts4/fts5
     public var module: String = "fts5"
 
-    /// 分词器,比如:ascii,porter,nl,apple,sqliteorm
+    /// tokenzier; such as: ascii,porter,nl,apple,sqliteorm
     public var tokenizer: String = ""
 
-    /// fts版本号
+    /// fts version
     public var version: UInt {
         switch module {
-        case let module where module.match("fts5"):
-            return 5
-        case let module where module.match("fts4"):
-            return 4
-        default:
-            return 3
+            case let module where module.match("fts5"):
+                return 5
+            case let module where module.match("fts4"):
+                return 4
+            default:
+                return 3
         }
     }
 
-    /// 从数据类型创建
-    ///
-    /// - Parameter type: 数据类型,Struct/Class
-    public override init(_ type: Codable.Type) {
+    /// initialize from some type
+    override public init(_ type: Codable.Type) {
         super.init(type)
     }
 
-    /// 从数据表创建
-    ///
-    /// - Parameters:
-    ///   - table: 表名
-    ///   - db: 数据库
+    /// initialize from table
     override init(table: String, db: Database) {
         super.init(table: table, db: db)
 
@@ -308,7 +278,7 @@ public final class FtsConfig: Config {
         var columns = [String]()
         var indexes = [String]()
 
-        // 获取模块名,版本号
+        // get fts moudle name, version
         var r = tableSql.range(of: " +fts.*\\(", options: options)
         if r != nil {
             let start = r!.lowerBound
@@ -318,7 +288,7 @@ public final class FtsConfig: Config {
         self.module = module
         let version = self.version
 
-        // 获取FTS分词器
+        // get fts tokenizer
         r = tableSql.range(of: "\\(.*\\)", options: options)
         assert(r != nil, "invalid fts table")
         let ftsOptionsString = String(tableSql[r!.lowerBound ..< r!.upperBound])
@@ -330,7 +300,7 @@ public final class FtsConfig: Config {
                 tokenizer = String(optionStr[start ..< optionStr.endIndex]).trim.replacingOccurrences(of: "'|\"", with: "", options: .regularExpression)
             }
         }
-        // 获取表配置
+        // get table configuration
         let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
         let infos = db.query(tableInfoSql)
         for dic in infos {
@@ -347,16 +317,13 @@ public final class FtsConfig: Config {
         self.indexes = indexes
     }
 
-    /// 生成完整的FTS表创建语句
-    ///
-    /// - Parameter table: 表名
-    /// - Returns: SQL语句
+    /// generate sql for create fts table
     public func createSQL(with table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
         treate()
         let notindexedsSet = NSMutableOrderedSet(array: columns)
         notindexedsSet.minusSet(Set(indexes))
         let notindexeds = notindexedsSet.array as! [String]
-        
+
         var rows: [String] = columns.map { $0.quoted }
         if notindexeds.count > 0 {
             if version >= 5 {
@@ -385,65 +352,56 @@ public final class FtsConfig: Config {
 }
 
 extension Config: Equatable {
-    /// `==`运算符重载,比较两个配置是否一致
-    ///
-    /// - Parameters:
-    ///   - lhs: 左值
-    ///   - rhs: 右值
-    /// - Returns: 是否一致
     public static func == (lhs: Config, rhs: Config) -> Bool {
         lhs.treate()
         rhs.treate()
         switch (lhs, rhs) {
-        case let (lhs as PlainConfig, rhs as PlainConfig):
-            return lhs.pkAutoInc == rhs.pkAutoInc &&
-                lhs.columns === rhs.columns &&
-                lhs.types == rhs.types &&
-                lhs.primaries === rhs.primaries &&
-                lhs.notnulls === rhs.notnulls &&
-                lhs.defaultValues === rhs.defaultValues
+            case let (lhs as PlainConfig, rhs as PlainConfig):
+                return lhs.pkAutoInc == rhs.pkAutoInc &&
+                    lhs.columns === rhs.columns &&
+                    lhs.types == rhs.types &&
+                    lhs.primaries === rhs.primaries &&
+                    lhs.notnulls === rhs.notnulls &&
+                    lhs.defaultValues === rhs.defaultValues
 
-        case let (lhs as FtsConfig, rhs as FtsConfig):
-            return lhs.module == rhs.module &&
-                lhs.tokenizer == rhs.tokenizer &&
-                lhs.columns === rhs.columns &&
-                lhs.indexes === rhs.indexes
+            case let (lhs as FtsConfig, rhs as FtsConfig):
+                return lhs.module == rhs.module &&
+                    lhs.tokenizer == rhs.tokenizer &&
+                    lhs.columns === rhs.columns &&
+                    lhs.indexes === rhs.indexes
 
-        default: return false
+            default: return false
         }
     }
 }
 
 public extension Config {
-    /// 生成约束条件
-    ///
-    /// - Parameter item: 数据
-    /// - Returns: 约束条件
+    /// generate constraint
     func constraint(for item: Any, properties: [String: PropertyInfo], unique: Bool = true) -> Where? {
         var condition = [String: Binding]()
         switch self {
-        case let self as PlainConfig:
-            if self.primaries.count > 0 {
-                var dic = [String: Binding]()
-                for pk in self.primaries {
-                    let prop = properties[pk]
-                    if let val = (try? prop?.get(from: item)) as? Binding {
-                        dic[pk] = val
+            case let self as PlainConfig:
+                if self.primaries.count > 0 {
+                    var dic = [String: Binding]()
+                    for pk in self.primaries {
+                        let prop = properties[pk]
+                        if let val = (try? prop?.get(from: item)) as? Binding {
+                            dic[pk] = val
+                        }
+                    }
+                    if (!unique && dic.count > 0) || dic.count == self.primaries.count {
+                        condition = dic
+                        break
                     }
                 }
-                if (!unique && dic.count > 0) || dic.count == self.primaries.count {
-                    condition = dic
-                    break
+                for unique in self.uniques {
+                    let prop = properties[unique]
+                    if let val = (try? prop?.get(from: item)) as? Binding {
+                        condition = [unique: val]
+                        break
+                    }
                 }
-            }
-            for unique in self.uniques {
-                let prop = properties[unique]
-                if let val = (try? prop?.get(from: item)) as? Binding {
-                    condition = [unique: val]
-                    break
-                }
-            }
-        default: break
+            default: break
         }
         guard condition.count > 0 else { return nil }
         return Where(condition)
@@ -452,21 +410,21 @@ public extension Config {
     func constraint(for KeyValues: [String: Binding], unique: Bool = true) -> Where? {
         var condition = [String: Binding]()
         switch self {
-        case let self as PlainConfig:
-            var dic = [String: Binding]()
-            self.primaries.forEach { dic[$0] = KeyValues[$0] }
-            if (!unique && dic.count > 0) || dic.count == self.primaries.count {
-                condition = dic
-                break
-            }
-
-            for col in self.uniques {
-                if let val = KeyValues[col] {
-                    condition = [col: val]
+            case let self as PlainConfig:
+                var dic = [String: Binding]()
+                self.primaries.forEach { dic[$0] = KeyValues[$0] }
+                if (!unique && dic.count > 0) || dic.count == self.primaries.count {
+                    condition = dic
                     break
                 }
-            }
-        default: break
+
+                for col in self.uniques {
+                    if let val = KeyValues[col] {
+                        condition = [col: val]
+                        break
+                    }
+                }
+            default: break
         }
         guard condition.count > 0 else { return nil }
         return Where(condition)

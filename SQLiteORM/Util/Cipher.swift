@@ -28,12 +28,12 @@ public final class Cipher {
 
     class func recrypt(_ path: String, oldKey: String, newKey: String = "") -> Bool {
         switch (oldKey.count, newKey.count) {
-        case (0, 0): return true
-        case (0, _): return encrypt(path, key: newKey)
-        case (_, 0): return decrypt(path, key: oldKey)
-        default:
-            let sqls = ["PRAGMA key = '\(oldKey)';", "PRAGMA rekey = '\(newKey)';"]
-            return exec(path, sqls: sqls)
+            case (0, 0): return true
+            case (0, _): return encrypt(path, key: newKey)
+            case (_, 0): return decrypt(path, key: oldKey)
+            default:
+                let sqls = ["PRAGMA key = '\(oldKey)';", "PRAGMA rekey = '\(newKey)';"]
+                return exec(path, sqls: sqls)
         }
     }
 

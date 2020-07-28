@@ -80,8 +80,8 @@ private class CursorTuple {
             var encoding: String.Encoding = .init(rawValue: UInt.max)
             if change {
                 switch last {
-                case .letter, .digit: encoding = .ascii
-                default: encoding = .utf8
+                    case .letter, .digit: encoding = .ascii
+                    default: encoding = .utf8
                 }
                 if encoding.rawValue != .max {
                     let tuple = CursorTuple(cursors: subs, type: last, encoding: encoding)
@@ -116,14 +116,14 @@ public func register(_ tokenizer: Tokenizer.Type, for method: TokenMethod) {
 public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask: TokenMask) -> [Token] {
     var tokens: [Token] = []
     switch method {
-    case .apple: tokens = appleTokenize(bytes, mask: mask)
-    case .natural: tokens = naturalTokenize(bytes, mask: mask)
-    case .sqliteorm: tokens = ormTokenize(bytes, mask: mask)
-    default:
-        if let tokenizer = tokenizers[method] {
-            tokens = tokenizer.tokenize(bytes, method, mask)
-        }
-        break
+        case .apple: tokens = appleTokenize(bytes, mask: mask)
+        case .natural: tokens = naturalTokenize(bytes, mask: mask)
+        case .sqliteorm: tokens = ormTokenize(bytes, mask: mask)
+        default:
+            if let tokenizer = tokenizers[method] {
+                tokens = tokenizer.tokenize(bytes, method, mask)
+            }
+            break
     }
     return Array(Set(tokens))
 }
@@ -405,9 +405,9 @@ private func numberTokens(of bytes: [UInt8], mask: TokenMask) -> [Token] {
         var flag = false
 
         switch ch {
-        case 0x30 ... 0x39, 0x2B ... 0x2E, 0x45, 0x65:
-            flag = true
-        default: break
+            case 0x30 ... 0x39, 0x2B ... 0x2E, 0x45, 0x65:
+                flag = true
+            default: break
         }
 
         if flag {

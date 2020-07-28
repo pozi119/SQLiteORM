@@ -26,19 +26,15 @@ extension Double: Binding {}
 extension String: Binding {}
 extension Data: Binding {}
 
-//extension Array: Binding where Element: Binding {}
-//extension Dictionary: Binding where Key == String, Value: Binding {}
-//extension Set: Binding where Element: Binding {}
-
 extension Data {
     private static let hexTable: [UInt8] = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
 
     private static func hexDigit(_ byte: UInt8) -> UInt8 {
         switch byte {
-        case 0x30 ... 0x39: return byte - 0x30
-        case 0x41 ... 0x46: return byte - 0x41 + 0xA
-        case 0x61 ... 0x66: return byte - 0x61 + 0xA
-        default: return 0xFF
+            case 0x30 ... 0x39: return byte - 0x30
+            case 0x41 ... 0x46: return byte - 0x41 + 0xA
+            case 0x61 ... 0x66: return byte - 0x61 + 0xA
+            default: return 0xFF
         }
     }
 
@@ -74,46 +70,46 @@ extension Data {
 extension Binding {
     public var sqlValue: String {
         switch self {
-        case let string as String:
-            return string.quoted
-        case let data as Data:
-            return data.hex
-        default:
-            return "\(self)"
+            case let string as String:
+                return string.quoted
+            case let data as Data:
+                return data.hex
+            default:
+                return "\(self)"
         }
     }
 }
 
-/// 获取sqlite存储类型
+/// sqlite storage type
 ///
-/// - Parameter type: 数据类型
-/// - Returns: 存储类型
+/// - Parameter type: data type
+/// - Returns: storage type
 public func sqlType(of type: Any.Type) -> String {
     switch type {
-    case is Bool.Type: fallthrough
-    case is Int.Type: fallthrough
-    case is Int8.Type: fallthrough
-    case is Int16.Type: fallthrough
-    case is Int32.Type: fallthrough
-    case is Int64.Type: fallthrough
-    case is UInt.Type: fallthrough
-    case is UInt8.Type: fallthrough
-    case is UInt16.Type: fallthrough
-    case is UInt32.Type: fallthrough
-    case is UInt64.Type:
-        return "INTEGER"
+        case is Bool.Type: fallthrough
+        case is Int.Type: fallthrough
+        case is Int8.Type: fallthrough
+        case is Int16.Type: fallthrough
+        case is Int32.Type: fallthrough
+        case is Int64.Type: fallthrough
+        case is UInt.Type: fallthrough
+        case is UInt8.Type: fallthrough
+        case is UInt16.Type: fallthrough
+        case is UInt32.Type: fallthrough
+        case is UInt64.Type:
+            return "INTEGER"
 
-    case is Float.Type: fallthrough
-    case is Double.Type:
-        return "REAL"
+        case is Float.Type: fallthrough
+        case is Double.Type:
+            return "REAL"
 
-    case is String.Type:
-        return "TEXT"
+        case is String.Type:
+            return "TEXT"
 
-    case is Data.Type:
-        return "BLOB"
+        case is Data.Type:
+            return "BLOB"
 
-    default:
-        return "JSON"
+        default:
+            return "JSON"
     }
 }
