@@ -302,7 +302,9 @@ public extension NSAttributedString {
         let len = first.length
 
         if upper > maxLen && lower > 2 {
-            let rlen = (2 + len > maxLen) ? (lower - 2) : (upper - maxLen)
+            var rlen = (2 + len > maxLen) ? (lower - 2) : (upper - maxLen)
+            let ch = (attrText.string as NSString).character(at: rlen - 1)
+            if 0xD800 <= ch && ch <= 0xDBFF { rlen += 1 }
             attrText.deleteCharacters(in: NSRange(location: 0, length: rlen))
             let ellipsis = NSAttributedString(string: "...")
             attrText.insert(ellipsis, at: 0)
