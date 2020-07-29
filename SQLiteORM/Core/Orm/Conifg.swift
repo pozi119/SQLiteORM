@@ -29,7 +29,7 @@ public class Config {
     /// black list
     public var blacks: [String] = []
 
-    /// index fileds
+    /// index fileds, when fts indexes count is 0, all fields are indexed by default
     public var indexes: [String] = []
 
     /// the storage type corresponding to the field
@@ -319,6 +319,9 @@ public final class FtsConfig: Config {
 
     /// generate sql for create fts table
     public func createSQL(with table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
+        if indexes.count == 0 {
+            indexes = columns
+        }
         treate()
         let notindexedsSet = NSMutableOrderedSet(array: columns)
         notindexedsSet.minusSet(Set(indexes))

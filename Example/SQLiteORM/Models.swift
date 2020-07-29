@@ -34,26 +34,16 @@ struct Item {
         self.ftsDbName = ftsDbName
         self.label = label
 
-        let config = PlainConfig(Message.self)
-        config.primaries = ["message_id"]
-
-        let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
-        let ftsConfig = FtsConfig(Message.self)
-        ftsConfig.module = "fts5"
-        ftsConfig.tokenizer = "sqliteorm \(mask.rawValue)"
-        ftsConfig.indexes = ["info"]
-
         let url = URL(fileURLWithPath: dir).appendingPathComponent(dbName)
         dbPath = url.path
         db = Database(with: dbPath)
-        orm = Orm(config: config, db: db, table: tableName, setup: true)
+        orm = Orm(ormable: Message.self, db: db, table: tableName, setup: true)
 
         let ftsUrl = URL(fileURLWithPath: dir).appendingPathComponent(ftsDbName)
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
         ftsDb.register(.sqliteorm, for: "sqliteorm")
-//        ftsDb.updateInterval = 1.0
-        ftsOrm = Orm(config: ftsConfig, db: ftsDb, table: tableName, setup: true)
+        ftsOrm = Orm(ftsable: Message.self, db: ftsDb, table: tableName, setup: true)
     }
 }
 
@@ -75,5 +65,17 @@ struct Message: Codable {
             results.append(message)
         }
         return results
+    }
+}
+
+extension Message: Ormable {
+    static var primaries: [String] = ["message_id"]
+}
+
+extension Message: Ftsable {
+    static var indexlist: [String] = ["info"]
+    static var tokenizer: String {
+        let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
+        return "sqliteorm \(mask.rawValue)"
     }
 }
