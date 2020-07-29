@@ -7,7 +7,6 @@
 
 import Foundation
 
-/// 拼音相关
 fileprivate final class PinYin {
     static let shared: PinYin = PinYin()
 
@@ -118,7 +117,7 @@ public extension String {
         self = ""
     }
 
-    /// 是否包含汉字
+    /// has chinese characters
     var hasChinese: Bool {
         let regex = ".*[\\u4e00-\\u9fa5].*"
         let predicate = NSPredicate(format: "SELF MATCHES \(regex)")
@@ -168,7 +167,6 @@ public extension String {
         return string
     }
 
-    /// 拼音字符串
     var pinyin: String {
         let source = NSMutableString(string: self) as CFMutableString
         CFStringTransform(source, nil, kCFStringTransformToLatin, false)
@@ -278,7 +276,7 @@ public extension String {
         return Segmentor.segment(self)
     }
 
-    /// 预加载拼音分词资源
+    /// preload pinyin resouces
     static func preloadingForPinyin() {
         _ = "中文".pinyins
     }

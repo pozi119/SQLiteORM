@@ -9,14 +9,12 @@ typedef struct sqlite3 sqlite3;
 
 NS_ASSUME_NONNULL_BEGIN
 
-/**
- 分词对象
- */
+/// token
 @interface SQLiteORMToken : NSObject
-@property (nonatomic, copy) NSString *token;  ///< 分词
-@property (nonatomic, assign) int len;  ///< 分词长度
-@property (nonatomic, assign) int start; ///< 分词对应原始字符串的起始位置
-@property (nonatomic, assign) int end; ///< 分词对应原始字符串的结束位置
+@property (nonatomic, copy) NSString *token;  ///< token word
+@property (nonatomic, assign) int len;  ///<  token length ( c language length)
+@property (nonatomic, assign) int start; ///<  starting position of original string
+@property (nonatomic, assign) int end; ///< end position of original string
 
 + (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end;
 
@@ -24,21 +22,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
-/**
- 注册分词器,fts3/4/5
-
- @param method 分词方法
- @param tokenizerName 分词器名称
- @return 是否注册成功
- */
+/// register tokenizer
+/// @param method tokenize method, 1-apple, 2-natural, 4-sqliteorm
 BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, int method, NSString *tokenizerName);
 
-/**
- 枚举函数
-
- @param tokenizerName 分词器名称
- @return 分词方法
- */
+/// get tokenize method
 int SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerName);
 
 NS_ASSUME_NONNULL_END

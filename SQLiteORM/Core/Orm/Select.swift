@@ -7,36 +7,36 @@
 
 import Foundation
 
-/// 数据查询
+/// select  statement
 public final class Select {
-    /// 表名
+    /// table name
     var table: String = ""
 
-    /// 是否去重
+    /// remove duplicate
     var distinct: Bool = false
 
-    /// 指定查询字段
+    /// special fields
     var fields: Fields = "*"
 
-    /// 查询条件
+    /// query condition
     var `where`: Where = ""
 
-    /// 排序条件
+    /// sort criteria
     var orderBy: OrderBy = ""
 
-    /// 分组
+    /// fields for group
     var groupBy: GroupBy = ""
 
-    /// 分组条件
+    /// condition for group
     var having: Where = ""
 
-    /// 查询条数
+    /// maximum number of results
     var limit: Int64 = 0
 
-    /// 起始位置
+    /// starting position
     var offset: Int64 = 0
 
-    /// 生成具体查询语句
+    /// native sql clause
     var sql: String {
         assert(table.count > 0, "set table first!")
 

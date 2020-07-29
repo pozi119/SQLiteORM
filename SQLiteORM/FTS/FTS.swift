@@ -7,23 +7,17 @@
 
 import Foundation
 
-/// 分词器
 public extension Database {
-    /// 注册分词器
+    /// register tokenizer
     ///
     /// - Parameters:
-    ///   - type: 分词器
-    ///   - tokenizer: 分词器名称
-    /// - Returns: 是否注册成功
+    ///   - type: tokenize method
     @discardableResult
     func register(_ method: TokenMethod, for tokenizer: String) -> Bool {
         return SQLiteORMRegisterEnumerator(handle, Int32(method.rawValue), tokenizer)
     }
 
-    /// 获取分词器核心枚举方法
-    ///
-    /// - Parameter tokenizer: 分词器名称
-    /// - Returns: 核心枚举方法
+    /// get tokenize method
     func enumerator(for tokenizer: String) -> TokenMethod {
         let result = SQLiteORMFindEnumerator(handle, tokenizer)
         return TokenMethod(rawValue: Int(result))

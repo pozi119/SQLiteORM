@@ -23,18 +23,13 @@ public final class Statement {
     /// statement
     fileprivate var handle: OpaquePointer?
 
-    /// 数据库
+    /// database
     fileprivate let db: Database
 
-    /// sql 语句
+    /// native sql clause
     fileprivate let sql: String
 
-    /// 初始化
-    ///
-    /// - Parameters:
-    ///   - db: 数据
-    ///   - SQL: sql语句
-    /// - Throws: 初始化过程中的错误
+    /// initialize
     init(_ db: Database, _ SQL: String) throws {
         self.db = db
         sql = SQL
@@ -47,21 +42,20 @@ public final class Statement {
     }
 
     // FIXME: columnCount is 0 and columnNames is [] when sql is `INSERT INTO table (col1,col2,col3) VALUES (?,?,?)`
-    /// 字段数量
+    /// columns count
     public lazy var columnCount: Int = Int(sqlite3_column_count(self.handle))
 
-    /// 字段名数组
+    /// field name array
     public lazy var columnNames: [String] = (0 ..< Int32(self.columnCount)).map {
         String(cString: sqlite3_column_name(self.handle, $0))
     }
 
-    /// 查询游标
+    /// search cursor
     fileprivate lazy var cursor: Cursor = Cursor(self)
 
-    /// 绑定数据,防SQL注入
+    /// bind datas
     ///
-    /// - Parameter values: [数据]数组,和sql语句对应
-    /// - Returns: 绑定后的statement
+    /// - Parameter values: [Binding] array, corresponding to sql statement
     public func bind(_ values: [Binding]) -> Statement {
         if values.isEmpty { return self }
         reset()
@@ -70,10 +64,7 @@ public final class Statement {
         return self
     }
 
-    /// 查询数据
-    ///
-    /// - Returns: 查询结果
-    /// - Throws: 查询过程中的错误
+    /// query records
     public func query() throws -> [[String: Binding]] {
         guard columnCount > 0 else {
             return []
@@ -100,19 +91,13 @@ public final class Statement {
         return array
     }
 
-    /// 执行sql语句
-    ///
-    /// - Returns: 执行sql语句后的statment
-    /// - Throws: 执行过程中的错误
+    /// execute native sql statement
     public func run() throws {
         reset(clear: false)
         try db.sync { repeat {} while try step() }
     }
 
-    /// 执行sql语句
-    ///
-    /// - Parameter bindings: [数据]数组,和sql语句对应
-    /// - Throws: 执行过程中的错误
+    /// execute native sql statement, and bind datas
     public func run(_ bindings: [Binding]) throws {
         return try bind(bindings).run()
     }
@@ -131,9 +116,9 @@ public final class Statement {
         return try db.check(sqlite3_step(handle)) == SQLITE_ROW
     }
 
-    /// 重置statement
+    /// reset statement
     ///
-    /// - Parameter shouldClear: 是否清除绑定数据
+    /// - Parameter shouldClear: clean bind data
     public func reset(clear shouldClear: Bool = true) {
         sqlite3_reset(handle)
         if shouldClear { sqlite3_clear_bindings(handle) }
@@ -146,17 +131,15 @@ extension Statement: CustomStringConvertible {
     }
 }
 
-/// 查询/绑定数据的游标
+/// search cursor
 fileprivate struct Cursor {
     /// SQL statement
     fileprivate let handle: OpaquePointer
 
-    /// statment字段数量
+    /// fields count
     fileprivate let columnCount: Int
 
-    /// 初始化
-    ///
-    /// - Parameter statement: SQL statement
+    /// initialize
     fileprivate init(_ statement: Statement) {
         handle = statement.handle!
         columnCount = statement.columnCount
@@ -165,9 +148,7 @@ fileprivate struct Cursor {
 
 /// Cursors provide direct access to a statement’s current row.
 extension Cursor: Sequence {
-    /// 数字下标访问,数组
-    ///
-    /// - Parameter idx: 下标
+    /// digital subscript access, like array
     subscript(idx: Int) -> Binding? {
         get {
             switch sqlite3_column_type(handle, Int32(idx)) {
@@ -239,9 +220,7 @@ extension Cursor: Sequence {
         }
     }
 
-    /// 字符串下标访问,字典
-    ///
-    /// - Parameter field: 下标
+    /// string subscript access, like dictionary
     subscript(field: String) -> Binding? {
         get {
             let idx = Int(sqlite3_bind_parameter_index(handle, field))

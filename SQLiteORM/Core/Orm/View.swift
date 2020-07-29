@@ -7,7 +7,7 @@
 
 import Foundation
 
-// TODO: 未测试
+// sqlite view
 public class View<T: Codable> {
     public let temp: Bool
     public let name: String
@@ -106,43 +106,36 @@ public class View<T: Codable> {
 }
 
 public extension View {
-    /// 最大rowid. 此rowid,自增主键和数据条数不一定一致
+    /// maximum rowid. the maximum rowid, auto increment primary key and records count may not be the same
     var maxRowId: Int64 {
         return max(of: "rowid") as? Int64 ?? 0
     }
 
-    /// 查找一条数据
+    /// find a record, not decoded
     ///
     /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - orderBy: 排序方式
-    /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
+    /// - Returns: [String:Binding], decoding with ORMDecoder
     func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
         return Select().table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues(db).first
     }
 
-    /// 查找一条数据
-    ///
-    /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - orderBy: 排序方式
-    /// - Returns: [String:Binding]数据,需自行转换成对应的数据类型
+    /// find a record, decoded
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
         return Select().table(name).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self, decoder: decoder).first
     }
 
-    /// 查询数据
+    /// find data, not decoded
     ///
     /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - distinct: 是否去重
-    ///   - fields: 指定字段
-    ///   - groupBy: 分组字段
-    ///   - having: 分组条件
-    ///   - orderBy: 排序条件
-    ///   - limit: 查询数量
-    ///   - offset: 起始位置
-    /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
+    ///   - condition: query terms
+    ///   - distinct: remove duplicate
+    ///   - fields: special fields
+    ///   - groupBy: fields for group
+    ///   - having: condition for group
+    ///   - orderBy: sort criteria
+    ///   - limit: maximum number of results
+    ///   - offset: starting position
+    /// - Returns: [String:Binding], decoding with ORMDecoder
     func find(_ condition: Where = Where(""),
               distinct: Bool = false,
               fields: Fields = Fields("*"),
@@ -156,18 +149,7 @@ public extension View {
             .limit(limit).offset(offset).allKeyValues(db)
     }
 
-    /// 查询数据
-    ///
-    /// - Parameters:
-    ///   - condition: 查询条件
-    ///   - distinct: 是否去重
-    ///   - fields: 指定字段
-    ///   - groupBy: 分组字段
-    ///   - having: 分组条件
-    ///   - orderBy: 排序条件
-    ///   - limit: 查询数量
-    ///   - offset: 起始位置
-    /// - Returns: [[String:Binding]]数据,需自行转换成对应数据类型
+    /// find data, decoded
     func xFind(_ condition: Where = Where(""),
                distinct: Bool = false,
                fields: Fields = Fields("*"),
@@ -181,64 +163,43 @@ public extension View {
             .limit(limit).offset(offset).allItems(db, type: T.self, decoder: decoder)
     }
 
-    /// 查询数据条数
-    ///
-    /// - Parameter condition: 查询条件
-    /// - Returns: 数据条数
+    /// get number of records
     func count(_ condition: Where = Where("")) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
-    /// 是否存在某条数据
-    ///
-    /// - Parameter item: 要查询的数据
-    /// - Returns: 是否存在
+    /// check if a record exists
     func exist(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         return count(condition) > 0
     }
 
+    /// check if a record exists
     func exist(_ keyValues: [String: Binding]) -> Bool {
         guard let condition = config.constraint(for: keyValues) else { return false }
         return count(condition) > 0
     }
 
-    /// 获取某个字段的最大值
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 最大值
+    /// get the maximum value of a field
     func max(of field: String, condition: Where = Where("")) -> Binding? {
         return function("max(\(field))", condition: condition)
     }
 
-    /// 获取某个字段的最小值
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 最小值
+    /// get the minimum value of a field
     func min(of field: String, condition: Where = Where("")) -> Binding? {
         return function("min(\(field))", condition: condition)
     }
 
-    /// 获取某个字段的数据的总和
-    ///
-    /// - Parameters:
-    ///   - field: 字段名
-    ///   - condition: 查询条件
-    /// - Returns: 求和
+    /// get the sum value of a field
     func sum(of field: String, condition: Where = Where("")) -> Binding? {
         return function("sum(\(field))", condition: condition)
     }
 
-    /// 执行某些简单函数,如max(),min(),sum()
+    /// execute a function, such as: max(),min(),sum()
     ///
     /// - Parameters:
-    ///   - function: 函数名
-    ///   - condition: 查询条件
-    /// - Returns: 函数执行结果
+    ///   - function: function name
+    /// - Returns: function result
     func function(_ function: String, condition: Where = Where("")) -> Binding? {
         let dic = Select().table(name).fields(Fields(function)).where(condition).allKeyValues(db).first
         return dic?.values.first

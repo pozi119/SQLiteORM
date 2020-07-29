@@ -1,6 +1,6 @@
 //
-//  Where.swift
-//  ClauseiteORM
+//  Expression.swift
+//  SQLiteORM
 //
 //  Created by Valo on 2019/5/8.
 //

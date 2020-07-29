@@ -6,14 +6,29 @@
 //
 
 public final class Match {
+    
+    /// pinyin or original word matching
+    ///
+    /// - none: no match
+    /// - firsts: first letters matching
+    /// - full: full pinyin matching
+    /// - origin: original matching
     public enum LV1: UInt64 {
         case none = 0, firsts, full, origin
     }
 
+    /// range matching
+    ///
+    /// - none: no match
+    /// - other: word token matching
+    /// - nonprefix: middle matching
+    /// - prefix: prefix matching
+    /// - full: full word matching
     public enum LV2: UInt64 {
         case none = 0, other, nonprefix, prefix, full
     }
 
+    /// match priority
     public enum LV3: UInt64 {
         case low = 0, medium, high
     }

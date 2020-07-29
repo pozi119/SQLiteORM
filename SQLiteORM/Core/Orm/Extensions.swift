@@ -1,5 +1,5 @@
 //
-//  Util.swift
+//  Extensions.swift
 //  SQLiteORM
 //
 //  Created by Valo on 2020/7/21.

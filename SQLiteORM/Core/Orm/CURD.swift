@@ -1,5 +1,5 @@
 //
-//  Create.swift
+//  CURD.swift
 //  SQLiteORM
 //
 //  Created by Valo on 2019/5/7.
@@ -248,13 +248,13 @@ public extension Orm {
     ///
     /// - Parameters:
     ///   - condition: query terms
-    ///   - distinct: remove duplicate or not
+    ///   - distinct: remove duplicate
     ///   - fields: special fields
     ///   - groupBy: fields for group
     ///   - having: condition for group
     ///   - orderBy: sort criteria
-    ///   - limit: maximum number of queries
-    ///   - offset: startint position
+    ///   - limit: maximum number of results
+    ///   - offset: starting position
     /// - Returns: [String:Binding], decoding with ORMDecoder
     func find(_ condition: Where = Where(""),
               distinct: Bool = false,

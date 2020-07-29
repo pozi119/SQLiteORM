@@ -128,7 +128,7 @@ public func tokenize(_ bytes: [UInt8], _ method: TokenMethod = .unknown, _ mask:
     return Array(Set(tokens))
 }
 
-/// 自然语言处理分词
+/// natural languagei tokenizer
 private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
     guard bytes.count > 0 else { return [] }
     let source = String(bytes: bytes)
@@ -159,7 +159,7 @@ private func naturalTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String =
     return results
 }
 
-/// CoreFundation分词
+/// CoreFundation tokenizer
 private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "") -> [Token] {
     guard bytes.count > 0 else { return [] }
     let source = String(bytes: bytes)
@@ -196,7 +196,7 @@ private func appleTokenize(_ bytes: [UInt8], mask: TokenMask, locale: String = "
     return results
 }
 
-/// SQLiteORM分词
+/// SQLiteORM tokenizer
 private func ormTokenize(_ bytes: [UInt8], mask: TokenMask) -> [Token] {
     guard bytes.count > 0 else { return [] }
 

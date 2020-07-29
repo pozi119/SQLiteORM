@@ -1,5 +1,5 @@
 //
-//  Value.swift
+//  Binding.swift
 //  SQLiteORM
 //
 //  Created by Valo on 2019/5/5.
