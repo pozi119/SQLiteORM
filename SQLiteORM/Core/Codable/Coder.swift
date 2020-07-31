@@ -51,20 +51,16 @@ fileprivate struct OrmCodingKey: CodingKey {
     static let `super` = OrmCodingKey(stringValue: "super")!
 }
 
-fileprivate enum OrmCodableError: Error {
-    case cast
-}
-
 func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
     if let value = item as? T {
         return value
     }
 
-    guard let item = item as? Binding else {
-        throw OrmCodableError.cast
+    guard let temp = item as? Binding else {
+        throw EncodingError.invalidCast(item as Any, type)
     }
 
-    let desc = String(describing: item)
+    let desc = String(describing: temp)
     var value: T?
     switch type {
         case is Int.Type: value = (Int(desc) ?? 0) as? T
@@ -86,7 +82,7 @@ func cast<T>(_ item: Any?, as type: T.Type) throws -> T {
     }
 
     guard value != nil else {
-        throw OrmCodableError.cast
+        throw EncodingError.invalidCast(item as Any, type)
     }
     return value!
 }
@@ -135,8 +131,7 @@ extension OrmEncoder {
             }
             return encoded
         } catch let error {
-            let context = EncodingError.Context(codingPath: [], debugDescription: "Top-level \(T.self) did not encode any values.", underlyingError: error)
-            throw EncodingError.invalidValue(value, context)
+            throw EncodingError.invalidEncode(value, error)
         }
     }
 
@@ -196,7 +191,7 @@ extension OrmEncoder {
                 if storage.count > depth {
                     _ = storage.popContainer()
                 }
-                throw error
+                throw EncodingError.invalidWrap(value, error)
             }
             return storage.popContainer()
         }

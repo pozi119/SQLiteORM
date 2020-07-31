@@ -62,21 +62,21 @@ public extension Dictionary {
             let lvalue = lhs[key]
             let rvalue = rhs[key]
             switch (lvalue, rvalue) {
-                case let (lvalue as Bool, rvalue as Bool): guard lvalue == rvalue else { return false }
-                case let (lvalue as Int, rvalue as Int): guard lvalue == rvalue else { return false }
-                case let (lvalue as Int8, rvalue as Int8): guard lvalue == rvalue else { return false }
-                case let (lvalue as Int16, rvalue as Int16): guard lvalue == rvalue else { return false }
-                case let (lvalue as Int32, rvalue as Int32): guard lvalue == rvalue else { return false }
-                case let (lvalue as Int64, rvalue as Int64): guard lvalue == rvalue else { return false }
-                case let (lvalue as UInt, rvalue as UInt): guard lvalue == rvalue else { return false }
-                case let (lvalue as UInt8, rvalue as UInt8): guard lvalue == rvalue else { return false }
-                case let (lvalue as UInt16, rvalue as UInt16): guard lvalue == rvalue else { return false }
-                case let (lvalue as UInt32, rvalue as UInt32): guard lvalue == rvalue else { return false }
-                case let (lvalue as UInt64, rvalue as UInt64): guard lvalue == rvalue else { return false }
-                case let (lvalue as Float, rvalue as Float): guard lvalue == rvalue else { return false }
-                case let (lvalue as Double, rvalue as Double): guard lvalue == rvalue else { return false }
-                case let (lvalue as String, rvalue as String): guard lvalue == rvalue else { return false }
-                case let (lvalue as Data, rvalue as Data): guard lvalue == rvalue else { return false }
+                case let (lvalue as Bool, rvalue as Bool): return lvalue == rvalue
+                case let (lvalue as Int, rvalue as Int): return lvalue == rvalue
+                case let (lvalue as Int8, rvalue as Int8): return lvalue == rvalue
+                case let (lvalue as Int16, rvalue as Int16): return lvalue == rvalue
+                case let (lvalue as Int32, rvalue as Int32): return lvalue == rvalue
+                case let (lvalue as Int64, rvalue as Int64): return lvalue == rvalue
+                case let (lvalue as UInt, rvalue as UInt): return lvalue == rvalue
+                case let (lvalue as UInt8, rvalue as UInt8): return lvalue == rvalue
+                case let (lvalue as UInt16, rvalue as UInt16): return lvalue == rvalue
+                case let (lvalue as UInt32, rvalue as UInt32): return lvalue == rvalue
+                case let (lvalue as UInt64, rvalue as UInt64): return lvalue == rvalue
+                case let (lvalue as Float, rvalue as Float): return lvalue == rvalue
+                case let (lvalue as Double, rvalue as Double): return lvalue == rvalue
+                case let (lvalue as String, rvalue as String): return lvalue == rvalue
+                case let (lvalue as Data, rvalue as Data): return lvalue == rvalue
                 case (_, _):
                     return false
             }

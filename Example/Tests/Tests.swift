@@ -68,12 +68,15 @@ extension SQLiteORMTests {
         let data = Data([0x31, 0x32, 0x33, 0x34, 0x35, 0xF, 0x41, 0x42, 0x43])
         var person: Person? = Person(name: "张三", age: 22, id: 1, sex: .male, intro: "哈哈哈哈")
         person?.data = data
-        
+
         let user: User? = User(id: 2, name: "zhangsan", person: person)
         user?.list = [1, 2, 3, 4, 5]
         user?.data = data
-        
+
         do {
+            let dic0 = AnyEncoder.encode([user])
+            print(dic0 as Any)
+            
             let dic = try OrmEncoder().encode(person)
             let decoded = try OrmDecoder().decode(type(of: person), from: dic as Any)
             XCTAssertEqual(person, decoded)
@@ -94,6 +97,18 @@ extension SQLiteORMTests {
             let user2 = decoded2.first!
             XCTAssert(decoded2.count == 2 && user! == user2!)
         } catch {
+            XCTAssertThrowsError(error)
+        }
+    }
+
+    func testAnyCoder() {
+        do {
+            let enuminfo = try typeInfo(of: Person.Sex.self)
+            let tuple = (Data([0x1, 0x31, 0x61, 0x91]), 1, 2)
+            let tupleinfo = try typeInfo(of: type(of: tuple))
+            print(enuminfo)
+            print(tupleinfo)
+        } catch  {
             XCTAssertThrowsError(error)
         }
     }
