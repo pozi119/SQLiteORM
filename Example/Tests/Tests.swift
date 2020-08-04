@@ -76,7 +76,10 @@ extension SQLiteORMTests {
         do {
             let dic0 = AnyEncoder.encode([user])
             print(dic0 as Any)
-            
+
+            let decoded0 = AnyDecoder.decode(User.self, from: dic0)
+            print(decoded0)
+
             let dic = try OrmEncoder().encode(person)
             let decoded = try OrmDecoder().decode(type(of: person), from: dic as Any)
             XCTAssertEqual(person, decoded)
@@ -108,7 +111,7 @@ extension SQLiteORMTests {
             let tupleinfo = try typeInfo(of: type(of: tuple))
             print(enuminfo)
             print(tupleinfo)
-        } catch  {
+        } catch {
             XCTAssertThrowsError(error)
         }
     }

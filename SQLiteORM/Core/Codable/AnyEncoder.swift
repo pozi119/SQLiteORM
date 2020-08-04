@@ -32,7 +32,7 @@ class AnyEncoder {
         }
         return encoded
     }
-    
+
     class func encode<T>(_ values: [T]) -> [[String: Binding]] {
         var array = [[String: Binding]]()
         for value in values {
@@ -139,20 +139,8 @@ class AnyEncoder {
         }
     }
 
-    private static var cache: [String: TypeInfo] = [:]
-    private class func getTypeInfo(of type: Any.Type) throws -> TypeInfo {
-        let key = String(describing: type)
-        if let info = cache[key] {
-            return info
-        } else {
-            let info = try typeInfo(of: type)
-            cache[key] = info
-            return info
-        }
-    }
-
     private class func value(forEnum item: Any, type: Any.Type) throws -> Int {
-        let info = try getTypeInfo(of: type)
+        let info = try typeInfo(of: type)
         let cases = info.cases
         let name = String(describing: item)
         let first = (0 ..< cases.count).first { cases[$0].name == name }
@@ -164,7 +152,74 @@ class AnyEncoder {
 }
 
 class AnyDecoder {
-    open func decode<T>(_ type: T.Type, from container: [String:Binding]) throws -> T {
-        throw DecodingError.mismatch(type)
+    open class func decode<T>(_ type: T.Type, from containers: [[String: Binding]]) -> [T?] {
+        return containers.map { try? decode(type, from: $0) }
+    }
+
+    open class func decode<T>(_ type: T.Type, from container: [String: Binding]) throws -> T {
+        guard let result = try createObject(type, from: container) as? T else {
+            throw DecodingError.mismatch(type)
+        }
+        return result
+    }
+
+    private class func createObject(_ type: Any.Type, from container: [String: Any]) throws -> Any {
+        var info = try typeInfo(of: type)
+        let genericType: Any.Type
+        if info.kind == .optional {
+            guard info.genericTypes.count == 1 else {
+                throw DecodingError.mismatch(type)
+            }
+            genericType = info.genericTypes.first!
+            info = try typeInfo(of: genericType)
+        } else {
+            genericType = type
+        }
+        var object = try createInstance(of: genericType)
+        for prop in info.properties {
+            if prop.name.count == 0 { continue }
+            if let value = container[prop.name] {
+                if let string = value as? String {
+                    switch prop.type {
+                        case is String?.Type: fallthrough
+                        case is String.Type:
+                            try prop.set(value: string, on: &object)
+
+                        case is Data?.Type: fallthrough
+                        case is Data.Type:
+                            let data = Data(hex: string)
+                            try prop.set(value: data, on: &object)
+
+                        default:
+                            let data = Data(string.bytes)
+                            let json = try? JSONSerialization.jsonObject(with: data, options: [])
+                            switch json {
+                                case let array as [[String: Any]]:
+                                    var subs: [Any] = []
+                                    for dictionary in array {
+                                        if let sub = try? createObject(prop.type, from: dictionary) {
+                                            subs.append(sub)
+                                        }
+                                    }
+                                    try prop.set(value: subs, on: &object)
+
+                                case let array as [Any]:
+                                    try prop.set(value: array, on: &object)
+
+                                case let dictionary as [String: Any]:
+                                    let sub = try createObject(prop.type, from: dictionary)
+                                    try prop.set(value: sub, on: &object)
+
+                                default:
+                                    break
+                            }
+                    }
+                } else {
+                    try prop.set(value: value, on: &object)
+                }
+            }
+        }
+
+        return object
     }
 }

@@ -44,6 +44,8 @@ public func createInstance(of type: Any.Type, constructor: ((PropertyInfo) throw
         return try buildStruct(type: type, constructor: constructor)
     case .class:
         return try buildClass(type: type)
+    case .enum:
+        return 0
     default:
         throw RuntimeError.unableToBuildType(type: type)
     }
@@ -53,8 +55,12 @@ func buildStruct(type: Any.Type, constructor: ((PropertyInfo) throws -> Any)? = 
     let info = try typeInfo(of: type)
     let pointer = UnsafeMutableRawPointer.allocate(byteCount: info.size, alignment: info.alignment)
     defer { pointer.deallocate() }
-    try setProperties(typeInfo: info, pointer: pointer, constructor: constructor)
-    return getters(type: type).get(from: pointer)
+    if type is Data.Type {
+        return Data()
+    } else {
+        try setProperties(typeInfo: info, pointer: pointer, constructor: constructor)
+        return getters(type: type).get(from: pointer)
+    }
 }
 
 func buildClass(type: Any.Type) throws -> Any {

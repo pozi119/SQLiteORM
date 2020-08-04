@@ -26,6 +26,50 @@ extension Double: Binding {}
 extension String: Binding {}
 extension Data: Binding {}
 
+extension Binding {
+    init?(binding: Binding) {
+        if let value = binding as? Self {
+            self = value
+            return
+        }
+
+        var value: Any?
+        switch (binding, Self.self) {
+            case (let string as String, is Data.Type):
+                value = Data(hex: string)
+            case (let data as Data, is String.Type):
+                value = data.hex
+            case (_, is String.Type):
+                value = String(describing: binding)
+            default:
+                break
+        }
+
+        guard let result = value as? Self else {
+            return nil
+        }
+        self = result
+    }
+}
+
+extension Binding where Self: BinaryInteger {
+    init?<T:BinaryInteger>(binding: T) {
+        self.init(binding)
+    }
+}
+
+extension Binding where Self: BinaryFloatingPoint {
+    init?<T:BinaryFloatingPoint>(binding: T) {
+        self.init(binding)
+    }
+}
+
+extension Binding where Self: LosslessStringConvertible {
+    init?(binding: Binding) {
+        self.init(String(describing: binding))
+    }
+}
+
 extension Data {
     private static let hexTable: [UInt8] = [0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46]
 
