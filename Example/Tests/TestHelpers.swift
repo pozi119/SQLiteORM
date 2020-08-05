@@ -9,7 +9,7 @@ import Foundation
 import SQLiteORM
 
 struct Person: Codable, Equatable {
-    enum Sex: Int, Codable {
+    enum Sex: String, Codable {
         case male, female
     }
 

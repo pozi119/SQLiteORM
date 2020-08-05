@@ -424,13 +424,18 @@ open class OrmDecoder: Decoder {
                     result = try decode(type, from: dictionary)
 
                 default:
-                    storage.push(item)
-                    result = try T(from: self)
-                    storage.popContainer()
+                    throw DecodingError.mismatch(type)
             }
             return result
         } catch _ {
-            return try cast(nil, as: T.self)
+            do {
+                storage.push(item)
+                let result = try T(from: self)
+                storage.popContainer()
+                return result
+            } catch {
+                return try cast(nil, as: T.self)
+            }
         }
     }
 
