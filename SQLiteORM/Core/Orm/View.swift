@@ -8,7 +8,7 @@
 import Foundation
 
 // sqlite view
-public class View<T: Codable> {
+public class View<T> {
     public let temp: Bool
     public let name: String
     public let columns: [String]?
@@ -121,7 +121,7 @@ public extension View {
 
     /// find a record, decoded
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
-        return Select().table(name).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self, decoder: decoder).first
+        return Select().table(name).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self).first
     }
 
     /// find data, not decoded
@@ -160,7 +160,7 @@ public extension View {
                offset: Int64 = 0) -> [T] {
         return Select().table(name).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allItems(db, type: T.self, decoder: decoder)
+            .limit(limit).offset(offset).allItems(db, type: T.self)
     }
 
     /// get number of records

@@ -116,7 +116,7 @@ public class Highlighter {
     private var keywordTokens: [Token] = []
     private var kwFullPinyin: String = ""
 
-    public convenience init<T: Codable>(orm: Orm<T>, keyword: String) {
+    public convenience init<T>(orm: Orm<T>, keyword: String) {
         let config = orm.config as? FtsConfig
         assert(config != nil, "invalid fts orm")
 

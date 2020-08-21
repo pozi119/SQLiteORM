@@ -12,7 +12,7 @@ public class Config {
     public static let updateAt: String = "updateAt"
 
     /// type of struct / class that generates config. Nil for creating from table
-    public var type: Codable.Type?
+    public var type: Any.Type?
 
     /// create from table or not
     public var fromTable: Bool = false
@@ -36,7 +36,7 @@ public class Config {
     public var types: [String: String] = [:]
 
     /// initialize from some type
-    public init(_ type: Codable.Type) {
+    public init(_ type: Any.Type) {
         self.type = type
         let info: TypeInfo = try! typeInfo(of: type)
 
@@ -111,7 +111,7 @@ public final class PlainConfig: Config {
     public var defaultValues: [String: Binding] = [:]
 
     /// initialize from some type
-    override public init(_ type: Codable.Type) {
+    override public init(_ type: Any.Type) {
         super.init(type)
     }
 
@@ -260,7 +260,7 @@ public final class FtsConfig: Config {
     }
 
     /// initialize from some type
-    override public init(_ type: Codable.Type) {
+    override public init(_ type: Any.Type) {
         super.init(type)
     }
 

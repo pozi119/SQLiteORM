@@ -7,15 +7,15 @@
 
 import Foundation
 
-public protocol Ftsable: Codable {
+public protocol Ftsable {
     /// white list
-    static var whitelist: [String] { get }
+    static var fts_whites: [String] { get }
     
     /// black list
-    static var blacklist: [String] { get }
+    static var fts_blacks: [String] { get }
     
     /// when fts indexes count is 0, all fields are indexed by default
-    static var indexlist: [String] { get }
+    static var fts_indexes: [String] { get }
 
     /// fts module, default is fts5
     static var module: String { get }
@@ -27,9 +27,9 @@ public protocol Ftsable: Codable {
 // MARK: - optional
 
 public extension Ftsable {
-    static var whitelist: [String] { [] }
-    static var blacklist: [String] { [] }
-    static var indexlist: [String] { [] }
+    static var fts_whites: [String] { [] }
+    static var fts_blacks: [String] { [] }
+    static var fts_indexes: [String] { [] }
 
     static var module: String { "fts5" }
     static var tokenizer: String { "sqliteorm \(TokenMask.default.rawValue)" }
@@ -40,9 +40,9 @@ public extension Ftsable {
 extension FtsConfig {
     public convenience init(ftsable type: Ftsable.Type) {
         self.init(type)
-        whites = type.whitelist
-        blacks = type.blacklist
-        indexes = type.indexlist
+        whites = type.fts_whites
+        blacks = type.fts_blacks
+        indexes = type.fts_indexes
         module = type.module
         tokenizer = type.tokenizer
     }

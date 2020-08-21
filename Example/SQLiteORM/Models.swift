@@ -73,7 +73,7 @@ extension Message: Ormable {
 }
 
 extension Message: Ftsable {
-    static var indexlist: [String] = ["info"]
+    static var fts_indexes: [String] = ["info"]
     static var tokenizer: String {
         let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
         return "sqliteorm \(mask.rawValue)"

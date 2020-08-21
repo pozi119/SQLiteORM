@@ -119,10 +119,21 @@ extension Select {
         return db.query(sql)
     }
 
-    public func allItems<T: Codable>(_ db: Database, type: T.Type, decoder: OrmDecoder) -> [T] {
+    public func allItems<S: Codable>(_ db: Database, type: S.Type) -> [S] {
         let keyValues = db.query(sql)
         do {
-            let array = try decoder.decode([T].self, from: keyValues)
+            let array = try OrmDecoder().decode([S].self, from: keyValues)
+            return array
+        } catch {
+            print(error)
+            return []
+        }
+    }
+
+    public func allItems<S>(_ db: Database, type: S.Type) -> [S] {
+        let keyValues = db.query(sql)
+        do {
+            let array = try AnyDecoder.decode(S.self, from: keyValues)
             return array
         } catch {
             print(error)

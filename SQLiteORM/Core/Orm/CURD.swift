@@ -70,6 +70,14 @@ extension Orm {
         }
         return count
     }
+
+    func encode<S: Codable>(_ item: S) throws -> [String: Binding] {
+        return try OrmEncoder().encode(item)
+    }
+
+    func encode<S>(_ item: S) throws -> [String: Binding] {
+        return try AnyEncoder.encode(item)
+    }
 }
 
 // MARK: - insert
@@ -79,7 +87,7 @@ public extension Orm {
     @discardableResult
     func insert(_ item: T) -> Bool {
         do {
-            let encoded = try encoder.encode(item)
+            let encoded = try encode(item)
             return _update(encoded, type: .insert)
         } catch {
             return false
@@ -96,8 +104,13 @@ public extension Orm {
     /// - Returns: number of successes
     @discardableResult
     func insert(multi items: [T]) -> Int64 {
-        let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
-        return _update(multi: array)
+        var array: [[String: Binding]] = []
+        for item in items {
+            if let kv = try? encode(item) {
+                array.append(kv)
+            }
+        }
+        return _update(multi: array, type: .insert)
     }
 
     @discardableResult
@@ -109,7 +122,7 @@ public extension Orm {
     @discardableResult
     func upsert(_ item: T) -> Bool {
         do {
-            let encoded = try encoder.encode(item)
+            let encoded = try encode(item)
             return _update(encoded, type: .upsert)
         } catch {
             return false
@@ -126,7 +139,12 @@ public extension Orm {
     /// - Returns: number of successes
     @discardableResult
     func upsert(multi items: [T]) -> Int64 {
-        let array = items.map { try? encoder.encode($0) } as! [[String: Binding]]
+        var array: [[String: Binding]] = []
+        for item in items {
+            if let kv = try? encode(item) {
+                array.append(kv)
+            }
+        }
         return _update(multi: array, type: .upsert)
     }
 
@@ -154,7 +172,7 @@ public extension Orm {
     func update(_ item: T) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         do {
-            let encoded = try encoder.encode(item)
+            let encoded = try encode(item)
             return _update(encoded, type: .upsert, condition: condition)
         } catch {
             return false
@@ -166,7 +184,7 @@ public extension Orm {
     func update(_ item: T, fields: [String]) -> Bool {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         do {
-            var encoded = try encoder.encode(item)
+            var encoded = try encode(item)
             let trashKeys = Array(Set(encoded.keys).subtracting(fields))
             encoded.removeValues(forKeys: trashKeys)
             return _update(encoded, type: .upsert, condition: condition)
@@ -241,7 +259,7 @@ public extension Orm {
 
     /// find a record, decoded
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
-        return Select().table(table).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self, decoder: decoder).first
+        return Select().table(table).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self).first
     }
 
     /// find data, not decoded
@@ -280,7 +298,7 @@ public extension Orm {
                offset: Int64 = 0) -> [T] {
         return Select().table(table).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allItems(db, type: T.self, decoder: decoder)
+            .limit(limit).offset(offset).allItems(db, type: T.self)
     }
 
     /// get number of records

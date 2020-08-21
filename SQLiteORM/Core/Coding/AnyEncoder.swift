@@ -146,8 +146,8 @@ class AnyEncoder {
 }
 
 class AnyDecoder {
-    open class func decode<T>(_ type: T.Type, from containers: [[String: Binding]]) -> [T?] {
-        return containers.map { try? decode(type, from: $0) }
+    open class func decode<T>(_ type: T.Type, from containers: [[String: Binding]]) throws -> [T] {
+        return try containers.map { try decode(type, from: $0) }
     }
 
     open class func decode<T>(_ type: T.Type, from container: [String: Binding]) throws -> T {

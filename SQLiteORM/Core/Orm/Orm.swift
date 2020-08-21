@@ -24,7 +24,7 @@ public struct Inspection: OptionSet {
     }
 }
 
-public final class Orm<T: Codable> {
+public final class Orm<T> {
     /// configuration
     public let config: Config
 
@@ -36,12 +36,6 @@ public final class Orm<T: Codable> {
 
     /// property corresponding to the field
     public let properties: [String: PropertyInfo]
-
-    /// Encoder
-    public let encoder = OrmEncoder()
-
-    /// Decoder
-    public let decoder = OrmDecoder()
 
     private var created = false
 
