@@ -175,7 +175,7 @@ hu,606
 ping,606
 gei,583
 peng,551
-nyu,542
+nv,542
 tou,533
 he,530
 liao,518
@@ -185,7 +185,7 @@ ling,505
 guang,495
 chong,493
 gui,488
-lyu,487
+lv,487
 bing,483
 kou,479
 zao,463
