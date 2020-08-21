@@ -81,7 +81,7 @@ class AnyEncoder {
                     if let displayStyle = mirror.displayStyle {
                         switch displayStyle {
                             case .enum:
-                                return try? value(forEnum: any, type: mirror.subjectType)
+                                return value(forEnum: any)
                             default:
                                 break
                         }
@@ -139,14 +139,8 @@ class AnyEncoder {
         }
     }
 
-    private class func value(forEnum item: Any, type: Any.Type) throws -> Int {
-        let info = try typeInfo(of: type)
-        let cases = info.cases
-        let name = String(describing: item)
-        let first = (0 ..< cases.count).first { cases[$0].name == name }
-        guard let result = first else {
-            throw EncodingError.invalidWrap(item)
-        }
+    private class func value(forEnum item: Any) -> UInt8 {
+        let result = withUnsafeBytes(of: item) { [UInt8]($0).first ?? 0 }
         return result
     }
 }
@@ -215,7 +209,17 @@ class AnyDecoder {
                             }
                     }
                 } else {
-                    try prop.set(value: value, on: &object)
+                    var val = value
+                    let propinfo = try typeInfo(of: prop.type)
+                    if propinfo.kind == .enum {
+                        let eval = withUnsafePointer(to: value) { $0 }
+                        let pointer = UnsafeMutableRawPointer.allocate(byteCount: propinfo.size, alignment: propinfo.alignment)
+                        pointer.copyMemory(from: eval, byteCount: propinfo.alignment)
+                        defer { pointer.deallocate() }
+                        try setProperties(typeInfo: propinfo, pointer: pointer)
+                        val = getters(type: prop.type).get(from: pointer)
+                    }
+                    try prop.set(value: val, on: &object)
                 }
             }
         }

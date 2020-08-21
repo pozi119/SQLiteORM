@@ -66,7 +66,7 @@ final class SQLiteORMTests: XCTestCase {
 extension SQLiteORMTests {
     func testCoder() {
         let data = Data([0x31, 0x32, 0x33, 0x34, 0x35, 0xF, 0x41, 0x42, 0x43])
-        var person: Person? = Person(name: "张三", age: 22, id: 1, sex: .male, intro: "哈哈哈哈")
+        var person: Person? = Person(name: "张三", age: 22, id: 1, sex: .female, intro: "哈哈哈哈")
         person?.data = data
 
         let user: User? = User(id: 2, name: "zhangsan", person: person)
@@ -74,11 +74,9 @@ extension SQLiteORMTests {
         user?.data = data
 
         do {
-            let dic0 = AnyEncoder.encode([user])
-            print(dic0 as Any)
-
-            let decoded0 = AnyDecoder.decode(User.self, from: dic0)
-            print(decoded0)
+            let dic0 = try AnyEncoder.encode(user)
+            let decoded0 = try AnyDecoder.decode(User?.self, from: dic0)
+            XCTAssert(user != nil && decoded0 != nil && user! == decoded0!)
 
             let dic = try OrmEncoder().encode(person)
             let decoded = try OrmDecoder().decode(type(of: person), from: dic as Any)
