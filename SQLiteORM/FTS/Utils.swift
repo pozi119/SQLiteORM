@@ -7,7 +7,7 @@
 
 import Foundation
 
-fileprivate final class PinYin {
+final class PinYin {
     static let shared: PinYin = PinYin()
 
     private class func path(of resource: String) -> String {

@@ -240,7 +240,8 @@ static int so_fts3_open(
     }
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
     so_fts3_tokenizer *tok = (so_fts3_tokenizer *)pTokenizer;
-    NSArray *array = [clazz enumerate:pInput mask:tok->mask];
+    NSString *source = [NSString stringWithCString:pInput];
+    NSArray *array = [clazz enumerate:source mask:tok->mask];
     c->pInput = pInput;
     c->nBytes = nInput;
     c->iToken = 0;
@@ -367,7 +368,8 @@ static int so_fts5_xTokenize(
             mask = mask & ~(1 << 3);
         }
     }
-    NSArray *array = [clazz enumerate:pText mask:mask];
+    NSString *source = [NSString stringWithCString:pText];
+    NSArray *array = [clazz enumerate:source mask:mask];
 
     for (SQLiteORMToken *tk in array) {
         rc = xToken(pCtx, tk.colocated <= 0 ? 0 : 1, tk.word, tk.len, tk.start, tk.end);

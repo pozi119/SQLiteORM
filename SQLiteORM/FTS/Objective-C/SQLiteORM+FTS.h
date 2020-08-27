@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @protocol SQLiteORMEnumerator <NSObject>
 
-+ (NSArray<SQLiteORMToken *> *)enumerate:(const char *)input mask:(uint64_t)mask;
++ (NSArray<SQLiteORMToken *> *)enumerate:(NSString *)source mask:(uint64_t)mask;
 
 @end
 
