@@ -6,7 +6,6 @@
 //
 
 public final class Match {
-    
     /// pinyin or original word matching
     ///
     /// - none: no match
@@ -107,7 +106,7 @@ public class Highlighter {
     }
 
     public var option: Match.Option = .default
-    public var method: TokenMethod = .sqliteorm
+    public var enumerator: SQLiteORMEnumerator.Type = OrmEnumerator.self
     public var mask: TokenMask = .default { didSet { refresh() } }
     public var quantity: Int = 0
     public var highlightAttributes: [NSAttributedString.Key: Any] = [:]
@@ -125,12 +124,13 @@ public class Highlighter {
         let components = config!.tokenizer.components(separatedBy: " ")
         if components.count > 0 {
             let tokenizer = components[0]
-            let method = orm.db.enumerator(for: tokenizer)
-            self.method = method
+            if let enumerator = orm.db.enumerator(for: tokenizer) {
+                self.enumerator = enumerator
+            }
         }
         if components.count > 1 {
             let mask = components[1]
-            self.mask = .init(rawValue: UInt32(mask) ?? 0)
+            self.mask = .init(rawValue: UInt64(mask) ?? 0)
         }
     }
 
@@ -140,12 +140,13 @@ public class Highlighter {
     }
 
     private func refresh() {
-        var mask = self.mask
-        if mask.pinyin > 0 {
-            mask.subtract(.allPinYin)
-            mask.formUnion(.syllable)
-        }
-        let tokens = tokenize(_keyword.bytes, method, mask)
+        let mask = self.mask
+//        if mask.pinyin > 0 {
+//            mask.subtract(.allPinYin)
+//            mask.formUnion(.syllable)
+//        }
+        //FIXME: source/bytes
+        let tokens = enumerator.enumerate(keyword, mask: mask.rawValue)//tokenize(_keyword.bytes, method, mask)
         keywordTokens = tokens
 
         kwFullPinyin = ""
@@ -282,7 +283,8 @@ public class Highlighter {
         guard keywordTokens.count > 0 else { return nomatch }
 
         let mask = self.mask.subtracting(.syllable)
-        let sourceTokens = tokenize(bytes, method, mask)
+        //FIXME: source/bytes
+        let sourceTokens = enumerator.enumerate(source, mask: mask.rawValue)
         guard sourceTokens.count > 0 else { return nomatch }
 
         var tokenmap: [String: NSMutableSet] = [:]

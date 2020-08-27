@@ -42,7 +42,7 @@ struct Item {
         let ftsUrl = URL(fileURLWithPath: dir).appendingPathComponent(ftsDbName)
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
-        ftsDb.register(.sqliteorm, for: "sqliteorm")
+        ftsDb.register(OrmEnumerator.self, for: "sqliteorm")
         ftsOrm = Orm(ftsable: Message.self, db: ftsDb, table: tableName, setup: true)
     }
 }

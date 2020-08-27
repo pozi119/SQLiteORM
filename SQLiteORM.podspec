@@ -33,7 +33,7 @@ Pod::Spec.new do |s|
       ss.dependency 'SQLiteORM/util'
       ss.dependency 'SQLCipher'
       ss.xcconfig = {
-          'OTHER_CFLAGS' => '-DSQLITE_HAS_CODEC=1 -DHAVE_USLEEP=1',
+          'OTHER_CFLAGS' => '-DSQLITE_HAS_CODEC=1',
           'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/SQLCipher'
       }
   end

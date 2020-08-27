@@ -34,33 +34,35 @@ fileprivate final class PinYin {
         return _polyphones
     }()
 
-    lazy var hanzi2pinyins: [String: [String]] = {
+    lazy var hanzi2pinyins: [unichar: [String]] = {
         let path = PinYin.path(of: "hanzi2pinyin.plist")
-        var _polyphones = (NSDictionary(contentsOfFile: path) as? [String: [String]]) ?? [:]
-        return _polyphones
+        let dic = (NSDictionary(contentsOfFile: path) as? [String: [String]]) ?? [:]
+        var result: [unichar: [String]] = [:]
+        dic.forEach { result[PinYin.strtol($0.key)] = $0.value }
+        return result
     }()
 
-    lazy var gb2big5Map: [String: String] = {
+    lazy var gb2big5Map: [unichar: unichar] = {
         let simplified = self.transforms.simplified
         let traditional = self.transforms.traditional
         let count = simplified.count
-        var map: [String: String] = [:]
+        var map: [unichar: unichar] = [:]
         for i in 0 ..< count {
-            let k = String(simplified[simplified.index(simplified.startIndex, offsetBy: i)])
-            let v = String(traditional[traditional.index(traditional.startIndex, offsetBy: i)])
+            let k = (simplified as NSString).character(at: i)
+            let v = (traditional as NSString).character(at: i)
             map[k] = v
         }
         return map
     }()
 
-    lazy var big52gbMap: [String: String] = {
+    lazy var big52gbMap: [unichar: unichar] = {
         let simplified = self.transforms.simplified
         let traditional = self.transforms.traditional
         let count = simplified.count
-        var map: [String: String] = [:]
+        var map: [unichar: unichar] = [:]
         for i in 0 ..< count {
-            let k = String(traditional[traditional.index(traditional.startIndex, offsetBy: i)])
-            let v = String(simplified[simplified.index(simplified.startIndex, offsetBy: i)])
+            let k = (traditional as NSString).character(at: i)
+            let v = (simplified as NSString).character(at: i)
             map[k] = v
         }
         return map
@@ -102,6 +104,12 @@ fileprivate final class PinYin {
         formatter.numberStyle = .decimal
         return formatter
     }()
+
+    class func strtol(_ string: String) -> unichar {
+        let bytes = string.utf8.map { UInt8($0) }
+        let count = bytes.count
+        return (0 ..< count).reduce(unichar(0)) { $0 | (unichar(bytes[$1]) << ((count - $1) * 4)) }
+    }
 }
 
 public extension String {
@@ -131,9 +139,9 @@ public extension String {
     var simplified: String {
         var string = ""
         for i in 0 ..< count {
-            let s = String(self[index(startIndex, offsetBy: i)])
-            let v = PinYin.shared.big52gbMap[s]
-            string.append(v ?? s)
+            let s = (self as NSString).character(at: i)
+            let v = PinYin.shared.big52gbMap[s] ?? s
+            string.append(String(v))
         }
         return string
     }
@@ -141,31 +149,31 @@ public extension String {
     var traditional: String {
         var string = ""
         for i in 0 ..< count {
-            let s = String(self[index(startIndex, offsetBy: i)])
-            let v = PinYin.shared.gb2big5Map[s]
-            string.append(v ?? s)
+            let s = (self as NSString).character(at: i)
+            let v = PinYin.shared.gb2big5Map[s] ?? s
+            string.append(String(v))
         }
         return string
     }
 
-    func transform(_ map: [String: String]) -> String {
-        var string = self
-        let pattern = "[\\u4e00-\\u9fa5]+"
-        let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
-        regex?.enumerateMatches(in: self, options: .reportCompletion, range: NSRange(location: 0, length: count), using: { result, _, _ in
-            guard let r = result, r.resultType == .regularExpression else { return }
-            let lower = self.index(self.startIndex, offsetBy: r.range.location)
-            let upper = self.index(lower, offsetBy: r.range.length)
-            var fragment = ""
-            for i in 0 ..< r.range.length {
-                let ch = String(self[self.index(self.startIndex, offsetBy: r.range.location + i)])
-                let trans = PinYin.shared.big52gbMap[ch] ?? ch
-                fragment.append(trans)
-            }
-            string.replaceSubrange(lower ..< upper, with: fragment)
-        })
-        return string
-    }
+//    func transform(_ map: [String: String]) -> String {
+//        var string = self
+//        let pattern = "[\\u4e00-\\u9fa5]+"
+//        let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive)
+//        regex?.enumerateMatches(in: self, options: .reportCompletion, range: NSRange(location: 0, length: count), using: { result, _, _ in
+//            guard let r = result, r.resultType == .regularExpression else { return }
+//            let lower = self.index(self.startIndex, offsetBy: r.range.location)
+//            let upper = self.index(lower, offsetBy: r.range.length)
+//            var fragment = ""
+//            for i in 0 ..< r.range.length {
+//                let ch = String(self[self.index(self.startIndex, offsetBy: r.range.location + i)])
+//                let trans = PinYin.shared.big52gbMap[ch] ?? ch
+//                fragment.append(trans)
+//            }
+//            string.replaceSubrange(lower ..< upper, with: fragment)
+//        })
+//        return string
+//    }
 
     var pinyin: String {
         let source = NSMutableString(string: self) as CFMutableString
@@ -177,16 +185,12 @@ public extension String {
 
     func pinyins(at index: Int) -> (fulls: [String], abbrs: [String]) {
         guard count > index else { return ([], []) }
-        let idx = self.index(startIndex, offsetBy: index)
         let string = simplified as NSString
-        var ch = string.character(at: index)
-        let single = String(self[idx])
+        let ch = string.character(at: index)
         if ch < 0x4E00 || ch > 0x9FA5 {
-            return ([single], [single])
+            return ([String(ch)], [String(ch)])
         }
-        let trans = PinYin.shared.big52gbMap[single] ?? single
-        ch = (trans as NSString).character(at: 0)
-        let key = String(format: "%X", ch)
+        let key = PinYin.shared.big52gbMap[ch] ?? ch
         let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
         let fulls = NSMutableOrderedSet()
         let abbrs = NSMutableOrderedSet()
@@ -250,6 +254,10 @@ public extension String {
         return array.joined(separator: "")
     }
 
+    var singleLine: String {
+        return replacingOccurrences(of: "\\s| ", with: " ", options: .regularExpression, range: startIndex ..< endIndex)
+    }
+
     var matchingPattern: String {
         guard count > 0 else { return self }
         let string = (lowercased() as NSString).mutableCopy() as! NSMutableString
@@ -272,8 +280,71 @@ public extension String {
         return result
     }
 
-    var pinyinSegmentation: [String] {
+    var fts5KeywordPattern: String {
+        var array: [unichar] = []
+        let string = self as NSString
+        for i in 0 ..< count {
+            var ch = string.character(at: i)
+            switch ch {
+                case 0x21 ... 0x7E: ch += 0xFEE0
+                case 0xA2: ch = 0xFFE0
+                case 0xA3: ch = 0xFFE1
+                case 0xAC: ch = 0xFFE2
+                case 0xAF: ch = 0xFFE3
+                case 0xA6: ch = 0xFFE4
+                case 0xA5: ch = 0xFFE5
+                default: break
+            }
+            array.append(ch)
+        }
+        let r = NSString(characters: &array, length: count)
+        return r as String
+    }
+
+    var fastPinyinSegmentation: [String] {
         return Segmentor.segment(self)
+    }
+
+    var pinyinSegmentation: [[String]] {
+        return lowercased()._pinyinSegmentation
+    }
+
+    private var headPinyins: [String] {
+        let bytes = self.bytes
+        guard bytes.count > 0 else { return [] }
+        let s = String(self.first!)
+        guard let array = PinYin.shared.pinyins[s], array.count > 0 else { return [] }
+        var results: [String] = []
+        var spare = false
+        for pinyin in array {
+            let subbytes = pinyin.bytes
+            if bytes.count >= subbytes.count {
+                if Array(bytes[0 ..< subbytes.count]) == subbytes { results.append(pinyin) }
+            } else {
+                if Array(subbytes[0 ..< bytes.count]) == bytes { spare = true }
+            }
+        }
+        if results.count == 0 && spare { results.append(self) }
+        return results
+    }
+
+    private var _pinyinSegmentation: [[String]] {
+        var results: [[String]] = []
+        let heads = headPinyins
+        guard heads.count > 0 else { return [] }
+
+        for head in heads {
+            if head.count == count {
+                results.append([self])
+                continue
+            }
+            let tail = String(self[index(startIndex, offsetBy: head.count) ..< endIndex])
+            let tails = tail._pinyinSegmentation
+            for pinyins in tails {
+                results.append([head] + pinyins)
+            }
+        }
+        return results
     }
 
     /// preload pinyin resouces

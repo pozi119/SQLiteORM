@@ -40,14 +40,26 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
 @end
 
 @implementation SQLiteORMToken
-+ (instancetype)token:(NSString *)token len:(int)len start:(int)start end:(int)end
+@synthesize token = _token;
++ (instancetype)token:(const char *)word len:(int)len start:(int)start end:(int)end
 {
     SQLiteORMToken *tk = [SQLiteORMToken new];
-    tk.token = token;
+    char *temp = (char *)malloc(len + 1);
+    memcpy(temp, word, len);
+    temp[len] = '\0';
+    tk.word = temp;
     tk.start = start;
     tk.len = len;
     tk.end = end;
     return tk;
+}
+
+- (NSString *)token
+{
+    if (!_token) {
+        _token = _word ? [NSString stringWithUTF8String:_word] : nil;
+    }
+    return _token;
 }
 
 + (NSArray<SQLiteORMToken *> *)sortedTokens:(NSArray<SQLiteORMToken *> *)tokens
@@ -65,12 +77,31 @@ extern NSArray * swift_tokenize(NSString *, int, uint32_t);
 }
 
 - (NSUInteger)hash {
-    return _token.hash ^ @(_start).hash ^ @(_len).hash ^ @(_end).hash;
+    return self.token.hash ^ @(_start).hash ^ @(_len).hash ^ @(_end).hash;
 }
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"[%2i-%2i|%2i|0x%09lx]: %@ ", _start, _end, _len, (unsigned long)self.hash, _token];
+    return [NSString stringWithFormat:@"[%2i-%2i|%2i|%i|0x%09lx]: %@ ", _start, _end, _len, (int)_colocated, (unsigned long)self.hash, self.token];
+}
+
+- (void)dealloc
+{
+    free(_word);
+    _word = NULL;
+}
+
+- (id)copyWithZone:(nullable NSZone *)zone
+{
+    SQLiteORMToken *token = [[[self class] allocWithZone:zone] init];
+    char *temp = (char *)malloc(_len + 1);
+    memcpy(temp, _word, _len);
+    temp[_len] = '\0';
+    token.word = temp;
+    token.start = _start;
+    token.end = _end;
+    token.len = _len;
+    return token;
 }
 
 @end
@@ -103,7 +134,7 @@ struct sqlite3_tokenizer_module {
         );
     int (*xLanguageid)(sqlite3_tokenizer_cursor *pCsr, int iLangid);
     const char *xName;
-    int xMethod;
+    const void *xClass;
 };
 
 struct sqlite3_tokenizer {
@@ -114,20 +145,20 @@ struct sqlite3_tokenizer_cursor {
     sqlite3_tokenizer *pTokenizer;            /* Tokenizer for this cursor. */
 };
 
-typedef struct vv_fts3_tokenizer {
+typedef struct so_fts3_tokenizer {
     sqlite3_tokenizer base;
     char locale[16];
     uint32_t mask;
-} vv_fts3_tokenizer;
+} so_fts3_tokenizer;
 
-typedef struct vv_fts3_tokenizer_cursor {
+typedef struct so_fts3_tokenizer_cursor {
     sqlite3_tokenizer_cursor base;  /* base cursor */
     const char *pInput;             /* input we are tokenizing */
     int nBytes;                     /* size of the input */
     int iToken;                     /* index of current token*/
     int nToken;                     /* count of token */
     CFArrayRef tokens;
-} vv_fts3_tokenizer_cursor;
+} so_fts3_tokenizer_cursor;
 
 static int fts3_register_tokenizer(
     sqlite3                        *db,
@@ -153,16 +184,16 @@ static int fts3_register_tokenizer(
     return sqlite3_finalize(pStmt);
 }
 
-static int vv_fts3_create(
+static int so_fts3_create(
     int argc, const char *const *argv,
     sqlite3_tokenizer **ppTokenizer
     )
 {
-    vv_fts3_tokenizer *tok;
+    so_fts3_tokenizer *tok;
     UNUSED_PARAM(argc);
     UNUSED_PARAM(argv);
 
-    tok = (vv_fts3_tokenizer *)sqlite3_malloc(sizeof(*tok));
+    tok = (so_fts3_tokenizer *)sqlite3_malloc(sizeof(*tok));
     if (tok == NULL) return SQLITE_NOMEM;
     memset(tok, 0, sizeof(*tok));
 
@@ -183,13 +214,13 @@ static int vv_fts3_create(
     return SQLITE_OK;
 }
 
-static int vv_fts3_destroy(sqlite3_tokenizer *pTokenizer)
+static int so_fts3_destroy(sqlite3_tokenizer *pTokenizer)
 {
     sqlite3_free(pTokenizer);
     return SQLITE_OK;
 }
 
-static int vv_fts3_open(
+static int so_fts3_open(
     sqlite3_tokenizer *pTokenizer,                                                  /* The tokenizer */
     const char *pInput, int nBytes,                                                 /* String to be tokenized */
     sqlite3_tokenizer_cursor **ppCursor                                             /* OUT: Tokenization cursor */
@@ -198,18 +229,18 @@ static int vv_fts3_open(
     UNUSED_PARAM(pTokenizer);
     if (pInput == 0) return SQLITE_ERROR;
 
-    vv_fts3_tokenizer_cursor *c;
-    c = (vv_fts3_tokenizer_cursor *)sqlite3_malloc(sizeof(*c));
+    so_fts3_tokenizer_cursor *c;
+    c = (so_fts3_tokenizer_cursor *)sqlite3_malloc(sizeof(*c));
     if (c == NULL) return SQLITE_NOMEM;
 
     const sqlite3_tokenizer_module *module = pTokenizer->pModule;
-    int method = module->xMethod;
+    Class<SQLiteORMEnumerator> clazz = (__bridge Class)(module->xClass);
+    if (!clazz || ![clazz conformsToProtocol:@protocol(SQLiteORMEnumerator)]) {
+        return SQLITE_ERROR;
+    }
     int nInput = (pInput == 0) ? 0 : (nBytes < 0 ? (int)strlen(pInput) : nBytes);
-
-    vv_fts3_tokenizer *tok = (vv_fts3_tokenizer *)pTokenizer;
-    NSString *ocString = [NSString stringWithCString:pInput];
-    NSArray *array = swift_tokenize(ocString, method, tok->mask);
-
+    so_fts3_tokenizer *tok = (so_fts3_tokenizer *)pTokenizer;
+    NSArray *array = [clazz enumerate:pInput mask:tok->mask];
     c->pInput = pInput;
     c->nBytes = nInput;
     c->iToken = 0;
@@ -220,16 +251,16 @@ static int vv_fts3_open(
     return SQLITE_OK;
 }
 
-static int vv_fts3_close(sqlite3_tokenizer_cursor *pCursor)
+static int so_fts3_close(sqlite3_tokenizer_cursor *pCursor)
 {
-    vv_fts3_tokenizer_cursor *c = (vv_fts3_tokenizer_cursor *)pCursor;
+    so_fts3_tokenizer_cursor *c = (so_fts3_tokenizer_cursor *)pCursor;
     CFRelease(c->tokens);
     sqlite3_free(c);
     return SQLITE_OK;
 }
 
-static int vv_fts3_next(
-    sqlite3_tokenizer_cursor *pCursor,                                                  /* Cursor returned by vv_fts3_open */
+static int so_fts3_next(
+    sqlite3_tokenizer_cursor *pCursor,                                                  /* Cursor returned by so_fts3_open */
     const char               **ppToken,                                                 /* OUT: *ppToken is the token text */
     int                      *pnBytes,                                                  /* OUT: Number of bytes in token */
     int                      *piStartOffset,                                            /* OUT: Starting offset of token */
@@ -237,7 +268,7 @@ static int vv_fts3_next(
     int                      *piPosition                                                /* OUT: Position integer of token */
     )
 {
-    vv_fts3_tokenizer_cursor *c = (vv_fts3_tokenizer_cursor *)pCursor;
+    so_fts3_tokenizer_cursor *c = (so_fts3_tokenizer_cursor *)pCursor;
     NSArray *array = (__bridge NSArray *)(c->tokens);
     if (array.count == 0 || c->iToken == array.count) return SQLITE_DONE;
     SQLiteORMToken *t = array[c->iToken];
@@ -271,25 +302,25 @@ static fts5_api * fts5_api_from_db(sqlite3 *db)
     return pRet;
 }
 
-typedef struct Fts5VVTokenizer Fts5VVTokenizer;
-struct Fts5VVTokenizer {
+typedef struct Fts5SOTokenizer Fts5SOTokenizer;
+struct Fts5SOTokenizer {
     char locale[16];
-    uint32_t mask;
-    int method;
+    uint64_t mask;
+    void *clazz;
 };
 
-static void vv_fts5_xDelete(Fts5Tokenizer *p)
+static void so_fts5_xDelete(Fts5Tokenizer *p)
 {
     sqlite3_free(p);
 }
 
-static int vv_fts5_xCreate(
+static int so_fts5_xCreate(
     void *pUnused,
     const char **azArg, int nArg,
     Fts5Tokenizer **ppOut
     )
 {
-    Fts5VVTokenizer *tok = sqlite3_malloc(sizeof(Fts5VVTokenizer));
+    Fts5SOTokenizer *tok = sqlite3_malloc(sizeof(Fts5SOTokenizer));
     if (!tok) return SQLITE_NOMEM;
 
     memset(tok->locale, 0x0, 16);
@@ -305,13 +336,12 @@ static int vv_fts5_xCreate(
         }
     }
 
-    int method = *(int *)pUnused;
-    tok->method = method;
+    tok->clazz = pUnused;
     *ppOut = (Fts5Tokenizer *)tok;
     return SQLITE_OK;
 }
 
-static int vv_fts5_xTokenize(
+static int so_fts5_xTokenize(
     Fts5Tokenizer *pTokenizer,
     void *pCtx,
     int iUnused,
@@ -323,23 +353,24 @@ static int vv_fts5_xTokenize(
     UNUSED_PARAM(pText);
     if (pText == 0) return SQLITE_OK;
 
-    __block int rc = SQLITE_OK;
-    Fts5VVTokenizer *tok = (Fts5VVTokenizer *)pTokenizer;
-
-    uint32_t mask = tok->mask;
-    if ((mask & 0xFFFF) > 0) {
+    int rc = SQLITE_OK;
+    Fts5SOTokenizer *tok = (Fts5SOTokenizer *)pTokenizer;
+    Class<SQLiteORMEnumerator> clazz = (__bridge Class)(tok->clazz);
+    if (!clazz || ![clazz conformsToProtocol:@protocol(SQLiteORMEnumerator)]) {
+        return SQLITE_ERROR;
+    }
+    uint64_t mask = tok->mask;
+    if ((mask & (1 << 1)) > 0) {
         if (iUnused & FTS5_TOKENIZE_QUERY) {
-            mask = (mask & ~0x1FFFF) | (1 << 24) | (1 << 25);
+            mask = (mask & ~(1 << 1 | 1 << 2)) | (1 << 3);
         } else if (iUnused & FTS5_TOKENIZE_DOCUMENT) {
-            mask = mask & ~(1 << 24);
+            mask = mask & ~(1 << 3);
         }
     }
-
-    NSString *ocString = [NSString stringWithCString:pText];
-    NSArray *array = swift_tokenize(ocString, tok->method, mask);
+    NSArray *array = [clazz enumerate:pText mask:mask];
 
     for (SQLiteORMToken *tk in array) {
-        rc = xToken(pCtx, iUnused, tk.token.UTF8String, tk.len, tk.start, tk.end);
+        rc = xToken(pCtx, tk.colocated <= 0 ? 0 : 1, tk.word, tk.len, tk.start, tk.end);
         if (rc != SQLITE_OK) break;
     }
 
@@ -348,67 +379,62 @@ static int vv_fts5_xTokenize(
 }
 
 // MAKR: -
-static inline BOOL check(int resultCode)
+BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, Class<SQLiteORMEnumerator> enumerator, NSString *tokenizerName)
 {
-    switch (resultCode) {
-        case SQLITE_OK:
-        case SQLITE_ROW:
-        case SQLITE_DONE:
-            return YES;
-
-        default:
-            return NO;
-    }
-}
-
-BOOL SQLiteORMRegisterEnumerator(sqlite3 *db, int method, NSString *tokenizerName)
-{
-    char *name = (char *)tokenizerName.UTF8String;
-
     sqlite3_tokenizer_module *module;
     module = (sqlite3_tokenizer_module *)sqlite3_malloc(sizeof(*module));
     module->iVersion = 0;
-    module->xCreate = vv_fts3_create;
-    module->xDestroy = vv_fts3_destroy;
-    module->xOpen = vv_fts3_open;
-    module->xClose = vv_fts3_close;
-    module->xNext = vv_fts3_next;
-    module->xName = name;
-    module->xMethod = method;
-    int rc = fts3_register_tokenizer(db, name, module);
+    module->xCreate = so_fts3_create;
+    module->xDestroy = so_fts3_destroy;
+    module->xOpen = so_fts3_open;
+    module->xClose = so_fts3_close;
+    module->xNext = so_fts3_next;
+    module->xName = tokenizerName.UTF8String;
+    module->xClass = (__bridge void *)enumerator;
+    int rc = fts3_register_tokenizer(db, (char *)tokenizerName.UTF8String, module);
 
-    BOOL ret =  check(rc);
-    if (!ret) return ret;
-
+    BOOL ret =  (rc == SQLITE_OK) || (rc == SQLITE_ROW) || (rc == SQLITE_DONE);
+#if DEBUG
+    if (!ret) {
+        printf("[SODB][Debug] fts3 register tokenizer `%s` failure.", tokenizerName.UTF8String);
+    }
+#endif
     fts5_api *pApi = fts5_api_from_db(db);
-    if (!pApi) return NO;
+    if (!pApi) {
+#if DEBUG
+        printf("[SODB][Debug] fts5 is not supported\n");
+#endif
+        return ret;
+    }
     fts5_tokenizer *tokenizer;
     tokenizer = (fts5_tokenizer *)sqlite3_malloc(sizeof(*tokenizer));
-    tokenizer->xCreate = vv_fts5_xCreate;
-    tokenizer->xDelete = vv_fts5_xDelete;
-    tokenizer->xTokenize = vv_fts5_xTokenize;
+    tokenizer->xCreate = so_fts5_xCreate;
+    tokenizer->xDelete = so_fts5_xDelete;
+    tokenizer->xTokenize = so_fts5_xTokenize;
 
-    int *context = malloc(sizeof(int));
-    *context = (int)method;
-
-    rc = pApi->xCreateTokenizer(pApi,
-                                name,
-                                (void *)context,
-                                tokenizer,
-                                0);
-    return check(rc);
+    rc = pApi->xCreateTokenizer(pApi, tokenizerName.UTF8String, (__bridge void *)enumerator, tokenizer, NULL);
+    BOOL ret1 = (rc == SQLITE_OK) || (rc == SQLITE_ROW) || (rc == SQLITE_DONE);
+#if DEBUG
+    if (!ret1) {
+        printf("[SODB][Debug] fts5 register tokenizer `%s` failure.", tokenizerName.UTF8String);
+    }
+#endif
+    return ret && ret1;
 }
 
-int SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerName)
+_Nullable Class<SQLiteORMEnumerator> SQLiteORMFindEnumerator(sqlite3 *db, NSString *tokenizerName)
 {
     fts5_api *pApi = fts5_api_from_db(db);
-    if (!pApi) return 0xFFFFFFFF;
+    if (!pApi) return nil;
 
     void *pUserdata = 0;
     fts5_tokenizer *tokenizer;
     tokenizer = (fts5_tokenizer *)sqlite3_malloc(sizeof(*tokenizer));
     int rc = pApi->xFindTokenizer(pApi, tokenizerName.UTF8String, &pUserdata, tokenizer);
-    if (rc != SQLITE_OK) return 0xFFFFFFFF;
-
-    return *(int *)pUserdata;
+    if (rc != SQLITE_OK) return nil;
+    Class<SQLiteORMEnumerator> clazz = (__bridge Class)pUserdata;
+    if (!clazz || ![clazz conformsToProtocol:@protocol(SQLiteORMEnumerator)]) {
+        return nil;
+    }
+    return clazz;
 }
