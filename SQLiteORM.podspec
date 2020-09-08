@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.osx.deployment_target = '10.12'
   s.watchos.deployment_target = '3.0'
   
-  s.default_subspec = 'system'
+  s.default_subspec = 'cipher'
   s.swift_version = '5.0'
 
   s.subspec 'system' do |ss|
@@ -33,8 +33,9 @@ Pod::Spec.new do |s|
       ss.dependency 'SQLiteORM/util'
       ss.dependency 'SQLCipher'
       ss.xcconfig = {
-          'OTHER_CFLAGS' => '-DSQLITE_HAS_CODEC=1',
-          'HEADER_SEARCH_PATHS' => '$(PODS_ROOT)/SQLCipher'
+        'OTHER_SWIFT_FLAGS' => '$(inherited) -D SQLITE_HAS_CODEC -D SQLITE_ENABLE_FTS5',
+        'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DGRDBCIPHER -DSQLITE_ENABLE_FTS5',
+        'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) SQLITE_HAS_CODEC=1 SQLITE_ENABLE_FTS5=1'
       }
   end
 

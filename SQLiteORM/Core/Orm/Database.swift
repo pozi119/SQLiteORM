@@ -91,7 +91,7 @@ public final class Database {
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
         #if SQLITE_HAS_CODEC
             if encrypt.count > 0 {
-                try check(key(encrypt))
+                _ = try sync { try check(sqlite3_key(handle, encrypt, Int32(encrypt.count))) }
                 try cipherOptions.forEach { try execute($0) }
             }
         #endif
@@ -151,7 +151,7 @@ public final class Database {
     ///
     /// "PRAGMA journal_mode = WAL"
     ///
-    public var normalOptions: [String] = ["pragma synchronous = NORMAL;", "pragma journal_mode = WAL;"]
+    public var normalOptions: [String] = ["pragma synchronous = normal;", "pragma journal_mode = wal;"]
 
     // MARK: - queue
 
@@ -220,7 +220,7 @@ public final class Database {
             return []
         }
     }
-    
+
     /// execute native sql query
     public func query<T>(_ statement: String, type: T.Type) -> [T] {
         let keyValues = query(statement)
@@ -374,25 +374,6 @@ public final class Database {
 
         throw error
     }
-
-    // MARK: - cipher
-
-    #if SQLITE_HAS_CODEC
-        public lazy var cipherVersion: String? = try? scalar("PRAGMA cipher_version") as? String
-
-        public func key(_ key: String, db: String = "main") throws -> Void? {
-            let data = key.data(using: .utf8)
-            let bytes = [UInt8](data)
-            try check(sqlite3_key_v2(handle, db, bytes, bytes.count))
-            try scalar("SELECT count(*) FROM sqlite_master;")
-        }
-
-        public func rekey(_ key: String, db: String = "main") throws -> Void? {
-            let data = key.data(using: .utf8)
-            let bytes = [UInt8](data)
-            try check(sqlite3_rekey_v2(handle, db, bytes, bytes.count))
-        }
-    #endif
 }
 
 // MAKR: - Hook

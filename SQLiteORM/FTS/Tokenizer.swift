@@ -8,8 +8,49 @@
 import Foundation
 import NaturalLanguage
 
-public typealias Token = SQLiteORMToken
-public typealias IEnumerator = SQLiteORMEnumerator
+public protocol Enumerator {
+    static func enumerate(_ source: String, mask: TokenMask) -> [Token]
+}
+
+public struct Token: Hashable {
+    public var word: String
+    public var len: Int
+    public var start: Int
+    public var end: Int
+    public var colocated: Int
+    private var weight: Int
+
+    public init(word: String, len: Int, start: Int, end: Int, colocated: Int) {
+        self.word = word
+        self.len = len
+        self.start = start
+        self.end = end
+        self.colocated = colocated
+        weight = start << 16 | end << 8 | len
+    }
+}
+
+extension Token: Comparable {
+    public static func < (lhs: Token, rhs: Token) -> Bool {
+        return lhs.weight == rhs.weight ? lhs.word < rhs.word : lhs.weight < rhs.weight
+    }
+
+    public static func <= (lhs: Token, rhs: Token) -> Bool {
+        return lhs.weight == rhs.weight ? lhs.word <= rhs.word : lhs.weight <= rhs.weight
+    }
+
+    public static func > (lhs: Token, rhs: Token) -> Bool {
+        return lhs.weight == rhs.weight ? lhs.word > rhs.word : lhs.weight > rhs.weight
+    }
+
+    public static func >= (lhs: Token, rhs: Token) -> Bool {
+        return lhs.weight == rhs.weight ? lhs.word >= rhs.word : lhs.weight >= rhs.weight
+    }
+
+    public static func == (lhs: Token, rhs: Token) -> Bool {
+        return lhs.weight == rhs.weight && lhs.word == rhs.word
+    }
+}
 
 public struct TokenMask: OptionSet {
     public var rawValue: UInt64
@@ -28,11 +69,9 @@ public struct TokenMask: OptionSet {
     public static let all = TokenMask(rawValue: 0xFFFFFF)
 }
 
-// @_silgen_name("swift_tokenize")
-
 /// natural languagei tokenizer
-public class NaturalEnumerator: NSObject, IEnumerator {
-    public static func enumerate(_ source: String, mask: UInt64) -> [Token] {
+public class NaturalEnumerator: Enumerator {
+    public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
         guard source.count > 0 else { return [] }
 
         var results: [Token] = []
@@ -46,7 +85,7 @@ public class NaturalEnumerator: NSObject, IEnumerator {
                 let pre = source[source.startIndex ..< tokenRange.lowerBound]
                 let start = pre.utf8.count
                 let len = tk.utf8.count
-                let token = Token(String(tk), len: Int32(len), start: Int32(start), end: Int32(start + len))
+                let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: 0)
                 results.append(token)
                 return true
             }
@@ -57,8 +96,8 @@ public class NaturalEnumerator: NSObject, IEnumerator {
 }
 
 /// CoreFundation tokenizer
-public class AppleEnumerator: NSObject, IEnumerator {
-    public static func enumerate(_ source: String, mask: UInt64) -> [Token] {
+public class AppleEnumerator: Enumerator {
+    public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
         guard source.count > 0 else { return [] }
 
         var results: [Token] = []
@@ -81,7 +120,7 @@ public class AppleEnumerator: NSObject, IEnumerator {
             let pre = source[startBound ..< lowerBound]
             let len = tk.utf8.count
             let start = pre.utf8.count
-            let token = Token(String(tk), len: Int32(len), start: Int32(start), end: Int32(start + len))
+            let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: 0)
             results.append(token)
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
         }
@@ -130,7 +169,7 @@ func unicode2utf8(_ ch: UInt32, _ utf8: inout [UInt8]) -> Int {
 }
 
 func utf82unicode(_ utf8: [UInt8], _ len: Int) -> UInt32 {
-    guard utf8.count < len else { return 0 }
+    guard utf8.count >= len else { return 0 }
 
     var ch: UInt32 = 0
     switch len {
@@ -165,18 +204,17 @@ func utf82unicode(_ utf8: [UInt8], _ len: Int) -> UInt32 {
 }
 
 /// SQLiteORM tokenizer
-public class OrmEnumerator: NSObject, IEnumerator {
-    private static func syllableTokens(_ source: String, _ end: Int) -> [Token] {
+public class OrmEnumerator: Enumerator {
+    private class func syllableTokens(_ source: String, _ end: Int) -> [Token] {
         var results: [Token] = []
         let allPinyins = source.pinyinSegmentation
         for n in 0 ..< allPinyins.count {
-            var start = Int32(end - source.count)
+            var start = end - source.count
             let pinyins = allPinyins[n]
             for i in 0 ..< pinyins.count {
-                let tkString = pinyins[i] as NSString
-                let len = Int32(tkString.length)
-                let token = Token(tkString.utf8String!, len: len, start: start, end: start + len)
-                token.colocated = Int32(n) + 3
+                let tkString = pinyins[i]
+                let len = tkString.count
+                let token = Token(word: tkString, len: len, start: start, end: start + len, colocated: n + 3)
                 results.append(token)
                 start += len
             }
@@ -184,14 +222,12 @@ public class OrmEnumerator: NSObject, IEnumerator {
         return results
     }
 
-    public static func enumerate(_ source: String, mask raw: UInt64) -> [Token] {
+    public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
         let buff = source.bytes
         let nText = buff.count
         guard nText > 0 else { return [] }
 
         var results: [Token] = []
-        let mask = TokenMask(rawValue: raw)
-
         let usetrans = mask.contains(.transform)
         let usepinyin = mask.contains(.pinyin)
         let useabbr = mask.contains(.abbreviation)
@@ -267,14 +303,12 @@ public class OrmEnumerator: NSObject, IEnumerator {
                             abbrs.insert(py.substring(to: 1) as NSString)
                         }
                         for full in fulls {
-                            let token = Token(full.utf8String!, len: Int32(full.length), start: Int32(idx), end: Int32(idx + length))
-                            token.colocated = 1
+                            let token = Token(word: full as String, len: full.length, start: idx, end: idx + length, colocated: 1)
                             results.append(token)
                         }
                         if useabbr {
                             for abbr in abbrs {
-                                let token = Token(abbr.utf8String!, len: Int32(abbr.length), start: Int32(idx), end: Int32(idx + length))
-                                token.colocated = 1
+                                let token = Token(word: abbr as String, len: abbr.length, start: idx, end: idx + length, colocated: 1)
                                 results.append(token)
                             }
                         }
@@ -289,19 +323,22 @@ public class OrmEnumerator: NSObject, IEnumerator {
             // syllable
             if usesyllable {
                 if wordlen == 1 && word[0] > 96 && word[0] < 123 {
-                    syllableString += String(format: "%c", arguments: [word[0]])
-                } else {
+                    syllableString += String(bytes: [word[0]])
+                } else if( syllableString.count > 0) {
                     let subTks = syllableTokens(syllableString, idx)
                     results += subTks
                     syllableString = ""
                 }
             }
 
-            let wordstr = String(bytes: word) as NSString
-            let token = Token(wordstr.utf8String!, len: Int32(wordlen), start: Int32(idx), end: Int32(idx + length))
-            token.colocated = wordlen != length ? -1 : 0
+            let wordstr = String(bytes: word)
+            let token = Token(word: wordstr, len: wordlen, start: idx, end: idx + length, colocated: wordlen != length ? -1 : 0)
             results.append(token)
             idx += length
+        }
+        if( syllableString.count > 0) {
+            let subTks = syllableTokens(syllableString, idx)
+            results += subTks
         }
 
         return results

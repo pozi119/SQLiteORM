@@ -38,7 +38,7 @@ final class PinYin {
         let path = PinYin.path(of: "hanzi2pinyin.plist")
         let dic = (NSDictionary(contentsOfFile: path) as? [String: [String]]) ?? [:]
         var result: [unichar: [String]] = [:]
-        dic.forEach { result[PinYin.strtol($0.key)] = $0.value }
+        dic.forEach { result[unichar(strtol($0.key, nil, 16))] = $0.value }
         return result
     }()
 
@@ -104,12 +104,6 @@ final class PinYin {
         formatter.numberStyle = .decimal
         return formatter
     }()
-
-    class func strtol(_ string: String) -> unichar {
-        let bytes = string.utf8.map { UInt8($0) }
-        let count = bytes.count
-        return (0 ..< count).reduce(unichar(0)) { $0 | (unichar(bytes[$1]) << ((count - $1) * 4)) }
-    }
 }
 
 public extension String {
@@ -141,7 +135,7 @@ public extension String {
         for i in 0 ..< count {
             let s = (self as NSString).character(at: i)
             let v = PinYin.shared.big52gbMap[s] ?? s
-            string.append(String(v))
+            string.append(String(Unicode.Scalar(v)!))
         }
         return string
     }
@@ -151,7 +145,7 @@ public extension String {
         for i in 0 ..< count {
             let s = (self as NSString).character(at: i)
             let v = PinYin.shared.gb2big5Map[s] ?? s
-            string.append(String(v))
+            string.append(String(Unicode.Scalar(v)!))
         }
         return string
     }
@@ -312,7 +306,7 @@ public extension String {
     private var headPinyins: [String] {
         let bytes = self.bytes
         guard bytes.count > 0 else { return [] }
-        let s = String(self.first!)
+        let s = String(first!)
         guard let array = PinYin.shared.pinyins[s], array.count > 0 else { return [] }
         var results: [String] = []
         var spare = false

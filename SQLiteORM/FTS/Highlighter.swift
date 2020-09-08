@@ -106,7 +106,7 @@ public class Highlighter {
     }
 
     public var option: Match.Option = .default
-    public var enumerator: SQLiteORMEnumerator.Type = OrmEnumerator.self
+    public var enumerator: Enumerator.Type = OrmEnumerator.self
     public var mask: TokenMask = .default { didSet { refresh() } }
     public var quantity: Int = 0
     public var highlightAttributes: [NSAttributedString.Key: Any] = [:]
@@ -146,7 +146,7 @@ public class Highlighter {
 //            mask.formUnion(.syllable)
 //        }
         //FIXME: source/bytes
-        let tokens = enumerator.enumerate(keyword, mask: mask.rawValue)//tokenize(_keyword.bytes, method, mask)
+        let tokens = enumerator.enumerate(keyword, mask: mask)//tokenize(_keyword.bytes, method, mask)
         keywordTokens = tokens
 
         kwFullPinyin = ""
@@ -284,21 +284,21 @@ public class Highlighter {
 
         let mask = self.mask.subtracting(.syllable)
         //FIXME: source/bytes
-        let sourceTokens = enumerator.enumerate(source, mask: mask.rawValue)
+        let sourceTokens = enumerator.enumerate(source, mask: mask)
         guard sourceTokens.count > 0 else { return nomatch }
 
         var tokenmap: [String: NSMutableSet] = [:]
         for token in sourceTokens {
-            var set = tokenmap[token.token]
+            var set = tokenmap[token.word]
             if set == nil {
                 set = NSMutableSet()
-                tokenmap[token.token] = set
+                tokenmap[token.word] = set
             }
             set!.add(token)
         }
         var kwtks = Set<String>()
         for token in keywordTokens {
-            kwtks.insert(token.token)
+            kwtks.insert(token.word)
         }
 
         var matchedSet = Set<Token>()

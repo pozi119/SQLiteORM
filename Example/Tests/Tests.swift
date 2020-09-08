@@ -28,7 +28,7 @@ final class SQLiteORMTests: XCTestCase {
         let dir = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).last!
         let url = URL(fileURLWithPath: dir).appendingPathComponent("testFts.db")
         let _db = Database(with: url.path)
-        _db.register(.sqliteorm, for: "sqliteorm")
+        _db.register(OrmEnumerator.self, for: "sqliteorm")
         return _db
     }()
 
@@ -306,21 +306,21 @@ extension SQLiteORMTests {
 
     func testToken() {
         let sources = [
-            "陕西",
-            "西安",
-            "中国电信",
-            "中国移动",
-            "会计",
-            "体育运动",
-            "保健",
-            "保险业",
-            "健康",
-            "公益组织",
+//            "陕西",
+            "dierzhang",
+//            "dez",
+//            "中国移动",
+//            "会计",
+//            "体育运动",
+//            "保健",
+//            "保险业",
+//            "健康",
+//            "公益组织",
         ]
         let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
         for source in sources {
-            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, mask.rawValue) as! [Token]
-            let sorted = Token.sortedTokens(tokens)
+            let tokens = OrmEnumerator.enumerate(source, mask: mask)
+            let sorted = tokens.sorted()
             print("-> \(source) :")
             for token in sorted {
                 print(token)
@@ -329,7 +329,6 @@ extension SQLiteORMTests {
     }
 
     func testToken1() {
-        register(TestTokenizer.self, for: .test)
         let sources = [
             "第二章",
             "dez",
@@ -339,17 +338,17 @@ extension SQLiteORMTests {
             "一1,234,567,890二12,345,678,901",
         ]
         for source in sources {
-            let tokens = swift_tokenize(source as NSString, TokenMethod.test.rawValue, TokenMask.all.rawValue)
+            let tokens = TestEnumerator.enumerate(source, mask: .all)
             print(tokens)
         }
     }
 
     func testRegisterTokenizer() {
-        let r = ftsDb.register(.natural, for: "nl")
+        let r = ftsDb.register(NaturalEnumerator.self, for: "nl")
         XCTAssert(r)
 
         let x = ftsDb.enumerator(for: "nl")
-        XCTAssert(x == .natural)
+        XCTAssert(x == NaturalEnumerator.self)
     }
 
     func testFtsDeleteInsert() {
@@ -471,7 +470,7 @@ extension SQLiteORMTests {
             "1,234,567.89哈-1,234,567.89哈",
         ]
         for source in numbers {
-            let tokens = swift_tokenize(source as NSString, TokenMethod.sqliteorm.rawValue, TokenMask.number.rawValue) as! [Token]
+            let tokens = OrmEnumerator.enumerate(source, mask: .all)
             let sorted = tokens.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
             print("-> \(source) :")
             for token in sorted {
