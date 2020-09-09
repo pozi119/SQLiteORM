@@ -89,15 +89,23 @@ public final class Database {
         guard _handle == nil else { return }
 
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
+        
         #if SQLITE_HAS_CODEC
             if encrypt.count > 0 {
-                _ = try sync { try check(sqlite3_key(handle, encrypt, Int32(encrypt.count))) }
-                try cipherOptions.forEach { try execute($0) }
+                try cipherDefaultOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
+                _ = try sync { try check(sqlite3_key(_handle, encrypt, Int32(encrypt.count))) }
+                try cipherOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
             }
         #endif
-        try normalOptions.forEach { try execute($0) }
-        sqlite3_update_hook(handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
-        sqlite3_commit_hook(handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+        
+        try normalOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
+        
+        sqlite3_update_hook(_handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+        sqlite3_commit_hook(_handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+        
+        #if SQLITEORM_FTS
+            try registerEnumerators(_handle)
+        #endif
     }
 
     /// is the database open?
@@ -131,6 +139,14 @@ public final class Database {
         return Int(sqlite3_total_changes(handle))
     }
 
+    /// execute between sqlite3_open_v2() and sqlite3_key()
+    ///
+    /// example:
+    ///
+    /// "pragma cipher_default_plaintext_header_size = 32;"
+    ///
+    public var cipherDefaultOptions: [String] = []
+
     /// execute after sqlite3_key_v2()
     ///
     /// example: open 3.x ciphered database
@@ -152,6 +168,10 @@ public final class Database {
     /// "PRAGMA journal_mode = WAL"
     ///
     public var normalOptions: [String] = ["pragma synchronous = normal;", "pragma journal_mode = wal;"]
+
+    #if SQLITEORM_FTS
+        var enumerators: [String: Enumerator.Type] = [:]
+    #endif
 
     // MARK: - queue
 

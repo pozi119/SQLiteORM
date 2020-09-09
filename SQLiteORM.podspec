@@ -34,8 +34,9 @@ Pod::Spec.new do |s|
       ss.dependency 'SQLCipher'
       ss.xcconfig = {
         'OTHER_SWIFT_FLAGS' => '$(inherited) -D SQLITE_HAS_CODEC -D SQLITE_ENABLE_FTS5',
-        'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DGRDBCIPHER -DSQLITE_ENABLE_FTS5',
-        'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) SQLITE_HAS_CODEC=1 SQLITE_ENABLE_FTS5=1'
+        'OTHER_CFLAGS' => '$(inherited) -DSQLITE_HAS_CODEC -DSQLITE_ENABLE_FTS5',
+        'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) SQLITE_HAS_CODEC=1 SQLITE_ENABLE_FTS5=1',
+        'HEADER_SEARCH_PATHS' => "{PODS_ROOT}/SQLCipher"
       }
   end
 
@@ -49,7 +50,12 @@ Pod::Spec.new do |s|
       ss.public_header_files = 'SQLiteORM/FTS/**/*.h'
       ss.resource = ['SQLiteORM/Assets/PinYin.bundle']
       ss.dependency 'SQLiteORM/core'
-      ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
+      ss.pod_target_xcconfig = {
+        'SWIFT_VERSION' => '5.0',
+        'OTHER_SWIFT_FLAGS' => '-D SQLITEORM_FTS',
+        'OTHER_CFLAGS' => '-DSQLITEORM_FTS',
+        'GCC_PREPROCESSOR_DEFINITIONS' => 'SQLITEORM_FTS=1',
+      }
   end
 
   s.subspec 'util' do |ss|

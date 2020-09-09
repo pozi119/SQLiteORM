@@ -344,9 +344,7 @@ extension SQLiteORMTests {
     }
 
     func testRegisterTokenizer() {
-        let r = ftsDb.register(NaturalEnumerator.self, for: "nl")
-        XCTAssert(r)
-
+        ftsDb.register(NaturalEnumerator.self, for: "nl")
         let x = ftsDb.enumerator(for: "nl")
         XCTAssert(x == NaturalEnumerator.self)
     }

@@ -15,6 +15,67 @@ import Foundation
     import SQLite3
 #endif
 
+// MARK: - FTS3
+
+struct Fts3TokenizeModule {
+    var iVersion: Int32
+    var xCreate: @convention(c) (Int32, UnsafeMutablePointer<UnsafePointer<Int8>?>?, UnsafeMutablePointer<OpaquePointer?>?) -> Int32
+    var xDestroy: @convention(c) (OpaquePointer?) -> Int32
+    var xOpen: @convention(c) (OpaquePointer?, UnsafePointer<Int8>?, Int32, UnsafeMutablePointer<OpaquePointer?>?) -> Int32
+    var xClose: @convention(c) (OpaquePointer?) -> Int32
+    var xNext: @convention(c) (OpaquePointer?, UnsafeMutablePointer<UnsafePointer<Int8>?>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?) -> Int32
+    var xLanguageid: @convention(c) (OpaquePointer?, Int32) -> Int32
+    var xName: UnsafePointer<Int8>?
+    var xEnumerator: UnsafeMutableRawPointer?
+}
+
+struct Fts3Tokenizer {
+    var base: OpaquePointer?
+    var locale: String?
+    var mask: UInt64 = 0
+}
+
+struct Fts3Cursor {
+    var base: OpaquePointer?
+    var pInput: UnsafePointer<Int8>?
+    var nBytes: Int32 = 0
+    var iToken: Int32 = 0
+    var nToken: Int32 = 0
+    var tokens: [Token] = []
+}
+
+func fts3_create(_ argc: Int32,
+                 _ argv: UnsafeMutablePointer<UnsafePointer<Int8>?>?,
+                 _ ppTokenizer: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
+    return SQLITE_OK
+}
+
+func fts3_destroy(_ pTokenizer: OpaquePointer?) -> Int32 {
+    return SQLITE_OK
+}
+
+func fts3_open(_ pTokenizer: OpaquePointer?,
+               _ pInput: UnsafePointer<Int8>?,
+               _ nBytes: Int32,
+               _ ppCursor: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
+    return SQLITE_OK
+}
+
+func fts3_close(_ pCursor: OpaquePointer?) -> Int32 {
+    return SQLITE_OK
+}
+
+func fts3_next(_ pCursor: OpaquePointer?,
+               _ ppToken: UnsafeMutablePointer<UnsafePointer<Int8>?>?,
+               _ pnBytes: UnsafeMutablePointer<Int32>?,
+               _ piStartOffset: UnsafeMutablePointer<Int32>?,
+               _ piEndOffset: UnsafeMutablePointer<Int32>?,
+               _ piPosition: UnsafeMutablePointer<Int32>?) -> Int32 {
+    return SQLITE_OK
+}
+
+// MARK: - FTS5
+
 struct Fts5Tokenizer {
     var locale: String?
     var mask: UInt64 = 0
@@ -76,52 +137,70 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
     return rc
 }
 
-public extension Database {
+extension Database {
     /// register tokenizer
     ///
     /// - Parameters:
     ///   - type: tokenize method
-    @discardableResult
-    func register(_ enumerator: Enumerator.Type, for tokenizer: String) -> Bool {
-        do {
-            let api = UnsafeMutablePointer<fts5_api>(mutating: try get_fts5_api())
-            var pTokenizer = fts5_tokenizer(xCreate: fts5_xCreate(_:_:_:_:), xDelete: fts5_xDelete(_:), xTokenize: fts5_xTokenize(_:_:_:_:_:_:))
-            let pointer = UnsafeMutablePointer<Enumerator.Type>.allocate(capacity: 1)
-            pointer.pointee = enumerator
-            let pContext = UnsafeMutableRawPointer(pointer)
-            let rc = api.pointee.xCreateTokenizer(api, tokenizer, pContext, &pTokenizer, nil)
-            try check(rc)
-        } catch {
-            return false
-        }
-        return true
+    public func register(_ enumerator: Enumerator.Type, for tokenizer: String) {
+        enumerators[tokenizer] = enumerator
     }
 
     /// get tokenize method
-    func enumerator(for tokenizer: String) -> Enumerator.Type? {
-        do {
-            let api = UnsafeMutablePointer<fts5_api>(mutating: try get_fts5_api())
-            var pUserdata: UnsafeMutableRawPointer?
-            var pTokenizer = fts5_tokenizer()
-            try check(api.pointee.xFindTokenizer(api, tokenizer, &pUserdata, &pTokenizer))
-            guard let pContext = pUserdata else { return nil }
-            let enumerator = pContext.assumingMemoryBound(to: Enumerator.Type.self).pointee
-            return enumerator
-        } catch {
-            return nil
+    public func enumerator(for tokenizer: String) -> Enumerator.Type? {
+        return enumerators[tokenizer]
+    }
+
+    /// register tokenizer
+    ///
+    /// - Parameters:
+    ///   - type: tokenize method
+    func registerEnumerators(_ db: OpaquePointer!) throws {
+        let pApi = UnsafeMutablePointer<fts5_api>(mutating: try get_fts5_api(db))
+        for (name, enumerator) in enumerators {
+            let pointer = UnsafeMutablePointer<Enumerator.Type>.allocate(capacity: 1)
+            pointer.pointee = enumerator
+            let pEnumerator = UnsafeMutableRawPointer(pointer)
+
+            // fts3,4 register custom tokenizer
+            var pStmt: OpaquePointer?
+            var pModule = UnsafeMutablePointer<Fts3TokenizeModule>.allocate(capacity: 1)
+            pModule.pointee.iVersion = 0
+            pModule.pointee.xCreate = fts3_create(_:_:_:)
+            pModule.pointee.xDestroy = fts3_destroy(_:)
+            pModule.pointee.xOpen = fts3_open(_:_:_:_:)
+            pModule.pointee.xClose = fts3_close(_:)
+            pModule.pointee.xNext = fts3_next(_:_:_:_:_:_:)
+            pModule.pointee.xName = (name as NSString).utf8String
+            pModule.pointee.xEnumerator = pEnumerator
+
+            try check(SQLiteORMEnableFts3Module(db))
+            try check(sqlite3_prepare_v2(db, "SELECT fts3_tokenizer(?,?)", -1, &pStmt, nil))
+            let size = MemoryLayout<UnsafeMutablePointer<Fts3TokenizeModule>>.size
+            try check(sqlite3_bind_text(pStmt, 1, name, -1, SQLITE_STATIC))
+            try check(sqlite3_bind_blob(pStmt, 2, &pModule, Int32(size), SQLITE_STATIC))
+            try check(sqlite3_step(pStmt))
+            try check(sqlite3_finalize(pStmt))
+
+            // fts5 register custom tokenizer
+            let pTokenizer = UnsafeMutablePointer<fts5_tokenizer>.allocate(capacity: 1)
+            pTokenizer.pointee.xCreate = fts5_xCreate(_:_:_:_:)
+            pTokenizer.pointee.xDelete = fts5_xDelete(_:)
+            pTokenizer.pointee.xTokenize = fts5_xTokenize(_:_:_:_:_:_:)
+            try check(pApi.pointee.xCreateTokenizer(pApi, name, pEnumerator, pTokenizer, nil))
         }
     }
 
-    func get_fts5_api() throws -> UnsafePointer<fts5_api> {
+    func get_fts5_api(_ db: OpaquePointer!) throws -> UnsafePointer<fts5_api> {
         var pApi: UnsafePointer<fts5_api>?
         var stmt: OpaquePointer?
-        try check(sqlite3_prepare_v2(handle, "SELECT fts5(?1)", -1, &stmt, nil))
+        try check(sqlite3_prepare_v2(db, "SELECT fts5(?1)", -1, &stmt, nil))
         #if SQLITE_HAS_CODEC
             sqlite3_bind_pointer(stmt!, 1, &pApi, "fts5_api_ptr", nil)
             sqlite3_step(stmt!)
         #else
             if #available(macOS 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
-                sqlite3_bind_pointer(stmt!, 1, &api, "fts5_api_ptr", nil)
+                sqlite3_bind_pointer(stmt!, 1, &pApi, "fts5_api_ptr", nil)
                 sqlite3_step(stmt!)
             }
         #endif

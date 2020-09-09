@@ -250,12 +250,9 @@ public final class FtsConfig: Config {
     /// fts version
     public var version: UInt {
         switch module {
-            case let module where module.match("fts5"):
-                return 5
-            case let module where module.match("fts4"):
-                return 4
-            default:
-                return 3
+            case let module where module.match("fts5"): return 5
+            case let module where module.match("fts4"): return 4
+            default: return 3
         }
     }
 

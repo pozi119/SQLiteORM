@@ -200,7 +200,7 @@ public final class Orm<T> {
             try createTable()
         }
         if exist && changed && general {
-            // NOTE: FTS表请手动迁移数据
+            // MARK: ** FTS table, please migrate data manually **
             try migrationData(from: tempTable)
         }
         if general && (indexChanged || !exist) {
