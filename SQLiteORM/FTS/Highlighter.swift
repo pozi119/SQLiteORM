@@ -13,7 +13,7 @@ public final class Match {
     /// - full: full pinyin matching
     /// - origin: original matching
     public enum LV1: UInt64 {
-        case none = 0, firsts, full, origin
+        case none = 0, fuzzy, firsts, fulls, origin
     }
 
     /// range matching
@@ -24,27 +24,12 @@ public final class Match {
     /// - prefix: prefix matching
     /// - full: full word matching
     public enum LV2: UInt64 {
-        case none = 0, other, nonprefix, prefix, full
+        case none = 0, other, middle, prefix, full
     }
 
     /// match priority
     public enum LV3: UInt64 {
         case low = 0, medium, high
-    }
-
-    public struct Option: OptionSet {
-        public let rawValue: UInt32
-
-        public init(rawValue: UInt32) {
-            self.rawValue = rawValue
-        }
-
-        public static let `default` = Option(rawValue: 0 << 0)
-        public static let pinyin = Option(rawValue: 1 << 0)
-        public static let fuzzy = Option(rawValue: 1 << 1)
-        public static let token = Option(rawValue: 1 << 2)
-
-        public static let all: Option = .init(rawValue: 0xFFFFFFFF)
     }
 
     public var lv1: LV1 = .none
@@ -87,40 +72,137 @@ extension Match: Comparable {
     public static func < (lhs: Match, rhs: Match) -> Bool {
         return lhs.weight < rhs.weight
     }
+
+    public static func <= (lhs: Match, rhs: Match) -> Bool {
+        return lhs.weight <= rhs.weight
+    }
+
+    public static func > (lhs: Match, rhs: Match) -> Bool {
+        return lhs.weight > rhs.weight
+    }
+
+    public static func >= (lhs: Match, rhs: Match) -> Bool {
+        return lhs.weight < rhs.weight
+    }
 }
 
 extension Match: CustomStringConvertible {
     public var description: String {
         let range = ranges.first ?? NSRange(location: 0, length: 0)
-        return "[\(lv1)|\(lv2)|\(lv3)|\(range)|" + String(format: "0x%llx", weight) + "]: " + attrText.description.replacingOccurrences(of: "\n", with: "").strip
+        return String(format: "[%i|%i|%i|%@|0x%llx]: %@", lv1.rawValue, lv2.rawValue, lv3.rawValue, NSStringFromRange(range), weight, attrText.description.singleLine.strip)
+    }
+}
+
+extension Highlighter {
+    private static let cache = Cache<String, (words: [[Set<String>]], tokens: [[[String: Token]]])>()
+    class func arrange(_ source: String, mask: TokenMask) -> (words: [[Set<String>]], tokens: [[[String: Token]]]) {
+        let key = "\(mask)" + source
+        if let results = cache[key] { return results }
+        let tokens = OrmEnumerator.enumerate(source, mask: mask)
+        let results = arrange(tokens)
+        cache[key] = results
+        return results
+    }
+
+    class func arrange(_ tokens: [Token]) -> ([[Set<String>]], [[[String: Token]]]) {
+        var commons: [Int: Set<Token>] = [:]
+        var syllables: [Int: Set<Token>] = [:]
+        for tk in tokens {
+            if tk.colocated < 3 {
+                var set = commons[tk.start]
+                if set == nil { set = Set<Token>() }
+                set!.insert(tk)
+                commons[tk.start] = set!
+            } else {
+                var set = syllables[tk.colocated]
+                if set == nil { set = Set<Token>() }
+                set!.insert(tk)
+                syllables[tk.colocated] = set!
+            }
+        }
+
+        var arrangedWords: [[Set<String>]] = []
+        var arrangedTokens: [[[String: Token]]] = []
+
+        // commons
+        let commonSorted = commons.values.sorted { ($0.first?.start ?? 0) < ($1.first?.start ?? 0) }
+        var commonWords: [Set<String>] = []
+        var commonTokens: [[String: Token]] = []
+
+        for subTokens in commonSorted {
+            var subWords = Set<String>()
+            var dic: [String: Token] = [:]
+            for tk in subTokens {
+                subWords.insert(tk.word)
+                dic[tk.word] = tk
+            }
+            commonWords.append(subWords)
+            commonTokens.append(dic)
+        }
+        arrangedWords.append(commonWords)
+        arrangedTokens.append(commonTokens)
+
+        // syllables
+        for (_, values) in syllables {
+            var syllableWords: [Set<String>] = []
+            var syllableTokens: [[String: Token]] = []
+            let subSorted = values.sorted()
+            var pos = 0
+            for tk in subSorted {
+                for i in pos ..< tk.start {
+                    let set = commons[i]
+                    if set == nil { continue }
+
+                    var subWords = Set<String>()
+                    var dic: [String: Token] = [:]
+                    for xtk in subSorted {
+                        subWords.insert(xtk.word)
+                        dic[tk.word] = xtk
+                    }
+                    syllableWords.append(subWords)
+                    syllableTokens.append(dic)
+                }
+                pos = tk.end
+                syllableWords.append(Set([tk.word]))
+                syllableTokens.append([tk.word: tk])
+            }
+        }
+        return (arrangedWords, arrangedTokens)
     }
 }
 
 public class Highlighter {
-    private static let hlMaxLen = 256
-
     private var _keyword: String = ""
     public var keyword: String {
-        set { _keyword = newValue.trim; refresh() }
+        set { _keyword = newValue.trim; _kwTokens = nil }
         get { return _keyword }
     }
 
-    public var option: Match.Option = .default
-    public var enumerator: Enumerator.Type = OrmEnumerator.self
-    public var mask: TokenMask = .default { didSet { refresh() } }
+    public var mask: TokenMask = .default { didSet { _kwTokens = nil } }
+    public var fuzzy: Bool = false { didSet { _kwTokens = nil } }
     public var quantity: Int = 0
+    public var useSingleLine: Bool = true
+    public var enumerator: Enumerator.Type = OrmEnumerator.self
     public var highlightAttributes: [NSAttributedString.Key: Any] = [:]
     public var normalAttributes: [NSAttributedString.Key: Any] = [:]
+    public var reserved: Any?
 
-    private var keywordTokens: [Token] = []
-    private var kwFullPinyin: String = ""
+    private var _kwTokens: [[Set<String>]]?
+    private var kwTokens: [[Set<String>]] {
+        guard _kwTokens == nil else { return _kwTokens! }
+        var xmask = mask
+        xmask.formUnion(.syllable)
+        xmask.subtract(.abbreviation)
+        if fuzzy { xmask.formUnion(.pinyin) } else { xmask.subtract(.pinyin) }
+        _kwTokens = Highlighter.arrange(_keyword, mask: xmask).words
+        return _kwTokens!
+    }
 
     public convenience init<T>(orm: Orm<T>, keyword: String) {
         let config = orm.config as? FtsConfig
         assert(config != nil, "invalid fts orm")
 
         self.init(keyword: keyword)
-        option = [.token]
         let components = config!.tokenizer.components(separatedBy: " ")
         if components.count > 0 {
             let tokenizer = components[0]
@@ -139,53 +221,32 @@ public class Highlighter {
         self.keyword = keyword
     }
 
-    private func refresh() {
-        let mask = self.mask
-//        if mask.pinyin > 0 {
-//            mask.subtract(.allPinYin)
-//            mask.formUnion(.syllable)
-//        }
-        //FIXME: source/bytes
-        let tokens = enumerator.enumerate(keyword, mask: mask)//tokenize(_keyword.bytes, method, mask)
-        keywordTokens = tokens
-
-        kwFullPinyin = ""
-        if keyword.count <= 30 {
-            var kw = keyword.lowercased()
-            if self.mask.contains(.transform) {
-                kw = kw.simplified
-            }
-            kwFullPinyin = kw.pinyins.fulls.first ?? ""
-        }
-    }
-
     public func highlight(_ source: String) -> Match {
         guard source.count > 0 && keyword.count > 0 else { return Match(source: source) }
 
-        let temp = source.count > Highlighter.hlMaxLen ? String(source.prefix(Highlighter.hlMaxLen)) : source
-        var text = temp.matchingPattern
-        var kw = keyword.lowercased()
+        var reference = source.matchingPattern
+        var xkeyword = keyword.matchingPattern
         if mask.contains(.transform) {
-            text = text.simplified
-            kw = kw.simplified
+            reference = reference.simplified
+            xkeyword = xkeyword.simplified
         }
-        let bytes = text.bytes
-        let match = highlight(source, comparison: text, bytes: bytes, keyword: kw, lv1: .origin)
-        return match
+
+        var match = highlight(usingRegex: source, reference: reference, keyword: xkeyword)
+        guard match.lv2 == .none else { return match }
+
+        match = highlight(usingToken: source, reference: reference)
+        guard match.lv2 == .none else { return match }
+
+        return Match(source: source)
     }
 
-    private func highlight(usingRegex source: String, comparison: String, keyword: String, lv1: Match.LV1) -> Match {
+    private func highlight(usingRegex source: String, reference: String, keyword: String) -> Match {
         let match = Match(source: source)
-        match.lv1 = lv1
 
-        guard let expression = try? NSRegularExpression(pattern: keyword.regexPattern, options: []) else {
-            return Match(source: source)
-        }
+        guard let expression = try? NSRegularExpression(pattern: keyword.regexPattern, options: []) else { return match }
 
-        var results = expression.matches(in: comparison, options: [], range: NSRange(location: 0, length: comparison.count))
-        guard results.count > 0 else {
-            return Match(source: source)
-        }
+        var results = expression.matches(in: reference, options: [], range: NSRange(location: 0, length: reference.count))
+        guard results.count > 0 else { return match }
 
         if quantity > 0 && results.count > quantity {
             results = Array(results[0 ..< quantity])
@@ -193,11 +254,12 @@ public class Highlighter {
 
         let found = results.first!.range
         switch (found.location, found.length) {
-            case (0, comparison.count): match.lv2 = .full
+            case (0, reference.count): match.lv2 = .full
             case (0, _): match.lv2 = .prefix
-            default: match.lv2 = .nonprefix
+            default: match.lv2 = .middle
         }
-        match.lv3 = lv1 == .origin ? .high : .medium
+        match.lv1 = .origin
+        match.lv3 = .high
 
         var ranges: [NSRange] = []
         let attrText = NSMutableAttributedString(string: source, attributes: normalAttributes)
@@ -210,149 +272,85 @@ public class Highlighter {
         return match
     }
 
-    private func highlight(usingPinyin source: String, comparison: String, keyword: String, lv1: Match.LV1) -> Match {
-        let match = Match(source: source)
-        match.lv1 = lv1
-
-        guard let expression = try? NSRegularExpression(pattern: keyword.regexPattern, options: []) else {
-            return Match(source: source)
-        }
-
-        var ranges: Set<NSRange> = Set()
-        let matrix = comparison.pinyinMatrix
-        let matrixes: [[[String]]] = [lv1 == .origin ? matrix.fulls : [], matrix.abbrs]
-        for i in 0 ..< matrixes.count {
-            for pinyins in matrixes[i] {
-                let pinyin = pinyins.joined()
-                let results = expression.matches(in: pinyin, options: [], range: NSRange(location: 0, length: pinyin.count))
-                if results.count == 0 { continue }
-
-                let range = results.first!.range
-                var lv2: Match.LV2 = .none
-                switch (range.lowerBound, range.upperBound) {
-                    case (0, pinyin.count): lv2 = keyword.count == 1 ? .prefix : .full
-                    case (0, _): lv2 = .prefix
-                    default: lv2 = .nonprefix
-                }
-                if match.lv2.rawValue < lv2.rawValue { match.lv2 = lv2 }
-
-                for result in results {
-                    let r = result.range
-                    let len = r.length
-                    var offset = 0, idx = 0
-                    while offset < r.lowerBound && idx < pinyins.count {
-                        let s = pinyins[idx]
-                        offset += s.count
-                        idx += 1
-                    }
-
-                    idx = idx >= pinyins.count ? pinyins.count - 1 : idx
-                    var hloc = idx, mlen = 0
-                    while mlen < len && idx < pinyins.count {
-                        let s = pinyins[idx]
-                        mlen += s.count
-                        idx += 1
-                    }
-
-                    ranges.insert(NSRange(location: hloc, length: idx - hloc))
-                }
-            }
-        }
-
-        guard ranges.count > 0 else {
-            return Match(source: source)
-        }
-
-        var sortedRanges = ranges.sorted { $0.location < $1.location || ($0.location == $1.location && $0.length > $1.length) }
-        if quantity > 0 && sortedRanges.count > quantity {
-            sortedRanges = Array(sortedRanges[0 ..< quantity])
-        }
-
-        let attrText = NSMutableAttributedString(string: source, attributes: normalAttributes)
-        sortedRanges.forEach { attrText.addAttributes(highlightAttributes, range: $0) }
-
-        let lv3decision = keyword.count > 1 && comparison.hasPrefix(keyword)
-        match.lv3 = lv3decision ? .medium : .low
-        match.ranges = sortedRanges
-        match.attrText = attrText
-        return match
-    }
-
-    private func highlight(usingToken source: String, bytes: [UInt8], keyword: String, lv1: Match.LV1) -> Match {
+    private func highlight(usingToken source: String, reference: String) -> Match {
         let nomatch = Match(source: source)
-        guard keywordTokens.count > 0 else { return nomatch }
+        guard kwTokens.count > 0 else { return nomatch }
 
-        let mask = self.mask.subtracting(.syllable)
-        //FIXME: source/bytes
-        let sourceTokens = enumerator.enumerate(source, mask: mask)
-        guard sourceTokens.count > 0 else { return nomatch }
+        let bytes = reference.bytes
+        let xmask = fuzzy ? mask.union(.pinyin) : mask
+        let arranged = Highlighter.arrange(reference, mask: xmask)
+        let arrangedTokens = arranged.tokens
+        let arrangedWords = arranged.words
+        guard arrangedWords.count > 0 && arrangedTokens.count > 0 else { return nomatch }
 
-        var tokenmap: [String: NSMutableSet] = [:]
-        for token in sourceTokens {
-            var set = tokenmap[token.word]
-            if set == nil {
-                set = NSMutableSet()
-                tokenmap[token.word] = set
-            }
-            set!.add(token)
-        }
-        var kwtks = Set<String>()
-        for token in keywordTokens {
-            kwtks.insert(token.word)
-        }
-
-        var matchedSet = Set<Token>()
-        for tk in kwtks {
-            if let set = tokenmap[tk] as? Set<Token> {
-                matchedSet.formUnion(set)
-            }
-        }
-        guard matchedSet.count > 0 else { return nomatch }
-
-        var array = matchedSet.sorted { $0.start == $1.start ? $0.end > $1.end : $0.start < $1.start }
-        if quantity > 0 && array.count > quantity {
-            array = Array(array[0 ..< quantity])
-        }
-
-        let match = Match(source: source)
-        match.lv1 = lv1
-
-        let attrText = NSMutableAttributedString(string: source, attributes: normalAttributes)
+        var lv1: Match.LV1 = .origin
+        var whole = true
+        let text = useSingleLine ? source.singleLine : source
+        let attrText = NSMutableAttributedString(string: text, attributes: normalAttributes)
         var ranges: [NSRange] = []
-        for token in array {
-            let sub1 = [UInt8](bytes[0 ..< Int(token.start)])
-            let sub2 = [UInt8](bytes[Int(token.start) ..< Int(token.end)])
-            let s1 = String(bytes: sub1)
-            let sk = String(bytes: sub2)
-            let range = NSRange(location: s1.count, length: sk.count)
-            ranges.append(range)
-            attrText.addAttributes(highlightAttributes, range: range)
+
+        for kc in 0 ..< kwTokens.count {
+            for sc in 0 ..< arrangedWords.count {
+                let groupWords = arrangedWords[sc]
+                let kwGroupWords = kwTokens[kc]
+                for i in 0 ..< groupWords.count {
+                    var j = 0, k = i, sloc = -1, slen = -1
+                    while j < kwGroupWords.count && k < groupWords.count {
+                        let set = groupWords[k]
+                        let kwset = kwGroupWords[j]
+                        var matchword: String = ""
+                        let mset = set.intersection(kwset)
+                        if mset.count > 0 {
+                            matchword = mset.first!
+                        } else if j == kwGroupWords.count - 1 && kc > 0 {
+                            for kwword in kwset {
+                                for word in set {
+                                    if word.hasPrefix(kwword) {
+                                        matchword = word; whole = false; break
+                                    }
+                                }
+                                if matchword.count > 0 { break }
+                            }
+                        }
+                        if matchword.count > 0 {
+                            let dic = arrangedTokens[sc][k]
+                            let tk = dic[matchword]!
+                            var tlv1: Match.LV1 = .none
+                            switch (kc, sc) {
+                                case (0, 0): tlv1 = tk.colocated <= 0 ? .origin : .firsts
+                                case (_, 0): tlv1 = .fulls
+                                default: tlv1 = .fuzzy
+                            }
+                            if tlv1.rawValue < lv1.rawValue { lv1 = tlv1 }
+                            if sloc < 0 { sloc = tk.start }
+                            slen = tk.end - sloc
+                            j += 1
+                            k += 1
+                        } else {
+                            break
+                        }
+                    }
+                    if j > 0 && j == kwGroupWords.count {
+                        let s1 = String(bytes: Array(bytes[0 ..< sloc]))
+                        let s2 = String(bytes: Array(bytes[sloc ..< (sloc + slen)]))
+                        let range = NSRange(location: s1.count, length: s2.count)
+                        attrText.addAttributes(highlightAttributes, range: range)
+                        ranges.append(range)
+                        if quantity > 0 && ranges.count >= quantity { break }
+                    }
+                }
+                if ranges.count > 0 { break }
+            }
+            if ranges.count > 0 { break }
         }
-        match.attrText = attrText
+
+        guard ranges.count > 0 else { return nomatch }
+        let first = ranges.first!
+        let match = Match(source: source, attrText: attrText)
         match.ranges = ranges
-        match.lv2 = .other
-        match.lv3 = .low
-        return match
-    }
-
-    private func highlight(_ source: String, comparison: String, bytes: [UInt8], keyword: String, lv1: Match.LV1) -> Match {
-        var match = highlight(usingRegex: source, comparison: comparison, keyword: keyword, lv1: lv1)
-        guard match.lv2 == .none else { return match }
-
-        if option.contains(.pinyin) {
-            match = highlight(usingPinyin: source, comparison: comparison, keyword: keyword, lv1: lv1)
-        }
-        guard match.lv2 == .none else { return match }
-
-        if option.contains(.token) {
-            match = highlight(usingToken: source, bytes: bytes, keyword: keyword, lv1: lv1)
-        }
-        guard match.lv2 == .none else { return match }
-
-        if option.contains(.fuzzy) && keyword != kwFullPinyin {
-            match = highlight(source, comparison: comparison, bytes: bytes, keyword: kwFullPinyin, lv1: .full)
-        }
-
+        match.lv1 = lv1
+        match.lv2 = first.location == 0 ? (first.length == attrText.length && whole ? .full : .prefix) : .middle
+        match.lv3 = lv1 == .origin ? .high : lv1 == .fulls ? .medium : .low
         return match
     }
 

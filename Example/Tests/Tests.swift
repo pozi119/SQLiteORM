@@ -317,7 +317,7 @@ extension SQLiteORMTests {
 //            "健康",
 //            "公益组织",
         ]
-        let mask: TokenMask = [.default, .abbreviation, .init(rawValue: 10)]
+        let mask: TokenMask = .all
         for source in sources {
             let tokens = OrmEnumerator.enumerate(source, mask: mask)
             let sorted = tokens.sorted()
@@ -499,7 +499,6 @@ extension SQLiteORMTests {
         for i in string.count ... string.count {
             let keyword = String(string[string.startIndex ..< string.index(string.startIndex, offsetBy: i)])
             let highlighter = Highlighter(keyword: keyword)
-            highlighter.option = .all
             highlighter.mask = .all
             highlighter.quantity = 3
             highlighter.highlightAttributes = [.foregroundColor: UIColor.red]

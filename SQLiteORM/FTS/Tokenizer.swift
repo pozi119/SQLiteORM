@@ -12,13 +12,16 @@ public protocol Enumerator {
     static func enumerate(_ source: String, mask: TokenMask) -> [Token]
 }
 
-public struct Token: Hashable {
+public final class Token: Hashable {
     public var word: String
     public var len: Int
     public var start: Int
     public var end: Int
+
+    /// -1:full width, 0:original, 1:full pinyin, 2:abbreviation, 3:syllable
     public var colocated: Int
-    private var weight: Int
+
+    private lazy var weight: Int = start << 16 | end << 8 | len
 
     public init(word: String, len: Int, start: Int, end: Int, colocated: Int) {
         self.word = word
@@ -26,7 +29,20 @@ public struct Token: Hashable {
         self.start = start
         self.end = end
         self.colocated = colocated
-        weight = start << 16 | end << 8 | len
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(word)
+        hasher.combine(len)
+        hasher.combine(start)
+        hasher.combine(end)
+        hasher.combine(colocated)
+    }
+}
+
+extension Token: CustomStringConvertible {
+    public var description: String {
+        return String(format: "[%2i-%2i|%2i|%i|0x%09lx]: %@ ", start, end, len, colocated, hashValue, word)
     }
 }
 
@@ -67,6 +83,10 @@ public struct TokenMask: OptionSet {
     public static let `default` = TokenMask([.transform])
     public static let allPinYin = TokenMask([.pinyin, .abbreviation])
     public static let all = TokenMask(rawValue: 0xFFFFFF)
+
+    func hasPinyin() -> Bool {
+        return intersection([.pinyin, .abbreviation, .syllable]).rawValue > 0
+    }
 }
 
 /// natural languagei tokenizer
@@ -308,7 +328,7 @@ public class OrmEnumerator: Enumerator {
                         }
                         if useabbr {
                             for abbr in abbrs {
-                                let token = Token(word: abbr as String, len: abbr.length, start: idx, end: idx + length, colocated: 1)
+                                let token = Token(word: abbr as String, len: abbr.length, start: idx, end: idx + length, colocated: 2)
                                 results.append(token)
                             }
                         }
@@ -324,7 +344,7 @@ public class OrmEnumerator: Enumerator {
             if usesyllable {
                 if wordlen == 1 && word[0] > 96 && word[0] < 123 {
                     syllableString += String(bytes: [word[0]])
-                } else if( syllableString.count > 0) {
+                } else if syllableString.count > 0 {
                     let subTks = syllableTokens(syllableString, idx)
                     results += subTks
                     syllableString = ""
@@ -336,7 +356,7 @@ public class OrmEnumerator: Enumerator {
             results.append(token)
             idx += length
         }
-        if( syllableString.count > 0) {
+        if syllableString.count > 0 {
             let subTks = syllableTokens(syllableString, idx)
             results += subTks
         }

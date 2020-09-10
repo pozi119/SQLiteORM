@@ -101,9 +101,8 @@ func fts5_xCreate(_ pUnused: UnsafeMutableRawPointer?,
     }
 
     tok.pointee.enumerator = pUnused
-    tok.pointee.mask = 0
     pTokenizer?.pointee = OpaquePointer(tok)
-    return 0
+    return SQLITE_OK
 }
 
 func fts5_xDelete(_ pTokenizer: OpaquePointer?) {
@@ -126,11 +125,21 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
     guard let pEnum = pTok.pointee.enumerator
     else { return SQLITE_ERROR }
 
+    var xmask = TokenMask(rawValue: pTok.pointee.mask)
+    if iUnused & FTS5_TOKENIZE_DOCUMENT > 0 {
+        xmask.subtract(.syllable)
+    }
+    else if iUnused & FTS5_TOKENIZE_QUERY > 0 && xmask.hasPinyin() {
+        xmask.subtract(.allPinYin)
+        xmask.formUnion(.syllable)
+    }
+    
     let enumerator = pEnum.assumingMemoryBound(to: Enumerator.Type.self).pointee
-    let tks = enumerator.enumerate(source, mask: .init(rawValue: pTok.pointee.mask))
+    let tks = enumerator.enumerate(source, mask: xmask)
+    
     var rc = SQLITE_OK
     for tk in tks {
-        rc = xxToken(pCtx, tk.colocated <= 0 ? 0 : 1, (tk.word as NSString).utf8String, Int32(tk.len), Int32(tk.start), Int32(tk.end))
+        rc = xxToken(pCtx, tk.colocated <= 0 ? 0 : 1, tk.word, Int32(tk.len), Int32(tk.start), Int32(tk.end))
         if rc != SQLITE_OK { break }
     }
     if rc == SQLITE_DONE { rc = SQLITE_OK }
