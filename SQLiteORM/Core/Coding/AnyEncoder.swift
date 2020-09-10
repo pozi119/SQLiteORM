@@ -210,14 +210,32 @@ class AnyDecoder {
                     }
                 } else {
                     var val = value
-                    let propinfo = try typeInfo(of: prop.type)
-                    if propinfo.kind == .enum {
-                        let eval = withUnsafePointer(to: value) { $0 }
-                        let pointer = UnsafeMutableRawPointer.allocate(byteCount: propinfo.size, alignment: propinfo.alignment)
-                        pointer.copyMemory(from: eval, byteCount: propinfo.alignment)
-                        defer { pointer.deallocate() }
-                        try setProperties(typeInfo: propinfo, pointer: pointer)
-                        val = getters(type: prop.type).get(from: pointer)
+                    let xinfo = try typeInfo(of: prop.type)
+                    if xinfo.kind == .enum, let xval = value as? UInt8 {
+                        let pval = UnsafeMutableRawPointer.allocate(byteCount: xinfo.size, alignment: xinfo.alignment)
+                        pval.storeBytes(of: xval, as: UInt8.self)
+                        defer { pval.deallocate() }
+                        try setProperties(typeInfo: xinfo, pointer: pval)
+                        val = getters(type: prop.type).get(from: pval)
+                    } else if let xval = value as? Binding {
+                        switch prop.type {
+                            case is Int.Type: val = Int(binding: xval) ?? 0
+                            case is Int8.Type: val = Int8(binding: xval) ?? 0
+                            case is Int16.Type: val = Int16(binding: xval) ?? 0
+                            case is Int32.Type: val = Int32(binding: xval) ?? 0
+                            case is Int64.Type: val = Int64(binding: xval) ?? 0
+                            case is UInt.Type: val = UInt(binding: xval) ?? 0
+                            case is UInt8.Type: val = UInt8(binding: xval) ?? 0
+                            case is UInt16.Type: val = UInt16(binding: xval) ?? 0
+                            case is UInt32.Type: val = UInt32(binding: xval) ?? 0
+                            case is UInt64.Type: val = UInt64(binding: xval) ?? 0
+                            case is Bool.Type: val = Bool(binding: xval) ?? 0
+                            case is Float.Type: val = Float(binding: xval) ?? 0.0
+                            case is Double.Type: val = Double(binding: xval) ?? 0.0
+                            case is Data.Type: val = Data(binding: xval) ?? Data()
+                            case is String.Type: val = String(binding: xval) ?? ""
+                            default: break
+                        }
                     }
                     try prop.set(value: val, on: &object)
                 }
