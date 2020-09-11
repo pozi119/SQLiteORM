@@ -59,7 +59,7 @@ struct TestEnumerator: Enumerator {
             let cur = string.substring(with: NSMakeRange(i, 1))
             let cbytes = cur.bytes
             let len = cbytes.count
-            let token = Token(word: cur, len: len, start: start, end: start + len, colocated: 0)
+            let token = Token(word: cur, len: len, start: start, end: start + len, colocated: TOKEN_ORIGIN)
             results.append(token)
         }
         return results

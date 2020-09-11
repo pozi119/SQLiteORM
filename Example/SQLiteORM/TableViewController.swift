@@ -150,10 +150,9 @@ class TableViewController: UITableViewController {
             var normalTime: CFAbsoluteTime = 0
             var ftsTime: CFAbsoluteTime = 0
 
-            var thousands = pow(10.0, Double(self.selectedIndex)) * 100
             var startId = item.count
-            thousands = thousands - Double(startId) / 1000.0
-            let loop = Int64(thousands)
+            let thousands = (item.maxCount - startId) / 1000
+            let loop = thousands
 
             for _ in 0 ..< loop {
                 autoreleasepool(invoking: { () -> Void in

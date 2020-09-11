@@ -108,7 +108,7 @@ extension Highlighter {
         var commons: [Int: Set<Token>] = [:]
         var syllables: [Int: Set<Token>] = [:]
         for tk in tokens {
-            if tk.colocated < 3 {
+            if tk.colocated < TOKEN_SYLLABLE {
                 var set = commons[tk.start]
                 if set == nil { set = Set<Token>() }
                 set!.insert(tk)
@@ -149,6 +149,7 @@ extension Highlighter {
             let subSorted = values.sorted()
             var pos = 0
             for tk in subSorted {
+                if pos >= tk.start { continue }
                 for i in pos ..< tk.start {
                     let set = commons[i]
                     if set == nil { continue }
@@ -317,7 +318,7 @@ public class Highlighter {
                             let tk = dic[matchword]!
                             var tlv1: Match.LV1 = .none
                             switch (kc, sc) {
-                                case (0, 0): tlv1 = tk.colocated <= 0 ? .origin : .firsts
+                                case (0, 0): tlv1 = tk.colocated <= TOKEN_FULLWIDTH ? .origin : .firsts
                                 case (_, 0): tlv1 = .fulls
                                 default: tlv1 = .fuzzy
                             }

@@ -128,18 +128,17 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
     var xmask = TokenMask(rawValue: pTok.pointee.mask)
     if iUnused & FTS5_TOKENIZE_DOCUMENT > 0 {
         xmask.subtract(.syllable)
-    }
-    else if iUnused & FTS5_TOKENIZE_QUERY > 0 && xmask.hasPinyin() {
+    } else if iUnused & FTS5_TOKENIZE_QUERY > 0 && xmask.hasPinyin() {
         xmask.subtract(.allPinYin)
         xmask.formUnion(.syllable)
     }
-    
+
     let enumerator = pEnum.assumingMemoryBound(to: Enumerator.Type.self).pointee
     let tks = enumerator.enumerate(source, mask: xmask)
-    
+
     var rc = SQLITE_OK
     for tk in tks {
-        rc = xxToken(pCtx, tk.colocated <= 0 ? 0 : 1, tk.word, Int32(tk.len), Int32(tk.start), Int32(tk.end))
+        rc = xxToken(pCtx, tk.colocated > TOKEN_FULLWIDTH ? 1 : 0, tk.word, Int32(tk.len), Int32(tk.start), Int32(tk.end))
         if rc != SQLITE_OK { break }
     }
     if rc == SQLITE_DONE { rc = SQLITE_OK }

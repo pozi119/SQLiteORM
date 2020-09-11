@@ -12,16 +12,22 @@ public protocol Enumerator {
     static func enumerate(_ source: String, mask: TokenMask) -> [Token]
 }
 
+public let TOKEN_ORIGIN = 0
+public let TOKEN_FULLWIDTH = 1
+public let TOKEN_FULLPINYIN = 2
+public let TOKEN_ABBREVIATION = 3
+public let TOKEN_SYLLABLE = 4
+
 public final class Token: Hashable {
     public var word: String
     public var len: Int
     public var start: Int
     public var end: Int
 
-    /// -1:full width, 0:original, 1:full pinyin, 2:abbreviation, 3:syllable
+    /// TOKEN_ORIGIN, TOKEN_FULLWIDTH, TOKEN_FULLPINYIN, TOKEN_ABBREVIATION, TOKEN_SYLLABLE
     public var colocated: Int
 
-    private lazy var weight: Int = start << 16 | end << 8 | len
+    private lazy var weight: Int = (0xF - colocated) << 24 | start << 16 | end << 8 | len
 
     public init(word: String, len: Int, start: Int, end: Int, colocated: Int) {
         self.word = word
@@ -64,7 +70,7 @@ extension Token: Comparable {
     }
 
     public static func == (lhs: Token, rhs: Token) -> Bool {
-        return lhs.weight == rhs.weight && lhs.word == rhs.word
+        return lhs.hashValue == rhs.hashValue
     }
 }
 
@@ -105,7 +111,7 @@ public class NaturalEnumerator: Enumerator {
                 let pre = source[source.startIndex ..< tokenRange.lowerBound]
                 let start = pre.utf8.count
                 let len = tk.utf8.count
-                let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: 0)
+                let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: TOKEN_ORIGIN)
                 results.append(token)
                 return true
             }
@@ -140,7 +146,7 @@ public class AppleEnumerator: Enumerator {
             let pre = source[startBound ..< lowerBound]
             let len = tk.utf8.count
             let start = pre.utf8.count
-            let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: 0)
+            let token = Token(word: String(tk), len: len, start: start, end: start + len, colocated: TOKEN_ORIGIN)
             results.append(token)
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer!)
         }
@@ -227,18 +233,30 @@ func utf82unicode(_ utf8: [UInt8], _ len: Int) -> UInt32 {
 public class OrmEnumerator: Enumerator {
     private class func syllableTokens(_ source: String, _ end: Int) -> [Token] {
         var results: [Token] = []
-        let allPinyins = source.pinyinSegmentation
-        for n in 0 ..< allPinyins.count {
+        #if false
+            let allPinyins = source.pinyinSegmentation
+            for n in 0 ..< allPinyins.count {
+                var start = end - source.count
+                let pinyins = allPinyins[n]
+                for i in 0 ..< pinyins.count {
+                    let tkString = pinyins[i]
+                    let len = tkString.count
+                    let token = Token(word: tkString, len: len, start: start, end: start + len, colocated: n + TOKEN_SYLLABLE)
+                    results.append(token)
+                    start += len
+                }
+            }
+        #else
             var start = end - source.count
-            let pinyins = allPinyins[n]
+            let pinyins = source.fastPinyinSegmentation
             for i in 0 ..< pinyins.count {
                 let tkString = pinyins[i]
                 let len = tkString.count
-                let token = Token(word: tkString, len: len, start: start, end: start + len, colocated: n + 3)
+                let token = Token(word: tkString, len: len, start: start, end: start + len, colocated: TOKEN_ORIGIN)
                 results.append(token)
                 start += len
             }
-        }
+        #endif
         return results
     }
 
@@ -256,6 +274,8 @@ public class OrmEnumerator: Enumerator {
         var idx = 0
         var length = 0
         var syllableString = ""
+        var syllableTks: [Token] = []
+        var syllableRanges: [Range<Int>] = []
 
         while idx < nText {
             if buff[idx] < 0xC0 {
@@ -323,12 +343,12 @@ public class OrmEnumerator: Enumerator {
                             abbrs.insert(py.substring(to: 1) as NSString)
                         }
                         for full in fulls {
-                            let token = Token(word: full as String, len: full.length, start: idx, end: idx + length, colocated: 1)
+                            let token = Token(word: full as String, len: full.length, start: idx, end: idx + length, colocated: TOKEN_FULLPINYIN)
                             results.append(token)
                         }
                         if useabbr {
                             for abbr in abbrs {
-                                let token = Token(word: abbr as String, len: abbr.length, start: idx, end: idx + length, colocated: 2)
+                                let token = Token(word: abbr as String, len: abbr.length, start: idx, end: idx + length, colocated: TOKEN_ABBREVIATION)
                                 results.append(token)
                             }
                         }
@@ -346,21 +366,37 @@ public class OrmEnumerator: Enumerator {
                     syllableString += String(bytes: [word[0]])
                 } else if syllableString.count > 0 {
                     let subTks = syllableTokens(syllableString, idx)
-                    results += subTks
+                    if subTks.count > 0 {
+                        syllableRanges.append((idx - syllableString.count) ..< idx)
+                        syllableTks += subTks
+                    }
                     syllableString = ""
                 }
             }
 
             let wordstr = String(bytes: word)
-            let token = Token(word: wordstr, len: wordlen, start: idx, end: idx + length, colocated: wordlen != length ? -1 : 0)
+            let token = Token(word: wordstr, len: wordlen, start: idx, end: idx + length, colocated: wordlen != length ? TOKEN_FULLWIDTH : TOKEN_ORIGIN)
             results.append(token)
             idx += length
         }
-        if syllableString.count > 0 {
-            let subTks = syllableTokens(syllableString, idx)
-            results += subTks
+        if usesyllable {
+            if syllableString.count > 0 {
+                let subTks = syllableTokens(syllableString, idx)
+                if subTks.count > 0 {
+                    syllableRanges.append((idx - syllableString.count) ..< idx)
+                    syllableTks += subTks
+                }
+            }
+            if syllableRanges.count > 0 {
+                results = results.filter({ (tk) -> Bool in
+                    for r in syllableRanges {
+                        if r.contains(tk.start) { return false }
+                    }
+                    return true
+                })
+                results += syllableTks
+            }
         }
-
         return results
     }
 }
