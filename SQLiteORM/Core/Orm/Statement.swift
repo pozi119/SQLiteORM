@@ -37,6 +37,7 @@ public final class Statement {
     }
 
     deinit {
+        guard handle != nil else { return }
         sqlite3_finalize(handle)
         handle = nil
     }
@@ -57,7 +58,7 @@ public final class Statement {
     ///
     /// - Parameter values: [Binding] array, corresponding to sql statement
     public func bind(_ values: [Binding]) -> Statement {
-        if values.isEmpty { return self }
+        guard values.count > 0 else { return self }
         reset()
         let count = values.count
         for idx in 0 ..< count { cursor[idx] = values[idx] }

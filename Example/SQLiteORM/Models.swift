@@ -37,13 +37,13 @@ struct Item {
         let url = URL(fileURLWithPath: dir).appendingPathComponent(dbName)
         dbPath = url.path
         db = Database(with: dbPath)
-        orm = Orm(ormable: Message.self, db: db, table: tableName, setup: true)
+        orm = Orm(ormable: Message.self, db: db, table: tableName)
 
         let ftsUrl = URL(fileURLWithPath: dir).appendingPathComponent(ftsDbName)
         ftsDbPath = ftsUrl.path
         ftsDb = Database(with: ftsDbPath)
         ftsDb.register(OrmEnumerator.self, for: "sqliteorm")
-        ftsOrm = Orm(ftsable: Message.self, db: ftsDb, table: tableName, setup: true)
+        ftsOrm = Orm(ftsable: Message.self, db: ftsDb, table: tableName)
     }
 }
 

@@ -108,7 +108,7 @@ public final class PlainConfig: Config {
     public var uniques: [String] = []
 
     /// default value corresponding to the field
-    public var defaultValues: [String: Binding] = [:]
+    public var dfltVals: [String: Binding] = [:]
 
     /// initialize from some type
     override public init(_ type: Any.Type) {
@@ -125,10 +125,10 @@ public final class PlainConfig: Config {
         var indexes = [String]()
 
         var types = [String: String]()
-        var defaultValues = [String: Binding]()
+        var dfltVals = [String: Binding]()
 
         // get table configuration
-        let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
+        let tableInfoSql = "PRAGMA table_info = \(table.quoted);"
         let infos = db.query(tableInfoSql)
         for dic in infos {
             let name = dic["name"] as? String ?? ""
@@ -139,19 +139,19 @@ public final class PlainConfig: Config {
 
             columns.append(name)
             types[name] = type
-            defaultValues[name] = dflt_value
+            dfltVals[name] = dflt_value
             if pk { primaries.append(name) }
             if notnull { notnulls.append(name) }
         }
 
         // get index configuration
-        let indexListSql = "PRAGMA index_list(\(table.quoted));"
+        let indexListSql = "PRAGMA index_list = \(table.quoted);"
         let indexList = db.query(indexListSql)
         for dic in indexList {
             let idxname = dic["name"] as? String ?? ""
             let unique = (dic["unique"] as? Int64 ?? 0) > 0
 
-            let indexInfoSql = "PRAGMA index_info(\(idxname.quoted));"
+            let indexInfoSql = "PRAGMA index_info = \(idxname.quoted);"
             let indexInfos = db.query(indexInfoSql)
             for idxinfo in indexInfos {
                 let name = idxinfo["name"] as? String ?? ""
@@ -183,7 +183,7 @@ public final class PlainConfig: Config {
         self.uniques = uniques
 
         self.types = types
-        self.defaultValues = defaultValues
+        self.dfltVals = dfltVals
     }
 
     /// pretreatement
@@ -219,7 +219,7 @@ public final class PlainConfig: Config {
         }
         let nullString = notnulls.contains(column) ? " NOT NULL" : ""
         let uniqueString = uniques.contains(column) ? " UNIQUE" : ""
-        let defaultValue = defaultValues[column]
+        let defaultValue = dfltVals[column]
         let dfltString = defaultValue != nil ? " DEFAULT(\(String(describing: defaultValue)))" : ""
         return "\(column.quoted) " + typeString + pkString + nullString + uniqueString + dfltString
     }
@@ -298,7 +298,7 @@ public final class FtsConfig: Config {
             }
         }
         // get table configuration
-        let tableInfoSql = "PRAGMA table_info(\(table.quoted));"
+        let tableInfoSql = "PRAGMA table_info = \(table.quoted);"
         let infos = db.query(tableInfoSql)
         for dic in infos {
             let name = dic["name"] as? String ?? ""
@@ -357,12 +357,24 @@ extension Config: Equatable {
         rhs.treate()
         switch (lhs, rhs) {
             case let (lhs as PlainConfig, rhs as PlainConfig):
+                var dflt_equal = true
+                if lhs.dfltVals.count == rhs.dfltVals.count {
+                    for (lk, lv) in lhs.dfltVals {
+                        if let rv = rhs.dfltVals[lk], "\(lv)" == "\(rv)" {
+                        } else {
+                            dflt_equal = false
+                            break
+                        }
+                    }
+                } else {
+                    dflt_equal = false
+                }
+
                 return lhs.pkAutoInc == rhs.pkAutoInc &&
                     lhs.columns === rhs.columns &&
                     lhs.types == rhs.types &&
                     lhs.primaries === rhs.primaries &&
-                    lhs.notnulls === rhs.notnulls &&
-                    lhs.defaultValues === rhs.defaultValues
+                    lhs.notnulls === rhs.notnulls && dflt_equal
 
             case let (lhs as FtsConfig, rhs as FtsConfig):
                 return lhs.module == rhs.module &&

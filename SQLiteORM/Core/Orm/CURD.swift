@@ -15,9 +15,9 @@ extension Orm {
     }
 
     fileprivate func _update(_ bindings: [String: Binding], type: Update = .insert, condition: Where = Where("")) -> Bool {
-        guard bindings.count > 0 else {
-            return false
-        }
+        guard bindings.count > 0 else { return false }
+        try? create()
+        
         var dic = bindings
         switch config {
             case let config as PlainConfig:
@@ -49,7 +49,7 @@ extension Orm {
                 sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
         }
         do {
-            try db.prepare(sql, values).run()
+            try db.prepare(sql, bind: values).run()
         } catch _ {
             return false
         }

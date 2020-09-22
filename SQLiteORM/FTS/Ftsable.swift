@@ -51,8 +51,8 @@ extension FtsConfig {
 // MARK: - orm
 
 extension Orm {
-    public convenience init(ftsable type: Ftsable.Type, db: Database = Database(.temporary), table: String = "", setup flag: Bool = true) {
+    public convenience init(ftsable type: Ftsable.Type, db: Database = Database(.temporary), table: String = "", setup: Setup = .create) {
         let config = FtsConfig(ftsable: type)
-        self.init(config: config, db: db, table: table, setup: flag)
+        self.init(config: config, db: db, table: table, setup: setup)
     }
 }

@@ -13,7 +13,7 @@ final class SQLiteORMTests: XCTestCase {
     fileprivate lazy var orm: Orm<Person> = {
         let config = PlainConfig(Person.self)
         config.primaries = ["id"]
-        let orm = Orm<Person>(config: config, db: db, table: "person", setup: true)
+        let orm = Orm<Person>(config: config, db: db, table: "person")
         return orm
     }()
 
@@ -38,7 +38,7 @@ final class SQLiteORMTests: XCTestCase {
         config.tokenizer = "sqliteorm"
         config.indexes = ["name", "intro"]
 
-        let orm = Orm<Person>(config: config, db: ftsDb, table: "person", setup: true)
+        let orm = Orm<Person>(config: config, db: ftsDb, table: "person")
         return orm
     }()
 

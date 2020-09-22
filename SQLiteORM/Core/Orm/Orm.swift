@@ -7,24 +7,22 @@
 
 import Foundation
 
-/// table inspection results
-public struct Inspection: OptionSet {
-    public let rawValue: UInt8
-    /// table exists
-    public static let exist = Inspection(rawValue: 1 << 0)
+fileprivate struct Inspection: OptionSet {
+    let rawValue: UInt8
 
-    /// table modified
-    public static let tableChanged = Inspection(rawValue: 1 << 1)
+    static let exist = Inspection(rawValue: 1 << 0)
+    static let tableChanged = Inspection(rawValue: 1 << 1)
+    static let indexChanged = Inspection(rawValue: 1 << 2)
 
-    /// index modified
-    public static let indexChanged = Inspection(rawValue: 1 << 2)
-
-    public init(rawValue: UInt8) {
-        self.rawValue = rawValue
-    }
+    static let all: Inspection = [.exist, .tableChanged, .indexChanged]
 }
 
 public final class Orm<T> {
+    /// table inspection results
+    public enum Setup {
+        case none, create, rebuild
+    }
+
     /// configuration
     public let config: Config
 
@@ -39,19 +37,32 @@ public final class Orm<T> {
 
     private var created = false
 
-    private var content_table: String? = nil
+    private var content_table: String?
 
-    private var content_rowid: String? = nil
+    private var content_rowid: String?
 
-    private weak var relative: Orm? = nil
+    private weak var relative: Orm?
 
     private var tableConfig: Config
+
+    private var _existingIndexes: [String]?
+    private var existingIndexes: [String] {
+        if _existingIndexes == nil {
+            let sql = "PRAGMA index_list = \(table.quoted);"
+            let indexes = db.query(sql)
+            _existingIndexes = indexes.map { ($0["name"] as? String) ?? "" }
+        }
+        return _existingIndexes!
+    }
 
     /// initialize orm
     ///
     /// - Parameters:
     ///   - flag: create table immediately? in some sences, table creation  may be delayed
-    public init(config: Config, db: Database = Database(.temporary), table: String = "", setup flag: Bool = true) {
+    public init(config: Config,
+                db: Database = Database(.temporary),
+                table: String = "",
+                setup: Setup = .create) {
         assert(config.type != nil && config.columns.count > 0, "invalid config")
 
         self.config = config
@@ -72,8 +83,10 @@ public final class Orm<T> {
             self.table = info?.name ?? ""
         }
         tableConfig = Config.factory(self.table, db: db)
-        if flag {
-            try? setup()
+        switch setup {
+            case .create: try? create()
+            case .rebuild: try? rebuild()
+            default: break
         }
     }
 
@@ -82,12 +95,14 @@ public final class Orm<T> {
                             table: String = "",
                             content_table: String,
                             content_rowid: String,
-                            setup flag: Bool = true) {
-        self.init(config: config, db: db, table: table, setup: false)
+                            setup: Setup = .none) {
+        self.init(config: config, db: db, table: table, setup: setup)
         self.content_table = content_table
         self.content_rowid = content_rowid
-        if flag {
-            try? setup()
+        switch setup {
+            case .create: try? create()
+            case .rebuild: try? rebuild()
+            default: break
         }
     }
 
@@ -113,7 +128,7 @@ public final class Orm<T> {
         }
 
         let fts_table = "fts_" + orm.table
-        self.init(config: config, db: orm.db, table: fts_table, setup: false)
+        self.init(config: config, db: orm.db, table: fts_table, setup: .create)
         content_table = orm.table
         self.content_rowid = content_rowid
 
@@ -139,8 +154,8 @@ public final class Orm<T> {
             + "END;"
 
         do {
-            if !orm.created { try orm.setup() }
-            try setup()
+            try orm.create()
+            try create()
             try orm.db.run(ins_trigger)
             try orm.db.run(del_trigger)
             try orm.db.run(upd_trigger)
@@ -150,20 +165,28 @@ public final class Orm<T> {
     }
 
     /// table creation
-    public func setup() throws {
+    public func create() throws {
+        guard created == false else { return }
+        config.treate()
+        try createTable()
+        created = true
+        if config.indexes.count == 0 || existingIndexes.contains("orm_index_\(table)") { return }
+        try createIndex()
+    }
+
+    public func rebuild() throws {
+        created = false
         let ins = inspect()
         try setup(with: ins)
     }
 
     /// inspect table
-    public func inspect() -> Inspection {
+    fileprivate func inspect() -> Inspection {
         var ins: Inspection = .init()
         let exist = db.exists(table)
-        guard exist else {
-            return ins
-        }
-        ins.insert(.exist)
+        guard exist else { return ins }
 
+        ins.insert(.exist)
         switch (tableConfig, config) {
             case let (tableConfig as PlainConfig, config as PlainConfig):
                 if tableConfig != config {
@@ -183,9 +206,7 @@ public final class Orm<T> {
     }
 
     /// create table with inspection
-    public func setup(with options: Inspection) throws {
-        guard !created else { return }
-
+    fileprivate func setup(with options: Inspection) throws {
         let exist = options.contains(.exist)
         let changed = options.contains(.tableChanged)
         let indexChanged = options.contains(.indexChanged)
@@ -199,14 +220,15 @@ public final class Orm<T> {
         if !exist || changed {
             try createTable()
         }
+        created = true
         if exist && changed && general {
             // MARK: ** FTS table, please migrate data manually **
+
             try migrationData(from: tempTable)
         }
         if general && (indexChanged || !exist) {
             try rebuildIndex()
         }
-        created = true
     }
 
     /// rename table
@@ -216,7 +238,8 @@ public final class Orm<T> {
     }
 
     /// create table
-    public func createTable() throws {
+    func createTable() throws {
+        if db.exists(table) { return }
         var sql = ""
         switch config {
             case let cfg as PlainConfig:
@@ -228,6 +251,15 @@ public final class Orm<T> {
         try db.run(sql)
     }
 
+    /// create index
+    func createIndex() throws {
+        guard config.indexes.count > 0 else { return }
+        let indexName = "orm_index_\(table)"
+        let indexesString = config.indexes.joined(separator: ",")
+        let createSQL = "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));"
+        try db.run(createSQL)
+    }
+
     /// migrating data from old table to new table
     func migrationData(from tempTable: String) throws {
         let columnsSet = NSMutableOrderedSet(array: config.columns)
@@ -235,44 +267,26 @@ public final class Orm<T> {
         let columns = columnsSet.array as! [String]
 
         let fields = columns.joined(separator: ",")
-        guard fields.count > 0 else {
-            return
-        }
+        guard fields.count > 0 else { return }
         let sql = "INSERT INTO \(table.quoted) (\(fields)) SELECT \(fields) FROM \(tempTable.quoted)"
         let drop = "DROP TABLE IF EXISTS \(tempTable.quoted)"
         try db.run(sql)
         try db.run(drop)
     }
 
+    /// drop indexes
+    func dropIndexes() throws {
+        let indexes = existingIndexes.filter { !$0.hasPrefix("sqlite_autoindex_") }
+        guard indexes.count > 0 else { return }
+        let sql = indexes.reduce("") { $0 + "DROP INDEX IF EXISTS \($1);" }
+        try db.run(sql)
+    }
+
     /// rebuild indexes
     func rebuildIndex() throws {
-        guard config is PlainConfig else {
-            return
-        }
-        // delete old indexes
-        var dropIdxSQL = ""
-        let indexesSQL = "SELECT name FROM sqlite_master WHERE type ='index' and tbl_name = \(table.quoted)"
-        let array = db.query(indexesSQL)
-        for dic in array {
-            let name = (dic["name"] as? String) ?? ""
-            if !name.hasPrefix("sqlite_autoindex_") {
-                dropIdxSQL += "DROP INDEX IF EXISTS \(name.quoted);"
-            }
-        }
-        guard config.indexes.count > 0 else {
-            return
-        }
-        // create new indexes
-        let indexName = "orm_index_\(table)"
-        let indexesString = config.indexes.joined(separator: ",")
-        let createSQL = indexesSQL.count > 0 ? "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));" : ""
-        if indexesSQL.count > 0 {
-            if dropIdxSQL.count > 0 {
-                try db.run(dropIdxSQL)
-            }
-            if createSQL.count > 0 {
-                try db.run(createSQL)
-            }
-        }
+        guard config is PlainConfig, config.indexes.count > 0 else { return }
+        try dropIndexes()
+        try createIndex()
+        _existingIndexes = nil
     }
 }

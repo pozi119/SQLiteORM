@@ -42,30 +42,30 @@ public final class Database {
     public var removeWhenNotADB: Bool = false
 
     /// default open flags
-    private let _essential: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
-    private var _flags: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
+    private let _essential: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
+    private var _flags: Int32 = SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE
 
     fileprivate var _handle: OpaquePointer?
     fileprivate var encrypt: String = ""
     fileprivate var flags: Int32 {
-        get {
-            return _flags
-        }
-        set {
-            _flags = newValue | _essential
-        }
+        get { return _flags }
+        set { _flags = newValue | _essential }
     }
 
     private static var _caches = [String: Cache<String, [[String: Binding]]>]()
 
+    fileprivate var needClearCache = false
     /// query results cache
     lazy var cache: Cache<String, [[String: Binding]]> = {
-        if let _cache = Database._caches[path] {
-            return _cache
+        var _cache = Database._caches[path]
+        if _cache == nil {
+            _cache = Cache<String, [[String: Binding]]>()
+            Database._caches[path] = _cache
         }
-        let _cache = Cache<String, [[String: Binding]]>()
-        Database._caches[path] = _cache
-        return _cache
+        if self.needClearCache {
+            _cache!.removeAllObjects()
+        }
+        return _cache!
     }()
 
     /// initialize database
@@ -87,9 +87,13 @@ public final class Database {
     /// open database
     public func open() throws {
         guard _handle == nil else { return }
-
+        // open
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
-        
+        // hook
+        sqlite3_update_hook(_handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+        sqlite3_commit_hook(_handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+
+        // encrypt
         #if SQLITE_HAS_CODEC
             if encrypt.count > 0 {
                 try cipherDefaultOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
@@ -97,12 +101,10 @@ public final class Database {
                 try cipherOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
             }
         #endif
-        
+        // normal options
         try normalOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
-        
-        sqlite3_update_hook(_handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
-        sqlite3_commit_hook(_handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
-        
+
+        // register fts tokenizers
         #if SQLITEORM_FTS
             try registerEnumerators(_handle)
         #endif
@@ -113,9 +115,8 @@ public final class Database {
 
     /// close database
     public func close() {
-        if _handle != nil {
-            sqlite3_close(_handle)
-        }
+        guard _handle != nil else { return }
+        sqlite3_close(_handle)
         _handle = nil
     }
 
@@ -212,26 +213,21 @@ public final class Database {
 
     // MARK: - Prepare
 
-    /// prepare sql statement
-    public func prepare(_ statement: String) throws -> Statement {
-        return try Statement(self, statement)
-    }
-
     /// prepare sql statement, with values
-    public func prepare(_ statement: String, _ bindings: [Binding]) throws -> Statement {
-        return try prepare(statement).bind(bindings)
+    public func prepare(_ statement: String, bind bindings: [Binding] = []) throws -> Statement {
+        return try Statement(self, statement).bind(bindings)
     }
 
     // MARK: - Run
 
     /// query  with native sql statement
-    public func query(_ statement: String) -> [[String: Binding]] {
-        return (try? prepare(statement).query()) ?? []
+    public func query(_ statement: String, bind bindings: [Binding] = []) -> [[String: Binding]] {
+        return (try? prepare(statement, bind: bindings).query()) ?? []
     }
 
     /// execute native sql query
-    public func query<T: Codable>(_ statement: String, type: T.Type) -> [T] {
-        let keyValues = query(statement)
+    public func query<T: Codable>(_ statement: String, type: T.Type, bind bindings: [Binding] = []) -> [T] {
+        let keyValues = query(statement, bind: bindings)
         do {
             let array = try OrmDecoder().decode([T].self, from: keyValues)
             return array
@@ -242,8 +238,8 @@ public final class Database {
     }
 
     /// execute native sql query
-    public func query<T>(_ statement: String, type: T.Type) -> [T] {
-        let keyValues = query(statement)
+    public func query<T>(_ statement: String, type: T.Type, bind bindings: [Binding] = []) -> [T] {
+        let keyValues = query(statement, bind: bindings)
         do {
             let array = try AnyDecoder.decode(T.self, from: keyValues)
             return array
@@ -253,24 +249,14 @@ public final class Database {
         }
     }
 
-    /// execute native sql statement
-    public func run(_ statement: String) throws {
-        return try prepare(statement).run()
-    }
-
     /// execute native sql statement, with values
-    public func run(_ statement: String, _ bindings: [Binding]) throws {
-        return try prepare(statement).run(bindings)
+    public func run(_ statement: String, bind bindings: [Binding] = []) throws {
+        return try prepare(statement, bind: bindings).run(bindings)
     }
 
     // MARK: - Scalar
-
-    public func scalar(_ statement: String) throws -> Binding? {
-        return try prepare(statement).scalar()
-    }
-
-    public func scalar(_ statement: String, _ bindings: [Binding]) throws -> Binding? {
-        return try prepare(statement).scalar(bindings)
+    public func scalar(_ statement: String, bind bindings: [Binding] = []) throws -> Binding? {
+        return try prepare(statement, bind: bindings).scalar(bindings)
     }
 
     // MARK: - Transactions
@@ -282,8 +268,8 @@ public final class Database {
     }
 
     /// sqlite transaction
-    public func transaction(_ mode: TransactionMode = .deferred, block: () throws -> Void) throws {
-        try transaction("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+    public func transaction(_ mode: TransactionMode = .immediate, block: () throws -> Void) throws {
+        try transaction("BEGIN \(mode.rawValue)", block, "COMMIT", or: "ROLLBACK")
     }
 
     /// sqlite checkpoint
@@ -315,11 +301,14 @@ public final class Database {
 
     /// check if the table exists
     public func exists(_ table: String) -> Bool {
-        let value = ((try? scalar("SELECT count(*) as 'count' FROM sqlite_master WHERE type ='table' and tbl_name = \(table.quoted)")) as Binding??)
-        guard let count = value as? Int64 else {
-            return false
-        }
-        return count > 0
+        let sql = "SELECT 1 FROM \(table.quoted) LIMIT 0"
+        var pStmt: OpaquePointer?
+        var rc = sqlite3_prepare(handle, sql, -1, &pStmt, nil)
+        guard rc == SQLITE_OK else { return false }
+        rc = sqlite3_step(pStmt!)
+        sqlite3_finalize(pStmt!)
+        if rc == SQLITE_DONE { rc = SQLITE_OK }
+        return rc == SQLITE_OK
     }
 
     /// fts table or not
@@ -354,13 +343,21 @@ public final class Database {
     public typealias Trace = (UInt32, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Int32
     public var trace: Trace? {
         didSet {
-            if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
+            #if SQLITE_HAS_CODEC
                 if trace != nil {
                     sqlite3_trace_v2(handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                 } else {
                     sqlite3_trace_v2(handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                 }
-            }
+            #else
+                if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
+                    if trace != nil {
+                        sqlite3_trace_v2(handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                    } else {
+                        sqlite3_trace_v2(handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                    }
+                }
+            #endif
         }
     }
 
@@ -404,34 +401,40 @@ fileprivate typealias cRollbackHook = @convention(c) (UnsafeMutableRawPointer?) 
 fileprivate typealias cUpdateHook = @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<Int8>?, UnsafePointer<Int8>?, sqlite3_int64) -> Void
 
 fileprivate let global_busy: cBusyHandler = { (pCtx, times) -> Int32 in
-    let db: Database? = unsafeBitCast(pCtx, to: Database.self)
-    guard db != nil && db?.busyHandler != nil else { return 0 }
-    return db!.busyHandler!(times)
+    guard let ctx = pCtx else { return SQLITE_OK }
+    let db = unsafeBitCast(ctx, to: Database.self)
+    guard let busy = db.busyHandler else { return SQLITE_OK }
+    return busy(times)
 }
 
 fileprivate let global_trace: cTraceHook = { (mask, pCtx, p, x) -> Int32 in
-    let db: Database? = unsafeBitCast(pCtx, to: Database.self)
-    guard db != nil && db?.trace != nil else { return 0 }
-    return db!.trace!(mask, p, x)
+    guard let ctx = pCtx else { return SQLITE_OK }
+    let db = unsafeBitCast(ctx, to: Database.self)
+    guard let trace = db.trace else { return SQLITE_OK }
+    return trace(mask, p, x)
 }
 
-fileprivate let global_update: cUpdateHook = { (pCtx, _, db, _, _) -> Void in
-    let db: Database? = unsafeBitCast(pCtx, to: Database.self)
-
-    guard db != nil else { return }
-    db!.cache.removeAllObjects()
+fileprivate let global_update: cUpdateHook = { (pCtx, op, dbname, table, rowid) -> Void in
+    guard let ctx = pCtx else { return }
+    let db = unsafeBitCast(ctx, to: Database.self)
+    db.needClearCache = true
+    guard let update = db.updateHook else { return }
+    update(op, dbname!, table!, rowid)
 }
 
 fileprivate let global_commit: cCommitHook = { (pCtx) -> Int32 in
-    let db: Database? = unsafeBitCast(pCtx, to: Database.self)
-    guard db != nil else { return 0 }
-    db!.cache.removeAllObjects()
-    return 0
+    guard let ctx = pCtx else { return SQLITE_OK }
+    let db = unsafeBitCast(ctx, to: Database.self)
+    db.needClearCache = true
+    guard let commit = db.commitHook else { return SQLITE_OK }
+    return commit()
 }
 
 fileprivate let global_rollback: cRollbackHook = { (pCtx) -> Void in
-    let db: Database? = unsafeBitCast(pCtx, to: Database.self)
-    guard db != nil else { return }
+    guard let ctx = pCtx else { return }
+    let db = unsafeBitCast(ctx, to: Database.self)
+    guard let rollback = db.rollbackHook else { return }
+    rollback()
 }
 
 extension Database: CustomStringConvertible {

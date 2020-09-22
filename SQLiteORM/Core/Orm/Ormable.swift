@@ -10,28 +10,28 @@ import Foundation
 public protocol Ormable: Codable {
     /// primary keys
     static var primaries: [String] { get }
-    
+
     /// white list
     static var whites: [String] { get }
-    
+
     /// black list
     static var blacks: [String] { get }
-    
+
     /// index fields
     static var indexes: [String] { get }
-    
+
     /// not null fileds
     static var notnulls: [String] { get }
-    
+
     /// unique fileds
     static var uniques: [String] { get }
-    
+
     /// default value corresponding to the field
-    static var defaultValues: [String: Binding] { get }
+    static var dfltVals: [String: Binding] { get }
 
     /// record creation / modification time or not
     static var logAt: Bool { get }
-    
+
     /// is it an auto increment primary key, only valid if the number of primary keys is 1
     static var pkAutoInc: Bool { get }
 }
@@ -45,7 +45,7 @@ public extension Ormable {
     static var indexes: [String] { [] }
     static var notnulls: [String] { [] }
     static var uniques: [String] { [] }
-    static var defaultValues: [String: Binding] { [:] }
+    static var dfltVals: [String: Binding] { [:] }
 
     static var logAt: Bool { false }
     static var pkAutoInc: Bool { false }
@@ -62,7 +62,7 @@ extension PlainConfig {
         indexes = type.indexes
         notnulls = type.notnulls
         uniques = type.uniques
-        defaultValues = type.defaultValues
+        dfltVals = type.dfltVals
         logAt = type.logAt
         pkAutoInc = type.pkAutoInc
     }
@@ -71,8 +71,8 @@ extension PlainConfig {
 // MARK: - orm
 
 extension Orm {
-    public convenience init(ormable type: Ormable.Type, db: Database = Database(.temporary), table: String = "", setup flag: Bool = true) {
+    public convenience init(ormable type: Ormable.Type, db: Database = Database(.temporary), table: String = "", setup: Setup = .create) {
         let config = PlainConfig(ormable: type)
-        self.init(config: config, db: db, table: table, setup: flag)
+        self.init(config: config, db: db, table: table, setup: setup)
     }
 }
