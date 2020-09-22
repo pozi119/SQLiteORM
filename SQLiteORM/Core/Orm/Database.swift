@@ -255,6 +255,7 @@ public final class Database {
     }
 
     // MARK: - Scalar
+
     public func scalar(_ statement: String, bind bindings: [Binding] = []) throws -> Binding? {
         return try prepare(statement, bind: bindings).scalar(bindings)
     }
@@ -265,6 +266,23 @@ public final class Database {
         case deferred = "DEFERRED"
         case immediate = "IMMEDIATE"
         case exclusive = "EXCLUSIVE"
+    }
+
+    private var inTransaction = false
+
+    public func begin(_ mode: TransactionMode = .immediate) throws {
+        try prepare("BEGIN \(mode.rawValue)").run()
+        inTransaction = true
+    }
+
+    public func commit() throws {
+        try prepare("COMMIT").run()
+        inTransaction = false
+    }
+
+    public func rollback() throws {
+        try prepare("ROLLBACK").run()
+        inTransaction = false
     }
 
     /// sqlite transaction
@@ -282,12 +300,19 @@ public final class Database {
 
     /// sqlite transaction
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
+        if inTransaction {
+            try block()
+            return
+        }
         try prepare(begin).run()
+        inTransaction = true
         do {
             try block()
             try prepare(commit).run()
+            inTransaction = false
         } catch {
             try prepare(rollback).run()
+            inTransaction = false
             throw error
         }
     }
