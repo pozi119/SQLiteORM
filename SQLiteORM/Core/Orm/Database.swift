@@ -276,13 +276,15 @@ public final class Database {
     }
 
     public func commit() throws {
+        guard inTransaction else { return }
+        defer { inTransaction = false }
         try prepare("COMMIT").run()
-        inTransaction = false
     }
 
     public func rollback() throws {
+        guard inTransaction else { return }
+        defer { inTransaction = false }
         try prepare("ROLLBACK").run()
-        inTransaction = false
     }
 
     /// sqlite transaction
@@ -300,19 +302,23 @@ public final class Database {
 
     /// sqlite transaction
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
+        defer { inTransaction = false }
         if inTransaction {
             try block()
             return
         }
-        try prepare(begin).run()
+        do {
+            try prepare(begin).run()
+        } catch {
+            try block()
+            return
+        }
         inTransaction = true
         do {
             try block()
             try prepare(commit).run()
-            inTransaction = false
         } catch {
-            try prepare(rollback).run()
-            inTransaction = false
+            try? prepare(rollback).run()
             throw error
         }
     }
