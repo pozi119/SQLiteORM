@@ -47,10 +47,26 @@ struct Fts3Cursor {
 func fts3_create(_ argc: Int32,
                  _ argv: UnsafeMutablePointer<UnsafePointer<Int8>?>?,
                  _ ppTokenizer: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
+    let tok = UnsafeMutablePointer<Fts3Tokenizer>.allocate(capacity: 1)
+    if let azArg = argv {
+        for i in 0 ..< Int(argc) {
+            if let cstr = azArg[i] {
+                let mask = UInt64(atoll(cstr))
+                if mask > 0 {
+                    tok.pointee.mask = mask
+                } else {
+                    tok.pointee.locale = String(cString: cstr)
+                }
+            }
+        }
+    }
+    ppTokenizer?.pointee = OpaquePointer(tok)
     return SQLITE_OK
 }
 
 func fts3_destroy(_ pTokenizer: OpaquePointer?) -> Int32 {
+    let pointer = UnsafeMutableRawPointer(pTokenizer)
+    pointer?.deallocate()
     return SQLITE_OK
 }
 
@@ -58,10 +74,30 @@ func fts3_open(_ pTokenizer: OpaquePointer?,
                _ pInput: UnsafePointer<Int8>?,
                _ nBytes: Int32,
                _ ppCursor: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
+    guard let xTokenizer = pTokenizer, let xInput = UnsafePointer<CChar>.init(pInput) else { return SQLITE_ERROR }
+    let cursor = UnsafeMutablePointer<Fts3Cursor>.allocate(capacity: 1)
+    let xTok = UnsafeMutablePointer<Fts3Tokenizer>.init(xTokenizer)
+    let tok = xTok.pointee
+    guard let pModule = UnsafeMutablePointer<Fts3TokenizeModule>.init(tok.base) else { return SQLITE_ERROR }
+    let module = pModule.pointee
+    guard let pEnum = module.xEnumerator else { return SQLITE_ERROR }
+    let enumerator = pEnum.assumingMemoryBound(to: Enumerator.Type.self).pointee
+
+    let text = String(cString: xInput)
+    let array = enumerator.enumerate(text, mask: TokenMask(rawValue: tok.mask))
+
+    cursor.pointee.pInput = pInput
+    cursor.pointee.nBytes = nBytes
+    cursor.pointee.iToken = 0
+    cursor.pointee.nToken = Int32(array.count)
+    cursor.pointee.tokens = array
+    ppCursor?.pointee = OpaquePointer(cursor)
     return SQLITE_OK
 }
 
 func fts3_close(_ pCursor: OpaquePointer?) -> Int32 {
+    let pointer = UnsafeMutableRawPointer(pCursor)
+    pointer?.deallocate()
     return SQLITE_OK
 }
 
@@ -71,6 +107,17 @@ func fts3_next(_ pCursor: OpaquePointer?,
                _ piStartOffset: UnsafeMutablePointer<Int32>?,
                _ piEndOffset: UnsafeMutablePointer<Int32>?,
                _ piPosition: UnsafeMutablePointer<Int32>?) -> Int32 {
+    guard let cursor = UnsafeMutablePointer<Fts3Cursor>(pCursor) else { return SQLITE_ERROR }
+    let tokens = cursor.pointee.tokens
+    let iToken = Int(cursor.pointee.iToken)
+    guard tokens.count > 0 && iToken < tokens.count else { return SQLITE_DONE }
+    let token = tokens[iToken]
+    ppToken?.pointee = (token.word as NSString).utf8String
+    pnBytes?.pointee = Int32(token.len)
+    piStartOffset?.pointee = Int32(token.start)
+    piEndOffset?.pointee = Int32(token.end)
+    piPosition?.pointee = Int32(iToken)
+    cursor.pointee.iToken += 1
     return SQLITE_OK
 }
 
@@ -164,6 +211,8 @@ extension Database {
     /// - Parameters:
     ///   - type: tokenize method
     func registerEnumerators(_ db: OpaquePointer!) throws {
+        guard enumerators.count > 0 else { return }
+
         let pApi = UnsafeMutablePointer<fts5_api>(mutating: try get_fts5_api(db))
         for (name, enumerator) in enumerators {
             let pointer = UnsafeMutablePointer<Enumerator.Type>.allocate(capacity: 1)
