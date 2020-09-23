@@ -140,4 +140,13 @@ extension Select {
             return []
         }
     }
+
+    public func allItems<S>(_ orm: Orm<S>) -> [S] {
+        return allItems(orm.db, type: S.self)
+    }
+
+    public func allValues(_ db: Database, field: String) -> [Binding] {
+        let keyValues = allKeyValues(db)
+        return keyValues.map { $0[field] ?? "" }
+    }
 }

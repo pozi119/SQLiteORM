@@ -31,6 +31,9 @@ public final class Orm<T> {
 
     /// table name
     public let table: String
+    
+    /// type
+    public let type: T.Type
 
     /// property corresponding to the field
     public let properties: [String: PropertyInfo]
@@ -63,10 +66,11 @@ public final class Orm<T> {
                 db: Database = Database(.temporary),
                 table: String = "",
                 setup: Setup = .create) {
-        assert(config.type != nil && config.columns.count > 0, "invalid config")
+        assert(config.type != nil && config.type! == T.self && config.columns.count > 0, "Invalid config!")
 
         self.config = config
         self.db = db
+        self.type = T.self
 
         var props = [String: PropertyInfo]()
         let info = try? typeInfo(of: config.type!)
@@ -253,9 +257,9 @@ public final class Orm<T> {
 
     /// create index
     func createIndex() throws {
-        guard config.indexes.count > 0 else { return }
+        guard let cfg = config as? PlainConfig, cfg.indexes.count > 0 else { return }
         let indexName = "orm_index_\(table)"
-        let indexesString = config.indexes.joined(separator: ",")
+        let indexesString = cfg.indexes.joined(separator: ",")
         let createSQL = "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));"
         try db.run(createSQL)
     }

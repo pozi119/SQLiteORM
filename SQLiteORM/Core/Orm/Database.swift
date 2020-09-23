@@ -55,18 +55,23 @@ public final class Database {
     private static var _caches = [String: Cache<String, [[String: Binding]]>]()
 
     fileprivate var needClearCache = false
-    /// query results cache
-    lazy var cache: Cache<String, [[String: Binding]]> = {
-        var _cache = Database._caches[path]
-        if _cache == nil {
-            _cache = Cache<String, [[String: Binding]]>()
-            Database._caches[path] = _cache
+
+    private lazy var _cache: Cache<String, [[String: Binding]]> = {
+        var c = Database._caches[path]
+        if c == nil {
+            c = Cache<String, [[String: Binding]]>()
+            Database._caches[path] = c
         }
-        if self.needClearCache {
-            _cache!.removeAllObjects()
-        }
-        return _cache!
+        return c!
     }()
+
+    /// query results cache
+    var cache: Cache<String, [[String: Binding]]> {
+        if needClearCache {
+            _cache.removeAllObjects()
+        }
+        return _cache
+    }
 
     /// initialize database
     public required init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {
