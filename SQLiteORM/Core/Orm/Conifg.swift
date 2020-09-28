@@ -11,6 +11,10 @@ public class Config {
     public static let createAt: String = "createAt"
     public static let updateAt: String = "updateAt"
 
+    fileprivate var allColumns: [String] = []
+
+    fileprivate var allTypes: [String: String] = [:]
+
     /// type of struct / class that generates config. Nil for creating from table
     public var type: Any.Type?
 
@@ -54,6 +58,9 @@ public class Config {
         }
         self.columns = columns
         self.types = types
+
+        allColumns = columns
+        allTypes = types
     }
 
     /// initilalize form table
@@ -76,7 +83,7 @@ public class Config {
         whites = Array(Set(whites))
         blacks = Array(Set(blacks))
 
-        let orderedSet = NSMutableOrderedSet(array: columns)
+        let orderedSet = NSMutableOrderedSet(array: allColumns)
         if whites.count > 0 {
             orderedSet.intersectSet(Set(whites))
         } else if blacks.count > 0 {
@@ -88,13 +95,15 @@ public class Config {
         indexes = orderedSet.array as! [String]
     }
 
-    public func createSQL(with table: String) -> String {
+    func sqlToCreate(table: String) -> String {
         return ""
     }
 }
 
 /// general configuration
 public final class PlainConfig: Config {
+    fileprivate var allDfltVals: [String: Binding] = [:]
+
     /// record creation / modification time or not
     public var logAt: Bool = false
 
@@ -184,6 +193,10 @@ public final class PlainConfig: Config {
 
         self.types = types
         self.dfltVals = dfltVals
+
+        allColumns = columns
+        allTypes = types
+        allDfltVals = dfltVals
     }
 
     /// pretreatement
@@ -201,6 +214,8 @@ public final class PlainConfig: Config {
         indexesSet.minusSet(Set(uniques))
         indexesSet.minusSet(Set(primaries))
         indexes = indexesSet.array as! [String]
+        types = allTypes.filter { columns.contains($0.key) }
+        dfltVals = allDfltVals.filter { columns.contains($0.key) }
     }
 
     /// compare index configuration
@@ -211,7 +226,7 @@ public final class PlainConfig: Config {
 
     /// generate create sql for field
     /// - Returns: sql caluse
-    func createSQL(of column: String) -> String {
+    func sqlToCreate(column: String) -> String {
         let typeString = types[column] ?? ""
         var pkString = ""
         if primaries.count == 1 && primaries.contains(column) {
@@ -223,11 +238,15 @@ public final class PlainConfig: Config {
         let dfltString = defaultValue != nil ? " DEFAULT(\(String(describing: defaultValue)))" : ""
         return "\(column.quoted) " + typeString + pkString + nullString + uniqueString + dfltString
     }
+    
+    func sqlToAlert(column: String, table: String) -> String {
+        return "ALTER TABLE \(table.quoted) ADD COLUMN " + sqlToCreate(column: column)
+    }
 
     /// generate create sql for table
-    override public func createSQL(with table: String) -> String {
+    override public func sqlToCreate(table: String) -> String {
         treate()
-        var array = columns.map { createSQL(of: $0) }
+        var array = columns.map { sqlToCreate(column: $0) }
         if primaries.count > 1 {
             array.append("PRIMARY KEY (" + primaries.joined(separator: ",") + ")")
         }
@@ -312,10 +331,12 @@ public final class FtsConfig: Config {
         self.tokenizer = tokenizer
         self.columns = columns
         self.indexes = indexes
+
+        allColumns = columns
     }
 
     /// generate sql for create fts table
-    public func createSQL(with table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
+    public func sqlToCreate(table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
         if indexes.count == 0 {
             indexes = columns
         }
@@ -357,24 +378,16 @@ extension Config: Equatable {
         rhs.treate()
         switch (lhs, rhs) {
             case let (lhs as PlainConfig, rhs as PlainConfig):
-                var dflt_equal = true
-                if lhs.dfltVals.count == rhs.dfltVals.count {
-                    for (lk, lv) in lhs.dfltVals {
-                        if let rv = rhs.dfltVals[lk], "\(lv)" == "\(rv)" {
-                        } else {
-                            dflt_equal = false
-                            break
-                        }
-                    }
-                } else {
-                    dflt_equal = false
-                }
-
+                var ldflt = [String: String]()
+                var rdflt = [String: String]()
+                lhs.dfltVals.forEach { ldflt[$0.key] = String(describing: $0.value) }
+                rhs.dfltVals.forEach { rdflt[$0.key] = String(describing: $0.value) }
                 return lhs.pkAutoInc == rhs.pkAutoInc &&
                     lhs.columns === rhs.columns &&
                     lhs.types == rhs.types &&
                     lhs.primaries === rhs.primaries &&
-                    lhs.notnulls === rhs.notnulls && dflt_equal
+                    lhs.notnulls === rhs.notnulls &&
+                    ldflt == rdflt
 
             case let (lhs as FtsConfig, rhs as FtsConfig):
                 return lhs.module == rhs.module &&

@@ -95,8 +95,13 @@ public final class Database {
         // open
         try check(sqlite3_open_v2(path, &_handle, flags, nil))
         // hook
-        sqlite3_update_hook(_handle, global_update, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
-        sqlite3_commit_hook(_handle, global_commit, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+        let context = unsafeBitCast(self, to: UnsafeMutableRawPointer.self)
+        sqlite3_update_hook(_handle, global_update, context)
+        sqlite3_commit_hook(_handle, global_commit, context)
+        if busyTimeout > 0 { sqlite3_busy_timeout(_handle, Int32(busyTimeout * 1000)) }
+        if busyHandler != nil { sqlite3_busy_handler(_handle, global_busy, context) }
+        if traceHook != nil { sqlite3_trace_v2(_handle, 0, global_trace, context) }
+        if rollbackHook != nil { sqlite3_rollback_hook(_handle, global_rollback, context) }
 
         // encrypt
         #if SQLITE_HAS_CODEC
@@ -361,36 +366,39 @@ public final class Database {
 
     public var busyTimeout: Double = 0 {
         didSet {
-            sqlite3_busy_timeout(handle, Int32(busyTimeout * 1000))
+            guard _handle != nil else { return }
+            sqlite3_busy_timeout(_handle, Int32(busyTimeout * 1000))
         }
     }
 
     public typealias BusyHandler = (Int32) -> Int32
     public var busyHandler: BusyHandler? {
         didSet {
+            guard _handle != nil else { return }
             if busyHandler != nil {
-                sqlite3_busy_handler(handle, global_busy, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                sqlite3_busy_handler(_handle, global_busy, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
             } else {
-                sqlite3_busy_handler(handle, nil, nil)
+                sqlite3_busy_handler(_handle, nil, nil)
             }
         }
     }
 
-    public typealias Trace = (UInt32, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Int32
-    public var trace: Trace? {
+    public typealias TraceHook = (UInt32, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Int32
+    public var traceHook: TraceHook? {
         didSet {
+            guard _handle != nil else { return }
             #if SQLITE_HAS_CODEC
-                if trace != nil {
-                    sqlite3_trace_v2(handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                if traceHook != nil {
+                    sqlite3_trace_v2(_handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                 } else {
-                    sqlite3_trace_v2(handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                    sqlite3_trace_v2(_handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                 }
             #else
                 if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
                     if trace != nil {
-                        sqlite3_trace_v2(handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                        sqlite3_trace_v2(_handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                     } else {
-                        sqlite3_trace_v2(handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+                        sqlite3_trace_v2(_handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                     }
                 }
             #endif
@@ -406,10 +414,11 @@ public final class Database {
     public typealias RollbackHook = () -> Void
     public var rollbackHook: RollbackHook? {
         didSet {
-            if busyHandler != nil {
-                sqlite3_rollback_hook(handle, global_rollback, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
+            guard _handle != nil else { return }
+            if rollbackHook != nil {
+                sqlite3_rollback_hook(_handle, global_rollback, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
             } else {
-                sqlite3_rollback_hook(handle, nil, nil)
+                sqlite3_rollback_hook(_handle, nil, nil)
             }
         }
     }
@@ -427,9 +436,24 @@ public final class Database {
 
         throw error
     }
+
+    // MARK: - Utils
+
+    /// migrating data from old table to new table
+    public func migrating(_ columns: [String], from fromTable: String, to toTable: String, drop: Bool = false) throws {
+        guard columns.count > 0 else { return }
+        let fields = columns.joined(separator: ",")
+        let sql = "INSERT INTO \(toTable.quoted) (\(fields)) SELECT \(fields) FROM \(toTable.quoted)"
+        try run(sql)
+        if drop {
+            let dropSQL = "DROP TABLE IF EXISTS \(fromTable.quoted)"
+            try run(dropSQL)
+        }
+    }
 }
 
-// MAKR: - Hook
+// MARK: - Hook
+
 fileprivate typealias cBusyHandler = @convention(c) (UnsafeMutableRawPointer?, Int32) -> Int32
 fileprivate typealias cTraceHook = @convention(c) (UInt32, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?, UnsafeMutableRawPointer?) -> Int32
 fileprivate typealias cCommitHook = @convention(c) (UnsafeMutableRawPointer?) -> Int32
@@ -446,7 +470,7 @@ fileprivate let global_busy: cBusyHandler = { (pCtx, times) -> Int32 in
 fileprivate let global_trace: cTraceHook = { (mask, pCtx, p, x) -> Int32 in
     guard let ctx = pCtx else { return SQLITE_OK }
     let db = unsafeBitCast(ctx, to: Database.self)
-    guard let trace = db.trace else { return SQLITE_OK }
+    guard let trace = db.traceHook else { return SQLITE_OK }
     return trace(mask, p, x)
 }
 

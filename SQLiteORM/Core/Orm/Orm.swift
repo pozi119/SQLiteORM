@@ -7,16 +7,6 @@
 
 import Foundation
 
-fileprivate struct Inspection: OptionSet {
-    let rawValue: UInt8
-
-    static let exist = Inspection(rawValue: 1 << 0)
-    static let tableChanged = Inspection(rawValue: 1 << 1)
-    static let indexChanged = Inspection(rawValue: 1 << 2)
-
-    static let all: Inspection = [.exist, .tableChanged, .indexChanged]
-}
-
 public final class Orm<T> {
     /// table inspection results
     public enum Setup {
@@ -31,7 +21,7 @@ public final class Orm<T> {
 
     /// table name
     public let table: String
-    
+
     /// type
     public let type: T.Type
 
@@ -45,8 +35,6 @@ public final class Orm<T> {
     private var content_rowid: String?
 
     private weak var relative: Orm?
-
-    private var tableConfig: Config
 
     private var _existingIndexes: [String]?
     private var existingIndexes: [String] {
@@ -70,7 +58,7 @@ public final class Orm<T> {
 
         self.config = config
         self.db = db
-        self.type = T.self
+        type = T.self
 
         var props = [String: PropertyInfo]()
         let info = try? typeInfo(of: config.type!)
@@ -86,7 +74,6 @@ public final class Orm<T> {
         } else {
             self.table = info?.name ?? ""
         }
-        tableConfig = Config.factory(self.table, db: db)
         switch setup {
             case .create: try? create()
             case .rebuild: try? rebuild()
@@ -180,57 +167,47 @@ public final class Orm<T> {
 
     public func rebuild() throws {
         created = false
-        let ins = inspect()
-        try setup(with: ins)
-    }
-
-    /// inspect table
-    fileprivate func inspect() -> Inspection {
-        var ins: Inspection = .init()
         let exist = db.exists(table)
-        guard exist else { return ins }
-
-        ins.insert(.exist)
-        switch (tableConfig, config) {
-            case let (tableConfig as PlainConfig, config as PlainConfig):
-                if tableConfig != config {
-                    ins.insert(.tableChanged)
-                }
-                if !tableConfig.isIndexesEqual(config) {
-                    ins.insert(.indexChanged)
-                }
-            case let (tableConfig as FtsConfig, config as FtsConfig):
-                if tableConfig != config {
-                    ins.insert(.tableChanged)
-                }
-            default:
-                ins.insert([.tableChanged, .indexChanged])
+        if !exist {
+            try create()
+            created = true
+            return
         }
-        return ins
-    }
 
-    /// create table with inspection
-    fileprivate func setup(with options: Inspection) throws {
-        let exist = options.contains(.exist)
-        let changed = options.contains(.tableChanged)
-        let indexChanged = options.contains(.indexChanged)
-        let general = config is PlainConfig
+        var tableConfig = Config.factory(table, db: db)
+        if let tblcfg = tableConfig as? PlainConfig, let cfg = config as? PlainConfig, tblcfg != cfg {
+            let added = Set(cfg.columns).subtracting(tblcfg.columns)
+            if added.count > 0 {
+                try? db.begin()
+                for col in added {
+                    let alertSQL = cfg.sqlToAlert(column: col, table: table)
+                    do {
+                        try db.run(alertSQL)
+                    } catch {
+                        try? db.rollback()
+                    }
+                }
+                try? db.commit()
 
-        let tempTable = table + "_" + String(describing: NSDate().timeIntervalSince1970)
+                tableConfig = Config.factory(table, db: db)
+                let removed = Set(tableConfig.columns).subtracting(cfg.columns)
+                if removed.count > 0 {
+                    tableConfig.columns = tableConfig.columns.filter { !removed.contains($0) }
+                }
+            }
+        }
 
-        if exist && changed {
+        if tableConfig != config {
+            let tempTable = table + "_" + String(describing: NSDate().timeIntervalSince1970)
             try rename(to: tempTable)
-        }
-        if !exist || changed {
             try createTable()
+            created = true
+            let colset = Set(config.columns).intersection(Set(tableConfig.columns))
+            try db.migrating(Array(colset), from: tempTable, to: table, drop: true)
         }
-        created = true
-        if exist && changed && general {
-            // MARK: ** FTS table, please migrate data manually **
 
-            try migrationData(from: tempTable)
-        }
-        if general && (indexChanged || !exist) {
+        guard let tblcfg = tableConfig as? PlainConfig, let cfg = config as? PlainConfig else { return }
+        if !cfg.isIndexesEqual(tblcfg) {
             try rebuildIndex()
         }
     }
@@ -247,9 +224,9 @@ public final class Orm<T> {
         var sql = ""
         switch config {
             case let cfg as PlainConfig:
-                sql = cfg.createSQL(with: table)
+                sql = cfg.sqlToCreate(table: table)
             case let cfg as FtsConfig:
-                sql = cfg.createSQL(with: table, content_table: content_table, content_rowid: content_rowid)
+                sql = cfg.sqlToCreate(table: table, content_table: content_table, content_rowid: content_rowid)
             default: break
         }
         try db.run(sql)
@@ -262,20 +239,6 @@ public final class Orm<T> {
         let indexesString = cfg.indexes.joined(separator: ",")
         let createSQL = "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));"
         try db.run(createSQL)
-    }
-
-    /// migrating data from old table to new table
-    func migrationData(from tempTable: String) throws {
-        let columnsSet = NSMutableOrderedSet(array: config.columns)
-        columnsSet.intersectSet(Set(tableConfig.columns))
-        let columns = columnsSet.array as! [String]
-
-        let fields = columns.joined(separator: ",")
-        guard fields.count > 0 else { return }
-        let sql = "INSERT INTO \(table.quoted) (\(fields)) SELECT \(fields) FROM \(tempTable.quoted)"
-        let drop = "DROP TABLE IF EXISTS \(tempTable.quoted)"
-        try db.run(sql)
-        try db.run(drop)
     }
 
     /// drop indexes
