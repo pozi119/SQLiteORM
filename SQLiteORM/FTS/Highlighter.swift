@@ -284,7 +284,7 @@ public class Highlighter {
         let arrangedWords = arranged.words
         guard arrangedWords.count > 0 && arrangedTokens.count > 0 else { return nomatch }
 
-        var lv1: Match.LV1 = .origin
+        var rlv1: Match.LV1 = .none
         var whole = true
         let text = useSingleLine ? source.singleLine : source
         let attrText = NSMutableAttributedString(string: text, attributes: normalAttributes)
@@ -296,6 +296,7 @@ public class Highlighter {
                 let kwGroupWords = kwTokens[kc]
                 for i in 0 ..< groupWords.count {
                     var j = 0, k = i, sloc = -1, slen = -1
+                    var xlv1: Match.LV1 = .origin
                     while j < kwGroupWords.count && k < groupWords.count {
                         let set = groupWords[k]
                         let kwset = kwGroupWords[j]
@@ -322,7 +323,7 @@ public class Highlighter {
                                 case (_, 0): tlv1 = .fulls
                                 default: tlv1 = .fuzzy
                             }
-                            if tlv1.rawValue < lv1.rawValue { lv1 = tlv1 }
+                            if tlv1.rawValue < xlv1.rawValue { xlv1 = tlv1 }
                             if sloc < 0 { sloc = tk.start }
                             slen = tk.end - sloc
                             j += 1
@@ -332,6 +333,7 @@ public class Highlighter {
                         }
                     }
                     if j > 0 && j == kwGroupWords.count {
+                        if rlv1.rawValue < xlv1.rawValue { rlv1 = xlv1 }
                         let s1 = String(bytes: Array(bytes[0 ..< sloc]))
                         let s2 = String(bytes: Array(bytes[sloc ..< (sloc + slen)]))
                         let range = NSRange(location: s1.count, length: s2.count)
@@ -349,9 +351,9 @@ public class Highlighter {
         let first = ranges.first!
         let match = Match(source: source, attrText: attrText)
         match.ranges = ranges
-        match.lv1 = lv1
+        match.lv1 = rlv1
         match.lv2 = first.location == 0 ? (first.length == attrText.length && whole ? .full : .prefix) : .middle
-        match.lv3 = lv1 == .origin ? .high : lv1 == .fulls ? .medium : .low
+        match.lv3 = rlv1 == .origin ? .high : rlv1 == .fulls ? .medium : .low
         return match
     }
 
