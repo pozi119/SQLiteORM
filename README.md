@@ -1,5 +1,5 @@
 # SQLiteORM
-**The swift version of [VVSequelize](https://github.com/pozi119/VVSequelize).**
+**The Objective-C version of [VVSequelize](https://github.com/pozi119/VVSequelize).**
 
 ## Installation
 
