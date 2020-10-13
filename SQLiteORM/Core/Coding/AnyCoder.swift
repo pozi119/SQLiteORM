@@ -7,13 +7,13 @@
 
 import Foundation
 
-class AnyEncoder {
+open class AnyEncoder {
     struct Options: OptionSet {
         let rawValue: Int
         static let includeEmptyFields = Options(rawValue: 1 << 0)
     }
 
-    class func encode<T>(_ any: T) throws -> [String: Binding] {
+    open class func encode<T>(_ any: T) throws -> [String: Binding] {
         guard let temp = reflect(any) as? [String: Any] else {
             throw EncodingError.invalidEncode(any)
         }
@@ -33,7 +33,7 @@ class AnyEncoder {
         return encoded
     }
 
-    class func encode<T>(_ values: [T]) -> [[String: Binding]] {
+    open class func encode<T>(_ values: [T]) -> [[String: Binding]] {
         var array = [[String: Binding]]()
         for value in values {
             do {
@@ -145,7 +145,7 @@ class AnyEncoder {
     }
 }
 
-class AnyDecoder {
+open class AnyDecoder {
     open class func decode<T>(_ type: T.Type, from containers: [[String: Binding]]) throws -> [T] {
         return try containers.map { try decode(type, from: $0) }
     }
