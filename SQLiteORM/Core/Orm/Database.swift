@@ -31,7 +31,7 @@ public final class Database {
 
     /// sqlite3 database handle
     var handle: OpaquePointer {
-        try? open()
+        sync { try? open() }
         return _handle!
     }
 
@@ -125,9 +125,11 @@ public final class Database {
 
     /// close database
     public func close() {
-        guard _handle != nil else { return }
-        sqlite3_close(_handle)
-        _handle = nil
+        sync {
+            guard _handle != nil else { return }
+            sqlite3_close(_handle)
+            _handle = nil
+        }
     }
 
     // MARK: -
