@@ -298,12 +298,6 @@ extension SQLiteORMTests {
 // MARK: - FTS
 
 extension SQLiteORMTests {
-    func testPinyin() {
-        let tokens = "成都".pinyins
-        XCTAssertEqual(tokens.abbrs, ["cd"])
-        XCTAssertEqual(tokens.fulls, ["chengdou", "chengdu"])
-    }
-
     func testToken() {
         let sources = [
 //            "陕西",

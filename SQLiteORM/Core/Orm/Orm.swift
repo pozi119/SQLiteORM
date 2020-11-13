@@ -55,6 +55,19 @@ public final class Orm<T> {
                 table: String = "",
                 setup: Setup = .create) {
         assert(config.type != nil && config.type! == T.self && config.columns.count > 0, "Invalid config!")
+        if let orm = db.orms.object(forKey: table as NSString) as? Orm<T> {
+            self.config = orm.config
+            self.db = orm.db
+            self.table = orm.table
+            type = orm.type
+            properties = orm.properties
+            created = orm.created
+            content_table = orm.content_table
+            content_rowid = orm.content_rowid
+            relative = orm.relative
+            _existingIndexes = orm._existingIndexes
+            return
+        }
 
         self.config = config
         self.db = db
@@ -79,6 +92,7 @@ public final class Orm<T> {
             case .rebuild: try? rebuild()
             default: break
         }
+        db.orms.setObject((self as! Orm<Any>), forKey: table as NSString)
     }
 
     public convenience init(config: FtsConfig,

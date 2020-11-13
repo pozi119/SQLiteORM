@@ -62,6 +62,80 @@ public final class Match {
             self.attrText = NSAttributedString(string: source)
         }
     }
+
+    init(attrText: NSAttributedString, attributes: [NSAttributedString.Key: Any], keyword: String) {
+        source = attrText.string
+        self.attrText = attrText
+        guard keyword.count > 0 else { return }
+
+        var ranges: [NSRange] = []
+        var fs: String?
+        var fr: NSRange?
+        let attrdic = attributes as NSDictionary
+        attrText.enumerateAttributes(in: NSRange(location: 0, length: attrText.length), options: []) { attrs, range, _ in
+            let dic = attrs as NSDictionary
+            if dic == attrdic {
+                ranges.append(range)
+                if fs == nil {
+                    let lower = source.index(source.startIndex, offsetBy: range.location)
+                    let upper = source.index(source.startIndex, offsetBy: range.location + range.length)
+                    fs = String(source[lower ..< upper])
+                    fr = range
+                }
+            }
+        }
+        self.ranges = ranges
+
+        guard ranges.count > 0, let firstString = fs, let fisrtRange = fr else { return }
+
+        // lv1
+        let lowerkw = keyword.lowercased()
+        let lowerfs = firstString.lowercased()
+        let rch = (lowerfs as NSString).character(at: 0)
+        let kch = (lowerkw as NSString).character(at: 0)
+        if kch == rch {
+            lv1 = .origin
+        } else if rch >= 0x3000, kch >= 0x3000 {
+            let map = PinYin.shared.big52gbMap
+            let runi = map[rch] ?? rch
+            let kuni = map[kch] ?? kch
+            lv1 = runi == kuni ? .origin : .fuzzy
+        } else if rch >= 0x3000, kch < 0xC0 {
+            let map = PinYin.shared.big52gbMap
+            let runi = map[rch] ?? rch
+            let pinyins = PinYin.shared.hanzi2pinyins[runi] ?? []
+            var isfull = false
+            for pinyin in pinyins {
+                if (lowerkw.count >= pinyin.count && lowerkw.hasPrefix(pinyin))
+                    || (lowerkw.count < pinyin.count && pinyin.hasPrefix(lowerkw)) {
+                    isfull = true
+                    break
+                }
+            }
+            lv1 = isfull ? .fulls : .firsts
+        }
+
+        // lv2
+        var lv2: LV2 = fisrtRange.location > 0 ? .middle : (fisrtRange.length == source.count ? .full : .prefix)
+        if lv2 == .full, lv1 == .fulls, rch > 0x3000, kch < 0xC0 {
+            let ech = (lowerfs as NSString).character(at: lowerkw.count - 1)
+            let map = PinYin.shared.big52gbMap
+            let euni = map[ech] ?? ech
+            let pinyins = PinYin.shared.hanzi2pinyins[euni] ?? []
+            let lastkw = String(lowerkw.suffix(1))
+            lv2 = .prefix
+            for pinyin in pinyins {
+                if (lowerkw.count >= pinyin.count && lowerkw.hasSuffix(pinyin)) || pinyin.hasPrefix(lastkw) {
+                    lv2 = .full
+                    break
+                }
+            }
+        }
+        self.lv2 = lv2
+
+        // lv3
+        lv3 = (lv1 == .origin) ? .high : (lv1 == .fulls ? .medium : .low)
+    }
 }
 
 extension Match: Comparable {
@@ -225,12 +299,8 @@ public class Highlighter {
     public func highlight(_ source: String) -> Match {
         guard source.count > 0 && keyword.count > 0 else { return Match(source: source) }
 
-        var reference = source.matchingPattern
-        var xkeyword = keyword.matchingPattern
-        if mask.contains(.transform) {
-            reference = reference.simplified
-            xkeyword = xkeyword.simplified
-        }
+        let reference = source.matchingPattern.simplified
+        let xkeyword = keyword.matchingPattern.simplified
 
         var match = highlight(usingRegex: source, reference: reference, keyword: xkeyword)
         guard match.lv2 == .none else { return match }

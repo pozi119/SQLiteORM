@@ -73,6 +73,8 @@ public final class Database {
         return _cache
     }
 
+    lazy var orms = NSMapTable<NSString, Orm<Any>>(keyOptions: .copyIn, valueOptions: .weakMemory)
+
     /// initialize database
     public required init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {
         path = location.description
@@ -197,13 +199,13 @@ public final class Database {
     private lazy var readLabel = "com.sqliteorm.read.\(self.queueNum).\(self.name)"
 
     public lazy var writeQueue: DispatchQueue = {
-        let queue = DispatchQueue(label: self.writeLabel, qos: .utility, attributes: .init(), autoreleaseFrequency: .inherit, target: nil)
+        let queue = DispatchQueue(label: self.writeLabel, qos: .utility, attributes: .init())
         queue.setSpecific(key: Database.queueKey, value: self.writeLabel)
         return queue
     }()
 
     public lazy var readQueue: DispatchQueue = {
-        let queue = DispatchQueue(label: self.readLabel, qos: .utility, attributes: .concurrent, autoreleaseFrequency: .inherit, target: nil)
+        let queue = DispatchQueue(label: self.readLabel, qos: .utility, attributes: .concurrent)
         queue.setSpecific(key: Database.queueKey, value: self.writeLabel)
         return queue
     }()
@@ -314,7 +316,6 @@ public final class Database {
 
     /// sqlite transaction
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
-        defer { inTransaction = false }
         if inTransaction {
             try block()
             return
@@ -326,6 +327,7 @@ public final class Database {
             return
         }
         inTransaction = true
+        defer { inTransaction = false }
         do {
             try block()
             try prepare(commit).run()

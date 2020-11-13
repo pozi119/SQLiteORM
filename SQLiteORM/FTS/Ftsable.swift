@@ -10,16 +10,16 @@ import Foundation
 public protocol Ftsable {
     /// white list
     static var fts_whites: [String] { get }
-    
+
     /// black list
     static var fts_blacks: [String] { get }
-    
+
     /// when fts indexes count is 0, all fields are indexed by default
     static var fts_indexes: [String] { get }
 
     /// fts module, default is fts5
     static var module: String { get }
-    
+
     /// fts tokenizer, default is `sqlitorm`
     static var tokenizer: String { get }
 }
@@ -54,5 +54,20 @@ extension Orm {
     public convenience init(ftsable type: Ftsable.Type, db: Database = Database(.temporary), table: String = "", setup: Setup = .create) {
         let config = FtsConfig(ftsable: type)
         self.init(config: config, db: db, table: table, setup: setup)
+    }
+
+    public func fts5Highlight(of fields: [String],
+                              resultColumns: [String] = [],
+                              left: String = "<b>",
+                              right: String = "</b>") -> String {
+        let sql = "SELECT * FROM \(table.quoted) LIMIT 0;"
+        do {
+            var statement: Statement? = try Statement(db, sql)
+            let tableCols = statement?.columnNames ?? []
+            statement = nil
+            return String.fts5Highlight(of: fields, tableName: table, tableColumns: tableCols, resultColumns: resultColumns, left: left, right: right)
+        } catch {
+            return ""
+        }
     }
 }

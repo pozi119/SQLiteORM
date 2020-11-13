@@ -132,68 +132,26 @@ public extension String {
         return array.joined(separator: "")
     }
 
-    func pinyins(at index: Int) -> (fulls: [String], abbrs: [String]) {
-        guard count > index else { return ([], []) }
-        let string = simplified as NSString
-        let ch = string.character(at: index)
-        if ch < 0x4E00 || ch > 0x9FA5 {
-            return ([String(ch)], [String(ch)])
-        }
-        let key = PinYin.shared.big52gbMap[ch] ?? ch
-        let pinyins = PinYin.shared.hanzi2pinyins[key] ?? []
-        let fulls = NSMutableOrderedSet()
-        let abbrs = NSMutableOrderedSet()
-        for pinyin in pinyins {
-            if pinyin.count < 1 { continue }
-            let full = String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: pinyin.count - 1)])
-            let abbr = String(pinyin[pinyin.startIndex ..< pinyin.index(pinyin.startIndex, offsetBy: 1)])
-            fulls.add(full)
-            abbrs.add(abbr)
-        }
-        return (fulls.array as! [String], abbrs.array as! [String])
-    }
-
-    var pinyins: (fulls: [String], abbrs: [String]) {
-        guard count > 0 else { return ([], []) }
-        if let results = PinYin.shared.cache[self] {
-            return results
-        }
-        let matrix = pinyinMatrix
-        let fulls = matrix.fulls.map { $0.joined(separator: "") }
-        let abbrs = matrix.abbrs.map { $0.joined(separator: "") }
-        let results = (fulls, abbrs)
-        PinYin.shared.cache[self] = results
-        return results
-    }
-
-    var pinyinMatrix: (fulls: [[String]], abbrs: [[String]]) {
-        return pinyinMatrix(16)
-    }
-
-    func pinyinMatrix(_ limit: Int) -> (fulls: [[String]], abbrs: [[String]]) {
-        guard count > 0 else {
-            return ([[self]], [[self]])
-        }
-        var fulls: [[String]] = []
-        var abbrs: [[String]] = []
-        for i in 0 ..< count {
-            let item = pinyins(at: i)
-            fulls.append(item.fulls)
-            abbrs.append(item.abbrs)
-        }
-        let rfulls = fulls.tiled(limit)
-        let rabbrs = abbrs.tiled(limit)
-
-        return (rfulls, rabbrs)
-    }
-
     private static var tokenFormatter: NumberFormatter {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         return formatter
     }
 
-    var fts5KeywordPattern: String {
+    /// pinyin segmentation search
+    var fts5MatchPattern: String {
+        let allPinyins = pinyinSegmentation
+        var results: [String] = []
+
+        results.append(quoted)
+        for pinyins in allPinyins {
+            let pattern = (" " + pinyins.joined(separator: " ")).quoted + " *"
+            results.append(pattern)
+        }
+        return results.joined(separator: " OR ")
+    }
+
+    var fullWidthPattern: String {
         var array: [unichar] = []
         let string = self as NSString
         for i in 0 ..< count {
@@ -262,7 +220,41 @@ public extension String {
 
     /// preload pinyin resouces
     static func preloadingForPinyin() {
-        _ = "中文".pinyins
+        _ = PinYin.shared.pinyins
+        _ = PinYin.shared.hanzi2pinyins
+        _ = PinYin.shared.syllables
+        _ = PinYin.shared.big52gbMap
+    }
+
+    static func fts5Highlight(of fields: [String],
+                              tableName: String,
+                              tableColumns: [String],
+                              resultColumns: [String] = [],
+                              left: String = "<b>",
+                              right: String = "</b>") -> String {
+        let resultCols = resultColumns.count > 0 ? resultColumns : tableColumns
+        guard fields.count > 0, tableName.count > 0, tableColumns.count > 0 else { return resultCols.joined(separator: ",") }
+
+        let count = tableColumns.count
+        var array: [String] = []
+        for col in resultCols {
+            if !tableColumns.contains(col) { continue }
+            var highlight: String?
+            if fields.contains(col) {
+                if let idx = tableColumns.firstIndex(of: col) {
+                    if idx < count {
+                        highlight = "highlight(\(tableName), \(idx),'\(left)','\(right)') AS \(col)"
+                    }
+                }
+            }
+            if let hl = highlight {
+                array.append(hl)
+            } else {
+                array.append(col)
+            }
+        }
+
+        return array.joined(separator: ",")
     }
 }
 
@@ -296,40 +288,46 @@ public extension NSAttributedString {
 
         return attrText
     }
-}
 
-public extension Array where Element == [String] {
-    var maxTiledCount: Int { return reduce(1) { $0 * $1.count } }
-
-    var tiled: [[String]] { return tiled(16) }
-
-    func tiled(_ limit: Int) -> [[String]] {
-        let max = maxTiledCount
-        guard max > 0, max < 256 else {
-            return [map { $0.first ?? "" }]
+    convenience init(feature string: String,
+                     attibutes: [NSAttributedString.Key: Any],
+                     left: String = "<b>",
+                     right: String = "</b>") {
+        let llen = left.count
+        let rlen = right.count
+        guard llen > 0, rlen > 0, string.count > 0 else {
+            self.init(string: "")
+            return
         }
-        let tiledCount = Swift.min(max, limit)
-        var dim = [String](repeating: "", count: tiledCount * count)
 
-        var rowRepeat = max
-        var secRepeat = 1
-        for col in 0 ..< count {
-            let sub = self[col]
-            rowRepeat = rowRepeat / sub.count
-            let sec = max / secRepeat
-            for j in 0 ..< sub.count {
-                let str = sub[j]
-                for k in 0 ..< secRepeat {
-                    for l in 0 ..< rowRepeat {
-                        let row = k * sec + j * rowRepeat + l
-                        if row >= tiledCount { continue }
-                        dim[row * count + col] = str
-                    }
+        var mstr = string
+        var loc = mstr.startIndex
+        var ranges: [Range<String.Index>] = []
+
+        while true {
+            if let lr = mstr.range(of: left) {
+                mstr.removeSubrange(lr)
+                loc = lr.lowerBound
+
+                if let rr = string.range(of: right, options: [], range: loc ..< mstr.endIndex) {
+                    mstr.removeSubrange(rr)
+                    ranges.append(loc ..< rr.lowerBound)
+                } else {
+                    mstr.insert(contentsOf: left, at: loc)
+                    break
                 }
+            } else {
+                break
             }
-            secRepeat = secRepeat * sub.count
         }
-        return (0 ..< tiledCount).map { [String](dim[($0 * count) ..< ($0 * count + count)]) }
+        let attrText = NSMutableAttributedString(string: mstr)
+        for r in ranges {
+            let lower = mstr.distance(from: mstr.startIndex, to: r.lowerBound)
+            let upper = mstr.distance(from: mstr.startIndex, to: r.upperBound)
+            let range = NSRange(location: lower, length: upper - lower)
+            attrText.addAttributes(attibutes, range: range)
+        }
+        self.init(attributedString: attrText)
     }
 }
 

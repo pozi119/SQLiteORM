@@ -15,112 +15,6 @@ import Foundation
     import SQLite3
 #endif
 
-// MARK: - FTS3
-
-struct Fts3TokenizeModule {
-    var iVersion: Int32
-    var xCreate: @convention(c) (Int32, UnsafeMutablePointer<UnsafePointer<Int8>?>?, UnsafeMutablePointer<OpaquePointer?>?) -> Int32
-    var xDestroy: @convention(c) (OpaquePointer?) -> Int32
-    var xOpen: @convention(c) (OpaquePointer?, UnsafePointer<Int8>?, Int32, UnsafeMutablePointer<OpaquePointer?>?) -> Int32
-    var xClose: @convention(c) (OpaquePointer?) -> Int32
-    var xNext: @convention(c) (OpaquePointer?, UnsafeMutablePointer<UnsafePointer<Int8>?>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?, UnsafeMutablePointer<Int32>?) -> Int32
-    var xLanguageid: @convention(c) (OpaquePointer?, Int32) -> Int32
-    var xName: UnsafePointer<Int8>?
-    var xEnumerator: UnsafeMutableRawPointer?
-}
-
-struct Fts3Tokenizer {
-    var base: OpaquePointer?
-    var locale: String?
-    var mask: UInt64 = 0
-}
-
-struct Fts3Cursor {
-    var base: OpaquePointer?
-    var pInput: UnsafePointer<Int8>?
-    var nBytes: Int32 = 0
-    var iToken: Int32 = 0
-    var nToken: Int32 = 0
-    var tokens: [Token] = []
-}
-
-func fts3_create(_ argc: Int32,
-                 _ argv: UnsafeMutablePointer<UnsafePointer<Int8>?>?,
-                 _ ppTokenizer: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
-    let tok = UnsafeMutablePointer<Fts3Tokenizer>.allocate(capacity: 1)
-    if let azArg = argv {
-        for i in 0 ..< Int(argc) {
-            if let cstr = azArg[i] {
-                let mask = UInt64(atoll(cstr))
-                if mask > 0 {
-                    tok.pointee.mask = mask
-                } else {
-                    tok.pointee.locale = String(cString: cstr)
-                }
-            }
-        }
-    }
-    ppTokenizer?.pointee = OpaquePointer(tok)
-    return SQLITE_OK
-}
-
-func fts3_destroy(_ pTokenizer: OpaquePointer?) -> Int32 {
-    let pointer = UnsafeMutableRawPointer(pTokenizer)
-    pointer?.deallocate()
-    return SQLITE_OK
-}
-
-func fts3_open(_ pTokenizer: OpaquePointer?,
-               _ pInput: UnsafePointer<Int8>?,
-               _ nBytes: Int32,
-               _ ppCursor: UnsafeMutablePointer<OpaquePointer?>?) -> Int32 {
-    guard let xTokenizer = pTokenizer, let xInput = UnsafePointer<CChar>.init(pInput) else { return SQLITE_ERROR }
-    let cursor = UnsafeMutablePointer<Fts3Cursor>.allocate(capacity: 1)
-    let xTok = UnsafeMutablePointer<Fts3Tokenizer>.init(xTokenizer)
-    let tok = xTok.pointee
-    guard let pModule = UnsafeMutablePointer<Fts3TokenizeModule>.init(tok.base) else { return SQLITE_ERROR }
-    let module = pModule.pointee
-    guard let pEnum = module.xEnumerator else { return SQLITE_ERROR }
-    let enumerator = pEnum.assumingMemoryBound(to: Enumerator.Type.self).pointee
-
-    let text = String(cString: xInput)
-    let array = enumerator.enumerate(text, mask: TokenMask(rawValue: tok.mask))
-
-    cursor.pointee.pInput = pInput
-    cursor.pointee.nBytes = nBytes
-    cursor.pointee.iToken = 0
-    cursor.pointee.nToken = Int32(array.count)
-    cursor.pointee.tokens = array
-    ppCursor?.pointee = OpaquePointer(cursor)
-    return SQLITE_OK
-}
-
-func fts3_close(_ pCursor: OpaquePointer?) -> Int32 {
-    let pointer = UnsafeMutableRawPointer(pCursor)
-    pointer?.deallocate()
-    return SQLITE_OK
-}
-
-func fts3_next(_ pCursor: OpaquePointer?,
-               _ ppToken: UnsafeMutablePointer<UnsafePointer<Int8>?>?,
-               _ pnBytes: UnsafeMutablePointer<Int32>?,
-               _ piStartOffset: UnsafeMutablePointer<Int32>?,
-               _ piEndOffset: UnsafeMutablePointer<Int32>?,
-               _ piPosition: UnsafeMutablePointer<Int32>?) -> Int32 {
-    guard let cursor = UnsafeMutablePointer<Fts3Cursor>(pCursor) else { return SQLITE_ERROR }
-    let tokens = cursor.pointee.tokens
-    let iToken = Int(cursor.pointee.iToken)
-    guard tokens.count > 0 && iToken < tokens.count else { return SQLITE_DONE }
-    let token = tokens[iToken]
-    ppToken?.pointee = (token.word as NSString).utf8String
-    pnBytes?.pointee = Int32(token.len)
-    piStartOffset?.pointee = Int32(token.start)
-    piEndOffset?.pointee = Int32(token.end)
-    piPosition?.pointee = Int32(iToken)
-    cursor.pointee.iToken += 1
-    return SQLITE_OK
-}
-
 // MARK: - FTS5
 
 struct Fts5Tokenizer {
@@ -174,10 +68,9 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
 
     var xmask = TokenMask(rawValue: pTok.pointee.mask)
     if iUnused & FTS5_TOKENIZE_DOCUMENT > 0 {
-        xmask.subtract(.syllable)
-    } else if iUnused & FTS5_TOKENIZE_QUERY > 0 && xmask.hasPinyin() {
-        xmask.subtract(.allPinYin)
-        xmask.formUnion(.syllable)
+        xmask.subtract(.query)
+    } else if iUnused & FTS5_TOKENIZE_QUERY > 0 {
+        xmask.formUnion(.query)
     }
 
     let enumerator = pEnum.assumingMemoryBound(to: Enumerator.Type.self).pointee
@@ -218,26 +111,6 @@ extension Database {
             let pointer = UnsafeMutablePointer<Enumerator.Type>.allocate(capacity: 1)
             pointer.pointee = enumerator
             let pEnumerator = UnsafeMutableRawPointer(pointer)
-
-            // fts3,4 register custom tokenizer
-            var pStmt: OpaquePointer?
-            var pModule = UnsafeMutablePointer<Fts3TokenizeModule>.allocate(capacity: 1)
-            pModule.pointee.iVersion = 0
-            pModule.pointee.xCreate = fts3_create(_:_:_:)
-            pModule.pointee.xDestroy = fts3_destroy(_:)
-            pModule.pointee.xOpen = fts3_open(_:_:_:_:)
-            pModule.pointee.xClose = fts3_close(_:)
-            pModule.pointee.xNext = fts3_next(_:_:_:_:_:_:)
-            pModule.pointee.xName = (name as NSString).utf8String
-            pModule.pointee.xEnumerator = pEnumerator
-
-            try check(SQLiteORMEnableFts3Module(db))
-            try check(sqlite3_prepare_v2(db, "SELECT fts3_tokenizer(?,?)", -1, &pStmt, nil))
-            let size = MemoryLayout<UnsafeMutablePointer<Fts3TokenizeModule>>.size
-            try check(sqlite3_bind_text(pStmt, 1, name, -1, SQLITE_STATIC))
-            try check(sqlite3_bind_blob(pStmt, 2, &pModule, Int32(size), SQLITE_STATIC))
-            try check(sqlite3_step(pStmt))
-            try check(sqlite3_finalize(pStmt))
 
             // fts5 register custom tokenizer
             let pTokenizer = UnsafeMutablePointer<fts5_tokenizer>.allocate(capacity: 1)
