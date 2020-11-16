@@ -300,8 +300,10 @@ extension SQLiteORMTests {
 extension SQLiteORMTests {
     func testToken() {
         let sources = [
-//            "陕西",
-            "dierzhang",
+            "乘肥",
+            "乘员",
+            "乘警",
+//            "dierzhang",
 //            "dez",
 //            "中国移动",
 //            "会计",
@@ -311,7 +313,7 @@ extension SQLiteORMTests {
 //            "健康",
 //            "公益组织",
         ]
-        let mask: TokenMask = .all
+        let mask: TokenMask = .init(rawValue: 3)
         for source in sources {
             let tokens = OrmEnumerator.enumerate(source, mask: mask)
             let sorted = tokens.sorted()
@@ -357,15 +359,6 @@ extension SQLiteORMTests {
         XCTAssert(r2 > 0)
     }
 
-    func testFtsMatch() {
-        let r = ftsOrm.find(W("intro").match("李四"))
-        XCTAssert(r.count > 0)
-        let highlighter = Highlighter(orm: ftsOrm, keyword: "李四")
-        highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
-        let sources = r.map { $0["intro"] as? String ?? "" }
-        let s = highlighter.highlight(sources)
-        XCTAssert(s.count > 0)
-    }
 
     func testBigBatch() {
         var r = orm.delete()
@@ -481,27 +474,6 @@ extension SQLiteORMTests {
         }
         let p1 = view.xFindOne()
         XCTAssert(p1 != nil)
-    }
-}
-
-// MARK: Highlight
-
-extension SQLiteORMTests {
-    func testHighlight() {
-        let string = "研究"
-        let source = "媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组媒体重组研究公司"
-        for i in string.count ... string.count {
-            let keyword = String(string[string.startIndex ..< string.index(string.startIndex, offsetBy: i)])
-            let highlighter = Highlighter(keyword: keyword)
-            highlighter.mask = .all
-            highlighter.quantity = 3
-            highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
-            let match = highlighter.highlight(source)
-            print("\n\(keyword) : \(match)")
-            let attrText = highlighter.trim(matched: match.attrText, maxLength: 7)
-            print("\n\(attrText.string)")
-        }
-        print("\n")
     }
 }
 

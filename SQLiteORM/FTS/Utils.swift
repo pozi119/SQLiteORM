@@ -143,12 +143,33 @@ public extension String {
         let allPinyins = pinyinSegmentation
         var results: [String] = []
 
-        results.append(quoted)
+        results.append(fullWidthPattern.quoted)
         for pinyins in allPinyins {
             let pattern = (" " + pinyins.joined(separator: " ")).quoted + " *"
             results.append(pattern)
         }
         return results.joined(separator: " OR ")
+    }
+
+    var halfWidthPattern: String {
+        var array: [unichar] = []
+        let string = self as NSString
+        for i in 0 ..< count {
+            var ch = string.character(at: i)
+            switch ch {
+                case 0xFF01 ... 0xFF5E: ch -= 0xFEE0
+                case 0xFFE0: ch = 0xA2
+                case 0xFFE1: ch = 0xA3
+                case 0xFFE2: ch = 0xAC
+                case 0xFFE3: ch = 0xAF
+                case 0xFFE4: ch = 0xA6
+                case 0xFFE5: ch = 0xA5
+                default: break
+            }
+            array.append(ch)
+        }
+        let r = NSString(characters: &array, length: count)
+        return r as String
     }
 
     var fullWidthPattern: String {
@@ -309,7 +330,7 @@ public extension NSAttributedString {
                 mstr.removeSubrange(lr)
                 loc = lr.lowerBound
 
-                if let rr = string.range(of: right, options: [], range: loc ..< mstr.endIndex) {
+                if let rr = mstr.range(of: right, options: [], range: loc ..< mstr.endIndex) {
                     mstr.removeSubrange(rr)
                     ranges.append(loc ..< rr.lowerBound)
                 } else {

@@ -92,7 +92,7 @@ public final class Orm<T> {
             case .rebuild: try? rebuild()
             default: break
         }
-        db.orms.setObject((self as! Orm<Any>), forKey: table as NSString)
+        db.orms.setObject(self, forKey: table as NSString)
     }
 
     public convenience init(config: FtsConfig,

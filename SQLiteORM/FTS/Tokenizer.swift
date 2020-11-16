@@ -12,12 +12,6 @@ public protocol Enumerator {
     static func enumerate(_ source: String, mask: TokenMask) -> [Token]
 }
 
-public let TOKEN_ORIGIN = 0
-public let TOKEN_FULLWIDTH = 1
-public let TOKEN_FULLPINYIN = 2
-public let TOKEN_ABBREVIATION = 3
-public let TOKEN_SYLLABLE = 4
-
 public final class Token: Hashable {
     public var word: String
     public var len: Int
@@ -29,7 +23,7 @@ public final class Token: Hashable {
 
     private lazy var weight: Int = (0xF - colocated) << 24 | start << 16 | end << 8 | len
 
-    public init(word: String, len: Int, start: Int, end: Int, colocated: Int = TOKEN_ORIGIN) {
+    public init(word: String, len: Int, start: Int, end: Int, colocated: Int = 0) {
         self.word = word
         self.len = len
         self.start = start
@@ -87,13 +81,11 @@ public struct TokenMask: OptionSet {
     public static let `default` = TokenMask([])
     public static let all = TokenMask(rawValue: 0xFFFFFF)
 
-    /// only for Highlighter
-    public static let syllable = TokenMask(rawValue: 1 << 24)
     /// only for query
-    public static let query = TokenMask(rawValue: 1 << 25)
+    public static let query = TokenMask(rawValue: 1 << 24)
 
     func hasPinyin() -> Bool {
-        return intersection([.pinyin, .abbreviation, .syllable]).rawValue > 0
+        return intersection([.pinyin, .abbreviation]).rawValue > 0
     }
 }
 
@@ -233,43 +225,12 @@ func utf82unicode(_ utf8: [UInt8], _ len: Int) -> UInt32 {
 
 /// SQLiteORM tokenizer
 public class OrmEnumerator: Enumerator {
-    private class func syllableTokens(_ source: String) -> [Token] {
-        var results: [Token] = []
-        #if true
-            let allPinyins = source.pinyinSegmentation
-            for n in 0 ..< allPinyins.count {
-                var start = 0
-                let pinyins = allPinyins[n]
-                for i in 0 ..< pinyins.count {
-                    let tkString = pinyins[i]
-                    let len = tkString.count
-                    let token = Token(word: tkString, len: len, start: start, end: start + len, colocated: n + TOKEN_SYLLABLE)
-                    results.append(token)
-                    start += len
-                }
-            }
-        #else
-            var start = 0
-            let pinyins = source.fastPinyinSegmentation
-            for i in 0 ..< pinyins.count {
-                let tkString = pinyins[i]
-                let len = tkString.count
-                let token = Token(word: tkString, len: len, start: start, end: start + len)
-                results.append(token)
-                start += len
-            }
-        #endif
-        return results
-    }
-
     public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
         let buff = source.bytes
         let nText = buff.count
         guard nText > 0 else { return [] }
 
         var results: [Token] = []
-        var synonyms: [Token] = []
-        var syllables: [Token] = []
 
         if mask.contains(.query) {
             if source.hasPrefix(" ") {
@@ -283,13 +244,11 @@ public class OrmEnumerator: Enumerator {
                     loc += len
                 }
                 return results
-            } else if mask.contains(.syllable) {
-                syllables = syllableTokens(source)
             }
         }
 
-        let usepinyin = mask.contains(.pinyin)
-        let useabbr = mask.contains(.abbreviation)
+        let usepinyin = !mask.contains(.query) && mask.contains(.pinyin)
+        let useabbr = !mask.contains(.query) && mask.contains(.abbreviation)
 
         var idx = 0
         var length = 0
@@ -310,7 +269,7 @@ public class OrmEnumerator: Enumerator {
                 assert(false, "wrong utf-8 text")
                 break
             }
-
+            
             var word = [UInt8](buff[idx ..< (idx + length)])
             var wordlen = length
 
@@ -319,7 +278,6 @@ public class OrmEnumerator: Enumerator {
                 let uni = ((unichar)(word[0] & 0xF) << 12) | ((unichar)(word[1] & 0x3F) << 6) | (unichar)(word[2] & 0x3F)
                 if uni >= 0xFF01 && uni <= 0xFF5E {
                     word[0] = UInt8(uni - 0xFEE0)
-                    word[1] = 0
                     wordlen = 1
                 } else if uni >= 0xFFE0 && uni <= 0xFFE5 {
                     switch uni {
@@ -332,15 +290,14 @@ public class OrmEnumerator: Enumerator {
                         default: break
                     }
                     word[0] = 0xC2
-                    word[2] = 0
                     wordlen = 2
                 } else if uni == 0x3000 {
                     word[0] = 0x20
-                    word[1] = 0
                     wordlen = 1
                 }
             }
 
+            var synonyms: [Token] = []
             if wordlen >= 3 {
                 let uni = unichar(utf82unicode(word, wordlen))
                 if uni > 0 {
@@ -358,12 +315,12 @@ public class OrmEnumerator: Enumerator {
                             abbrs.insert(String(pinyin.prefix(1)))
                         }
                         for full in fulls {
-                            let token = Token(word: full, len: full.count, start: idx, end: idx + wordlen, colocated: TOKEN_FULLPINYIN)
+                            let token = Token(word: full, len: full.count, start: idx, end: idx + length, colocated: 1)
                             synonyms.append(token)
                         }
                         if useabbr {
                             for abbr in abbrs {
-                                let token = Token(word: abbr, len: abbr.count, start: idx, end: idx + wordlen, colocated: TOKEN_ABBREVIATION)
+                                let token = Token(word: abbr, len: abbr.count, start: idx, end: idx + length, colocated: 1)
                                 synonyms.append(token)
                             }
                         }
@@ -376,12 +333,12 @@ public class OrmEnumerator: Enumerator {
                 word[0] += 32
             }
 
-            let wordstr = String(bytes: word)
-            let token = Token(word: wordstr, len: wordlen, start: idx, end: idx + wordlen, colocated: wordlen != length ? TOKEN_FULLWIDTH : TOKEN_ORIGIN)
+            let wordstr = String(bytes: [UInt8](word[0 ..< wordlen]))
+            let token = Token(word: wordstr, len: wordlen, start: idx, end: idx + length)
             results.append(token)
+            results.append(contentsOf: synonyms)
             idx += length
         }
-        results.append(contentsOf: syllables)
         return results
     }
 }

@@ -73,7 +73,7 @@ public final class Database {
         return _cache
     }
 
-    lazy var orms = NSMapTable<NSString, Orm<Any>>(keyOptions: .copyIn, valueOptions: .weakMemory)
+    lazy var orms = NSMapTable<NSString, AnyObject>(keyOptions: .copyIn, valueOptions: .weakMemory)
 
     /// initialize database
     public required init(_ location: Location = .temporary, flags: Int32 = 0, encrypt: String = "") {

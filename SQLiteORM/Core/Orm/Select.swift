@@ -9,6 +9,9 @@ import Foundation
 
 /// select  statement
 public final class Select {
+    /// database
+    var db: Database?
+
     /// table name
     var table: String = ""
 
@@ -68,8 +71,21 @@ public final class Select {
         return str
     }
 
+    public init() {}
+
+    public func db(_ db: Database) -> Select {
+        self.db = db
+        return self
+    }
+
     public func table(_ table: String) -> Select {
         self.table = table
+        return self
+    }
+
+    public func orm<T>(_ orm: Orm<T>) -> Select {
+        db = orm.db
+        table = orm.table
         return self
     }
 
@@ -115,12 +131,22 @@ public final class Select {
 }
 
 extension Select {
-    public func allKeyValues(_ db: Database) -> [[String: Binding]] {
-        return db.query(sql)
+    public func allKeyValues() -> [[String: Binding]] {
+        assert(db != nil, "Please set db first!")
+        return db!.query(sql)
     }
 
-    public func allItems<S: Codable>(_ db: Database, type: S.Type) -> [S] {
-        let keyValues = db.query(sql)
+    public func allValues(field: String) -> [Binding] {
+        let keyValues = allKeyValues()
+        return keyValues.map { $0[field] ?? "" }
+    }
+
+    public func allItems<S>(_ orm: Orm<S>) -> [S] {
+        return self.orm(orm).allItems(type: S.self)
+    }
+
+    public func allItems<S: Codable>(type: S.Type) -> [S] {
+        let keyValues = allKeyValues()
         do {
             let array = try OrmDecoder().decode([S].self, from: keyValues)
             return array
@@ -130,8 +156,8 @@ extension Select {
         }
     }
 
-    public func allItems<S>(_ db: Database, type: S.Type) -> [S] {
-        let keyValues = db.query(sql)
+    public func allItems<S>(type: S.Type) -> [S] {
+        let keyValues = allKeyValues()
         do {
             let array = try AnyDecoder.decode(S.self, from: keyValues)
             return array
@@ -139,14 +165,5 @@ extension Select {
             print(error)
             return []
         }
-    }
-
-    public func allItems<S>(_ orm: Orm<S>) -> [S] {
-        return allItems(orm.db, type: S.self)
-    }
-
-    public func allValues(_ db: Database, field: String) -> [Binding] {
-        let keyValues = allKeyValues(db)
-        return keyValues.map { $0[field] ?? "" }
     }
 }

@@ -78,7 +78,7 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
 
     var rc = SQLITE_OK
     for tk in tks {
-        rc = xxToken(pCtx, tk.colocated > TOKEN_FULLWIDTH ? 1 : 0, tk.word, Int32(tk.len), Int32(tk.start), Int32(tk.end))
+        rc = xxToken(pCtx, Int32(tk.colocated), tk.word, Int32(tk.len), Int32(tk.start), Int32(tk.end))
         if rc != SQLITE_OK { break }
     }
     if rc == SQLITE_DONE { rc = SQLITE_OK }

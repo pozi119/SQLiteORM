@@ -222,18 +222,17 @@ class TableViewController: UITableViewController {
 
         guard keyword.count > 0 else { return }
 
-        let highlighter = Highlighter(orm: item.ftsOrm, keyword: keyword)
-        highlighter.highlightAttributes = [.foregroundColor: UIColor.red]
-
         updateUI(action: false, search: true, log: "")
+        let fts5keyword = keyword.fts5MatchPattern
+        let fields = item.ftsOrm.fts5Highlight(of: ["info"])
         DispatchQueue.global(qos: .background).async {
             let begin = CFAbsoluteTimeGetCurrent()
-            let messages = item.ftsOrm.find(Where("info").match(keyword))
+            let select = Select().orm(item.ftsOrm).fields(Fields(fields)).where(Where(item.ftsOrm.table).match(fts5keyword)).limit(10)
+            let messages = select.allItems(item.ftsOrm)
             let end = CFAbsoluteTimeGetCurrent()
             let str = "[query] fts: \(keyword), hit: \(messages.count), consumed: \(end - begin)"
             print(str)
-            let sources = messages.map { $0["info"] as? String ?? "" }
-            let highlights = highlighter.highlight(sources)
+            let highlights = messages.map { NSAttributedString(feature: $0.info, attibutes: [.foregroundColor: UIColor.red]) }
             if highlights.count > 0 {}
             DispatchQueue.main.async {
                 self.updateUI(action: true, search: true, log: str)

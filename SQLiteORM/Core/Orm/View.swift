@@ -116,12 +116,12 @@ public extension View {
     /// - Parameters:
     /// - Returns: [String:Binding], decoding with ORMDecoder
     func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
-        return Select().table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues(db).first
+        return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues().first
     }
 
     /// find a record, decoded
     func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
-        return Select().table(name).where(condition).orderBy(orderBy).limit(1).allItems(db, type: T.self).first
+        return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allItems(type: T.self).first
     }
 
     /// find data, not decoded
@@ -144,9 +144,9 @@ public extension View {
               orderBy: OrderBy = OrderBy(""),
               limit: Int64 = 0,
               offset: Int64 = 0) -> [[String: Binding]] {
-        return Select().table(name).where(condition).distinct(distinct).fields(fields)
+        return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allKeyValues(db)
+            .limit(limit).offset(offset).allKeyValues()
     }
 
     /// find data, decoded
@@ -158,9 +158,9 @@ public extension View {
                orderBy: OrderBy = OrderBy(""),
                limit: Int64 = 0,
                offset: Int64 = 0) -> [T] {
-        return Select().table(name).where(condition).distinct(distinct).fields(fields)
+        return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allItems(db, type: T.self)
+            .limit(limit).offset(offset).allItems(type: T.self)
     }
 
     /// get number of records
@@ -201,7 +201,7 @@ public extension View {
     ///   - function: function name
     /// - Returns: function result
     func function(_ function: String, condition: Where = Where("")) -> Binding? {
-        let dic = Select().table(name).fields(Fields(function)).where(condition).allKeyValues(db).first
+        let dic = Select().db(db).table(name).fields(Fields(function)).where(condition).allKeyValues().first
         return dic?.values.first
     }
 }
