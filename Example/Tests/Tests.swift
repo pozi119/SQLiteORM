@@ -57,62 +57,7 @@ final class SQLiteORMTests: XCTestCase {
 
     static var allTests = [
         ("testConnection", testConnection),
-        ("testCoder", testCoder),
     ]
-}
-
-// MARK: - Coder
-
-extension SQLiteORMTests {
-    func testCoder() {
-        let data = Data([0x31, 0x32, 0x33, 0x34, 0x35, 0xF, 0x41, 0x42, 0x43])
-        var person: Person? = Person(name: "张三", age: 22, id: 1, sex: .female, intro: "哈哈哈哈")
-        person?.data = data
-
-        let user: User? = User(id: 2, name: "zhangsan", person: person)
-        user?.list = [1, 2, 3, 4, 5]
-        user?.data = data
-
-        do {
-            let dic0 = try AnyEncoder.encode(user)
-            let decoded0 = try AnyDecoder.decode(User?.self, from: dic0)
-            XCTAssert(user != nil && decoded0 != nil && user! == decoded0!)
-
-            let dic = try OrmEncoder().encode(person)
-            let decoded = try OrmDecoder().decode(type(of: person), from: dic as Any)
-            XCTAssertEqual(person, decoded)
-
-            let dic1 = try OrmEncoder().encode(user)
-            let decoded1 = try OrmDecoder().decode(type(of: user), from: dic1 as Any)
-            XCTAssert(user != nil && decoded1 != nil && user! == decoded1!)
-
-            let dic3 = try JSONEncoder().encode(user)
-            let json3 = try JSONSerialization.jsonObject(with: dic3, options: [])
-            let decoded3 = try JSONDecoder().decode(type(of: user), from: dic3)
-            print(json3)
-            XCTAssert(user != nil && decoded3 != nil && user! == decoded3!)
-
-            let array2 = [user, nil]
-            let dic2 = OrmEncoder().encode(array2)
-            let decoded2 = try OrmDecoder().decode(type(of: array2), from: dic2 as Any)
-            let user2 = decoded2.first!
-            XCTAssert(decoded2.count == 2 && user! == user2!)
-        } catch {
-            XCTAssertThrowsError(error)
-        }
-    }
-
-    func testAnyCoder() {
-        do {
-            let enuminfo = try typeInfo(of: Person.Sex.self)
-            let tuple = (Data([0x1, 0x31, 0x61, 0x91]), 1, 2)
-            let tupleinfo = try typeInfo(of: type(of: tuple))
-            print(enuminfo)
-            print(tupleinfo)
-        } catch {
-            XCTAssertThrowsError(error)
-        }
-    }
 }
 
 // MARK: - Expression

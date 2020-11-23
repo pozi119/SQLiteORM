@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 #if SQLITE_HAS_CODEC
     import SQLCipher
@@ -56,8 +57,8 @@ public final class Statement {
 
     /// bind datas
     ///
-    /// - Parameter values: [Binding] array, corresponding to sql statement
-    public func bind(_ values: [Binding]) -> Statement {
+    /// - Parameter values: [Primitive] array, corresponding to sql statement
+    public func bind(_ values: [Primitive]) -> Statement {
         guard values.count > 0 else { return self }
         reset()
         let count = values.count
@@ -66,7 +67,7 @@ public final class Statement {
     }
 
     /// query records
-    public func query() throws -> [[String: Binding]] {
+    public func query() throws -> [[String: Primitive]] {
         guard columnCount > 0 else {
             return []
         }
@@ -76,11 +77,11 @@ public final class Statement {
         }
 
         var ret = true
-        var array = [[String: Binding]]()
+        var array = [[String: Primitive]]()
         repeat {
             ret = try step()
             if ret {
-                var dic = [String: Binding]()
+                var dic = [String: Primitive]()
                 for i in 0 ..< columnCount {
                     dic[columnNames[i]] = cursor[i]
                 }
@@ -99,17 +100,17 @@ public final class Statement {
     }
 
     /// execute native sql statement, and bind datas
-    public func run(_ bindings: [Binding]) throws {
+    public func run(_ bindings: [Primitive]) throws {
         return try bind(bindings).run()
     }
 
-    public func scalar() throws -> Binding? {
+    public func scalar() throws -> Primitive? {
         reset(clear: false)
         _ = try step()
         return cursor[0]
     }
 
-    public func scalar(_ bindings: [Binding]) throws -> Binding? {
+    public func scalar(_ bindings: [Primitive]) throws -> Primitive? {
         return try bind(bindings).scalar()
     }
 
@@ -150,7 +151,7 @@ fileprivate struct Cursor {
 /// Cursors provide direct access to a statement’s current row.
 extension Cursor: Sequence {
     /// digital subscript access, like array
-    subscript(idx: Int) -> Binding? {
+    subscript(idx: Int) -> Primitive? {
         get {
             switch sqlite3_column_type(handle, Int32(idx)) {
                 case SQLITE_BLOB:
@@ -222,7 +223,7 @@ extension Cursor: Sequence {
     }
 
     /// string subscript access, like dictionary
-    subscript(field: String) -> Binding? {
+    subscript(field: String) -> Primitive? {
         get {
             let idx = Int(sqlite3_bind_parameter_index(handle, field))
             return self[idx]
@@ -233,11 +234,11 @@ extension Cursor: Sequence {
         }
     }
 
-    public func makeIterator() -> AnyIterator<Binding?> {
+    public func makeIterator() -> AnyIterator<Primitive?> {
         var idx = 0
         return AnyIterator {
             if idx >= self.columnCount {
-                return Optional<Binding?>.none
+                return Optional<Primitive?>.none
             } else {
                 idx += 1
                 return self[idx - 1]

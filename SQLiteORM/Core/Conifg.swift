@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 public class Config {
     public static let createAt: String = "createAt"
@@ -102,7 +103,7 @@ public class Config {
 
 /// general configuration
 public final class PlainConfig: Config {
-    fileprivate var allDfltVals: [String: Binding] = [:]
+    fileprivate var allDfltVals: [String: Primitive] = [:]
 
     /// record creation / modification time or not
     public var logAt: Bool = false
@@ -117,7 +118,7 @@ public final class PlainConfig: Config {
     public var uniques: [String] = []
 
     /// default value corresponding to the field
-    public var dfltVals: [String: Binding] = [:]
+    public var dfltVals: [String: Primitive] = [:]
 
     /// initialize from some type
     override public init(_ type: Any.Type) {
@@ -134,7 +135,7 @@ public final class PlainConfig: Config {
         var indexes = [String]()
 
         var types = [String: String]()
-        var dfltVals = [String: Binding]()
+        var dfltVals = [String: Primitive]()
 
         // get table configuration
         let tableInfoSql = "PRAGMA table_info = \(table.quoted);"
@@ -403,14 +404,14 @@ extension Config: Equatable {
 public extension Config {
     /// generate constraint
     func constraint(for item: Any, properties: [String: PropertyInfo], unique: Bool = true) -> Where? {
-        var condition = [String: Binding]()
+        var condition = [String: Primitive]()
         switch self {
             case let self as PlainConfig:
                 if self.primaries.count > 0 {
-                    var dic = [String: Binding]()
+                    var dic = [String: Primitive]()
                     for pk in self.primaries {
                         let prop = properties[pk]
-                        if let val = (try? prop?.get(from: item)) as? Binding {
+                        if let val = (try? prop?.get(from: item)) as? Primitive {
                             dic[pk] = val
                         }
                     }
@@ -421,7 +422,7 @@ public extension Config {
                 }
                 for unique in self.uniques {
                     let prop = properties[unique]
-                    if let val = (try? prop?.get(from: item)) as? Binding {
+                    if let val = (try? prop?.get(from: item)) as? Primitive {
                         condition = [unique: val]
                         break
                     }
@@ -432,11 +433,11 @@ public extension Config {
         return Where(condition)
     }
 
-    func constraint(for KeyValues: [String: Binding], unique: Bool = true) -> Where? {
-        var condition = [String: Binding]()
+    func constraint(for KeyValues: [String: Primitive], unique: Bool = true) -> Where? {
+        var condition = [String: Primitive]()
         switch self {
             case let self as PlainConfig:
-                var dic = [String: Binding]()
+                var dic = [String: Primitive]()
                 self.primaries.forEach { dic[$0] = KeyValues[$0] }
                 if (!unique && dic.count > 0) || dic.count == self.primaries.count {
                     condition = dic

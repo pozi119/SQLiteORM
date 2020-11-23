@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 public extension String {
     var trim: String {
@@ -41,7 +42,7 @@ public extension String {
     }
 }
 
-public extension Array where Element: Binding {
+public extension Array where Element: Primitive {
     var sqlJoined: String {
         return map { $0.sqlValue }.joined(separator: ",")
     }

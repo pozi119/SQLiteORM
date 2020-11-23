@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 public protocol Ormable: Codable {
     /// primary keys
@@ -27,7 +28,7 @@ public protocol Ormable: Codable {
     static var uniques: [String] { get }
 
     /// default value corresponding to the field
-    static var dfltVals: [String: Binding] { get }
+    static var dfltVals: [String: Primitive] { get }
 
     /// record creation / modification time or not
     static var logAt: Bool { get }
@@ -45,7 +46,7 @@ public extension Ormable {
     static var indexes: [String] { [] }
     static var notnulls: [String] { [] }
     static var uniques: [String] { [] }
-    static var dfltVals: [String: Binding] { [:] }
+    static var dfltVals: [String: Primitive] { [:] }
 
     static var logAt: Bool { false }
     static var pkAutoInc: Bool { false }

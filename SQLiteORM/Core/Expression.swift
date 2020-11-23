@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 public protocol SQLable: CustomStringConvertible {
     /// sql statement
@@ -37,7 +38,7 @@ public struct Where: SQLable {
         sql = condition
     }
 
-    public init(_ keyValues: [[String: Binding]]) {
+    public init(_ keyValues: [[String: Primitive]]) {
         let array = keyValues.map { Where($0) }
         sql = array.map { "(\($0))" }.joined(separator: " OR ")
     }
@@ -50,7 +51,7 @@ public struct Where: SQLable {
         sql = conditions.joined(separator: " OR ")
     }
 
-    public init(_ keyValue: [String: Binding]) {
+    public init(_ keyValue: [String: Primitive]) {
         sql = keyValue.map { "(\($0.key.quoted) == \($0.value.sqlValue))" }.joined(separator: " AND ")
     }
 
@@ -75,9 +76,9 @@ extension Where: ExpressibleByArrayLiteral {
 
 extension Where: ExpressibleByDictionaryLiteral {
     public typealias Key = String
-    public typealias Value = Binding
-    public init(dictionaryLiteral elements: (String, Binding)...) {
-        var dic = [String: Binding]()
+    public typealias Value = Primitive
+    public init(dictionaryLiteral elements: (String, Primitive)...) {
+        var dic = [String: Primitive]()
         for (key, val) in elements {
             dic[key] = val
         }
@@ -93,43 +94,43 @@ infix operator <>: ComparisonPrecedence
 
 // MARK: comparison
 
-fileprivate func _operator(_ op: String, lhs: Where, value: Binding) -> Where {
+fileprivate func _operator(_ op: String, lhs: Where, value: Primitive) -> Where {
     return Where(lhs.quoted + " " + op + " " + value.sqlValue)
 }
 
-public func == (lhs: Where, value: Binding) -> Where {
+public func == (lhs: Where, value: Primitive) -> Where {
     return _operator("==", lhs: lhs, value: value)
 }
 
-public func != (lhs: Where, value: Binding) -> Where {
+public func != (lhs: Where, value: Primitive) -> Where {
     return _operator("!=", lhs: lhs, value: value)
 }
 
-public func <> (lhs: Where, value: Binding) -> Where {
+public func <> (lhs: Where, value: Primitive) -> Where {
     return _operator("<>", lhs: lhs, value: value)
 }
 
-public func > (lhs: Where, value: Binding) -> Where {
+public func > (lhs: Where, value: Primitive) -> Where {
     return _operator(">", lhs: lhs, value: value)
 }
 
-public func >= (lhs: Where, value: Binding) -> Where {
+public func >= (lhs: Where, value: Primitive) -> Where {
     return _operator(">=", lhs: lhs, value: value)
 }
 
-public func !> (lhs: Where, value: Binding) -> Where {
+public func !> (lhs: Where, value: Primitive) -> Where {
     return _operator("!>", lhs: lhs, value: value)
 }
 
-public func < (lhs: Where, value: Binding) -> Where {
+public func < (lhs: Where, value: Primitive) -> Where {
     return _operator("<", lhs: lhs, value: value)
 }
 
-public func <= (lhs: Where, value: Binding) -> Where {
+public func <= (lhs: Where, value: Primitive) -> Where {
     return _operator("<=", lhs: lhs, value: value)
 }
 
-public func !< (lhs: Where, value: Binding) -> Where {
+public func !< (lhs: Where, value: Primitive) -> Where {
     return _operator("!<", lhs: lhs, value: value)
 }
 
@@ -154,35 +155,35 @@ public func || (lhs: Where, rhs: Where) -> Where {
 }
 
 public extension Where {
-    fileprivate func _logic(_ logic: String, value: Binding) -> Where {
+    fileprivate func _logic(_ logic: String, value: Primitive) -> Where {
         return Where(quoted + " " + logic + " " + value.sqlValue)
     }
 
-    func match(_ value: Binding) -> Where {
+    func match(_ value: Primitive) -> Where {
         return _logic("MATCH", value: value)
     }
 
-    func like(_ value: Binding) -> Where {
+    func like(_ value: Primitive) -> Where {
         return _logic("LIKE", value: value)
     }
 
-    func notLike(_ value: Binding) -> Where {
+    func notLike(_ value: Primitive) -> Where {
         return _logic("NOT LIKE", value: value)
     }
 
-    func glob(_ value: Binding) -> Where {
+    func glob(_ value: Primitive) -> Where {
         return _logic("GLOB", value: value)
     }
 
-    func notGlob(_ value: Binding) -> Where {
+    func notGlob(_ value: Primitive) -> Where {
         return _logic("NOT GLOB", value: value)
     }
 
-    func `is`(_ value: Binding) -> Where {
+    func `is`(_ value: Primitive) -> Where {
         return _logic("IS", value: value)
     }
 
-    func isNot(_ value: Binding) -> Where {
+    func isNot(_ value: Primitive) -> Where {
         return _logic("IS NOT", value: value)
     }
 
@@ -190,27 +191,27 @@ public extension Where {
         return Where("\(quoted) IS NULL")
     }
 
-    func exists(_ value: Binding) -> Where {
+    func exists(_ value: Primitive) -> Where {
         return _logic("EXISTS", value: value)
     }
 
-    func notExists(_ value: Binding) -> Where {
+    func notExists(_ value: Primitive) -> Where {
         return _logic("NOT EXISTS", value: value)
     }
 
-    func between(_ turple: (start: Binding, end: Binding)) -> Where {
+    func between(_ turple: (start: Primitive, end: Primitive)) -> Where {
         return Where(quoted + " BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
-    func notBetween(_ turple: (start: Binding, end: Binding)) -> Where {
+    func notBetween(_ turple: (start: Primitive, end: Primitive)) -> Where {
         return Where(quoted + " NOT BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
-    func `in`<T: Binding>(_ array: [T]) -> Where {
+    func `in`<T: Primitive>(_ array: [T]) -> Where {
         return Where(quoted + " IN (" + array.sqlJoined + ")")
     }
 
-    func notIn<T: Binding>(_ array: [T]) -> Where {
+    func notIn<T: Primitive>(_ array: [T]) -> Where {
         return Where(quoted + " NOT IN (" + array.sqlJoined + ")")
     }
 }
@@ -238,7 +239,7 @@ public extension String {
         return self + " ON " + condition.sql
     }
 
-    func concat(_ concat: String, value: Binding) -> String {
+    func concat(_ concat: String, value: Primitive) -> String {
         return self + " " + concat + " " + value.sqlValue
     }
 }

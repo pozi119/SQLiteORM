@@ -7,6 +7,7 @@
 
 import Dispatch
 import Foundation
+import AnyCoder
 
 #if SQLITE_HAS_CODEC
     import SQLCipher
@@ -52,21 +53,21 @@ public final class Database {
         set { _flags = newValue | _essential }
     }
 
-    private static var _caches = [String: Cache<String, [[String: Binding]]>]()
+    private static var _caches = [String: Cache<String, [[String: Primitive]]>]()
 
     fileprivate var needClearCache = false
 
-    private lazy var _cache: Cache<String, [[String: Binding]]> = {
+    private lazy var _cache: Cache<String, [[String: Primitive]]> = {
         var c = Database._caches[path]
         if c == nil {
-            c = Cache<String, [[String: Binding]]>()
+            c = Cache<String, [[String: Primitive]]>()
             Database._caches[path] = c
         }
         return c!
     }()
 
     /// query results cache
-    var cache: Cache<String, [[String: Binding]]> {
+    var cache: Cache<String, [[String: Primitive]]> {
         if needClearCache {
             _cache.removeAllObjects()
         }
@@ -228,22 +229,22 @@ public final class Database {
     // MARK: - Prepare
 
     /// prepare sql statement, with values
-    public func prepare(_ statement: String, bind bindings: [Binding] = []) throws -> Statement {
+    public func prepare(_ statement: String, bind bindings: [Primitive] = []) throws -> Statement {
         return try Statement(self, statement).bind(bindings)
     }
 
     // MARK: - Run
 
     /// query  with native sql statement
-    public func query(_ statement: String, bind bindings: [Binding] = []) -> [[String: Binding]] {
+    public func query(_ statement: String, bind bindings: [Primitive] = []) -> [[String: Primitive]] {
         return (try? prepare(statement, bind: bindings).query()) ?? []
     }
 
     /// execute native sql query
-    public func query<T: Codable>(_ statement: String, type: T.Type, bind bindings: [Binding] = []) -> [T] {
+    public func query<T: Codable>(_ statement: String, type: T.Type, bind bindings: [Primitive] = []) -> [T] {
         let keyValues = query(statement, bind: bindings)
         do {
-            let array = try OrmDecoder().decode([T].self, from: keyValues)
+            let array = try ManyDecoder().decode([T].self, from: keyValues)
             return array
         } catch {
             print(error)
@@ -252,7 +253,7 @@ public final class Database {
     }
 
     /// execute native sql query
-    public func query<T>(_ statement: String, type: T.Type, bind bindings: [Binding] = []) -> [T] {
+    public func query<T>(_ statement: String, type: T.Type, bind bindings: [Primitive] = []) -> [T] {
         let keyValues = query(statement, bind: bindings)
         do {
             let array = try AnyDecoder.decode(T.self, from: keyValues)
@@ -264,13 +265,13 @@ public final class Database {
     }
 
     /// execute native sql statement, with values
-    public func run(_ statement: String, bind bindings: [Binding] = []) throws {
+    public func run(_ statement: String, bind bindings: [Primitive] = []) throws {
         return try prepare(statement, bind: bindings).run(bindings)
     }
 
     // MARK: - Scalar
 
-    public func scalar(_ statement: String, bind bindings: [Binding] = []) throws -> Binding? {
+    public func scalar(_ statement: String, bind bindings: [Primitive] = []) throws -> Primitive? {
         return try prepare(statement, bind: bindings).scalar(bindings)
     }
 

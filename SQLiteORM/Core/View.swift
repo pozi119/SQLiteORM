@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 // sqlite view
 public class View<T> {
@@ -19,7 +20,7 @@ public class View<T> {
     public let config: Config
     public let properties: [String: PropertyInfo]
 
-    private let decoder = OrmDecoder()
+    private let decoder = ManyDecoder()
 
     public init(_ name: String,
                 temp: Bool = false,
@@ -114,8 +115,8 @@ public extension View {
     /// find a record, not decoded
     ///
     /// - Parameters:
-    /// - Returns: [String:Binding], decoding with ORMDecoder
-    func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
+    /// - Returns: [String:Primitive], decoding with ORMDecoder
+    func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Primitive]? {
         return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues().first
     }
 
@@ -135,7 +136,7 @@ public extension View {
     ///   - orderBy: sort criteria
     ///   - limit: maximum number of results
     ///   - offset: starting position
-    /// - Returns: [String:Binding], decoding with ORMDecoder
+    /// - Returns: [String:Primitive], decoding with ORMDecoder
     func find(_ condition: Where = Where(""),
               distinct: Bool = false,
               fields: Fields = Fields("*"),
@@ -143,7 +144,7 @@ public extension View {
               having: Where = Where(""),
               orderBy: OrderBy = OrderBy(""),
               limit: Int64 = 0,
-              offset: Int64 = 0) -> [[String: Binding]] {
+              offset: Int64 = 0) -> [[String: Primitive]] {
         return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
             .limit(limit).offset(offset).allKeyValues()
@@ -175,23 +176,23 @@ public extension View {
     }
 
     /// check if a record exists
-    func exist(_ keyValues: [String: Binding]) -> Bool {
+    func exist(_ keyValues: [String: Primitive]) -> Bool {
         guard let condition = config.constraint(for: keyValues) else { return false }
         return count(condition) > 0
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: Where = Where("")) -> Binding? {
+    func max(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: Where = Where("")) -> Binding? {
+    func min(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: Where = Where("")) -> Binding? {
+    func sum(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -200,7 +201,7 @@ public extension View {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: Where = Where("")) -> Binding? {
+    func function(_ function: String, condition: Where = Where("")) -> Primitive? {
         let dic = Select().db(db).table(name).fields(Fields(function)).where(condition).allKeyValues().first
         return dic?.values.first
     }

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 public final class Orm<T> {
     /// table inspection results

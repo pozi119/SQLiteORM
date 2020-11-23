@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 // MARK: - private functions
 
@@ -14,7 +15,7 @@ extension Orm {
         case insert, upsert, update
     }
 
-    fileprivate func _update(_ bindings: [String: Binding], type: Update = .insert, condition: Where = Where("")) -> Bool {
+    fileprivate func _update(_ bindings: [String: Primitive], type: Update = .insert, condition: Where = Where("")) -> Bool {
         guard bindings.count > 0 else { return false }
         try? create()
         
@@ -36,7 +37,7 @@ extension Orm {
         }
         var sql = ""
         let fields = dic.keys
-        let values = fields.map { dic[$0] } as! [Binding]
+        let values = fields.map { dic[$0] } as! [Primitive]
         switch type {
             case .insert, .upsert:
                 let keys = fields.map { $0.quoted }.joined(separator: ",")
@@ -56,7 +57,7 @@ extension Orm {
         return true
     }
 
-    fileprivate func _update(multi items: [[String: Binding]], type: Update = .insert, condition: Where = Where("")) -> Int64 {
+    fileprivate func _update(multi items: [[String: Primitive]], type: Update = .insert, condition: Where = Where("")) -> Int64 {
         var count: Int64 = 0
         do {
             try db.transaction(.immediate) {
@@ -71,11 +72,11 @@ extension Orm {
         return count
     }
 
-    func encode<S: Codable>(_ item: S) throws -> [String: Binding] {
-        return try OrmEncoder().encode(item)
+    func encode<S: Codable>(_ item: S) throws -> [String: Primitive] {
+        return try ManyEncoder().encode(item)
     }
 
-    func encode<S>(_ item: S) throws -> [String: Binding] {
+    func encode<S>(_ item: S) throws -> [String: Primitive] {
         return try AnyEncoder.encode(item)
     }
 }
@@ -95,7 +96,7 @@ public extension Orm {
     }
 
     @discardableResult
-    func insert(keyValues: [String: Binding]) -> Bool {
+    func insert(keyValues: [String: Primitive]) -> Bool {
         return _update(keyValues)
     }
 
@@ -104,7 +105,7 @@ public extension Orm {
     /// - Returns: number of successes
     @discardableResult
     func insert(multi items: [T]) -> Int64 {
-        var array: [[String: Binding]] = []
+        var array: [[String: Primitive]] = []
         for item in items {
             if let kv = try? encode(item) {
                 array.append(kv)
@@ -114,7 +115,7 @@ public extension Orm {
     }
 
     @discardableResult
-    func insert(multiKeyValues: [[String: Binding]]) -> Int64 {
+    func insert(multiKeyValues: [[String: Primitive]]) -> Int64 {
         return _update(multi: multiKeyValues)
     }
 
@@ -130,7 +131,7 @@ public extension Orm {
     }
 
     @discardableResult
-    func upsert(keyValues: [String: Binding]) -> Bool {
+    func upsert(keyValues: [String: Primitive]) -> Bool {
         return _update(keyValues, type: .upsert)
     }
 
@@ -139,7 +140,7 @@ public extension Orm {
     /// - Returns: number of successes
     @discardableResult
     func upsert(multi items: [T]) -> Int64 {
-        var array: [[String: Binding]] = []
+        var array: [[String: Primitive]] = []
         for item in items {
             if let kv = try? encode(item) {
                 array.append(kv)
@@ -149,7 +150,7 @@ public extension Orm {
     }
 
     @discardableResult
-    func upsert(multiKeyValues: [[String: Binding]]) -> Int64 {
+    func upsert(multiKeyValues: [[String: Primitive]]) -> Int64 {
         return _update(multi: multiKeyValues, type: .upsert)
     }
 }
@@ -163,7 +164,7 @@ public extension Orm {
     ///   - condition: condit
     ///   - bindings: [filed:data]
     @discardableResult
-    func update(_ condition: Where, with bindings: [String: Binding]) -> Bool {
+    func update(_ condition: Where, with bindings: [String: Primitive]) -> Bool {
         return _update(bindings, type: .upsert, condition: condition)
     }
 
@@ -252,8 +253,8 @@ public extension Orm {
     /// find a record, not decoded
     ///
     /// - Parameters:
-    /// - Returns: [String:Binding], decoding with ORMDecoder
-    func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Binding]? {
+    /// - Returns: [String:Primitive], decoding with ORMDecoder
+    func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Primitive]? {
         return Select().orm(self).where(condition).orderBy(orderBy).limit(1).allKeyValues().first
     }
 
@@ -273,7 +274,7 @@ public extension Orm {
     ///   - orderBy: sort criteria
     ///   - limit: maximum number of results
     ///   - offset: starting position
-    /// - Returns: [String:Binding], decoding with ORMDecoder
+    /// - Returns: [String:Primitive], decoding with ORMDecoder
     func find(_ condition: Where = Where(""),
               distinct: Bool = false,
               fields: Fields = Fields("*"),
@@ -281,7 +282,7 @@ public extension Orm {
               having: Where = Where(""),
               orderBy: OrderBy = OrderBy(""),
               limit: Int64 = 0,
-              offset: Int64 = 0) -> [[String: Binding]] {
+              offset: Int64 = 0) -> [[String: Primitive]] {
         return Select().orm(self).where(condition).distinct(distinct).fields(fields)
             .groupBy(groupBy).having(having).orderBy(orderBy)
             .limit(limit).offset(offset).allKeyValues()
@@ -313,23 +314,23 @@ public extension Orm {
     }
 
     /// check if a record exists
-    func exist(_ keyValues: [String: Binding]) -> Bool {
+    func exist(_ keyValues: [String: Primitive]) -> Bool {
         guard let condition = config.constraint(for: keyValues) else { return false }
         return count(condition) > 0
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: Where = Where("")) -> Binding? {
+    func max(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: Where = Where("")) -> Binding? {
+    func min(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: Where = Where("")) -> Binding? {
+    func sum(of field: String, condition: Where = Where("")) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -338,7 +339,7 @@ public extension Orm {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: Where = Where("")) -> Binding? {
+    func function(_ function: String, condition: Where = Where("")) -> Primitive? {
         let dic = Select().orm(self).fields(Fields(function)).where(condition).allKeyValues().first
         return dic?.values.first
     }

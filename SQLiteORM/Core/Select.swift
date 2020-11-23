@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import AnyCoder
 
 /// select  statement
 public final class Select {
@@ -131,12 +132,12 @@ public final class Select {
 }
 
 extension Select {
-    public func allKeyValues() -> [[String: Binding]] {
+    public func allKeyValues() -> [[String: Primitive]] {
         assert(db != nil, "Please set db first!")
         return db!.query(sql)
     }
 
-    public func allValues(field: String) -> [Binding] {
+    public func allValues(field: String) -> [Primitive] {
         let keyValues = allKeyValues()
         return keyValues.map { $0[field] ?? "" }
     }
@@ -148,7 +149,7 @@ extension Select {
     public func allItems<S: Codable>(type: S.Type) -> [S] {
         let keyValues = allKeyValues()
         do {
-            let array = try OrmDecoder().decode([S].self, from: keyValues)
+            let array = try ManyDecoder().decode([S].self, from: keyValues)
             return array
         } catch {
             print(error)
