@@ -42,7 +42,7 @@ Pod::Spec.new do |s|
 
   s.subspec 'core' do |ss|
       ss.source_files = 'SQLiteORM/Core/**/*'
-      ss.dependency 'AnyCoder'
+      ss.dependency 'AnyCoder', '~> 0.1.1-beta1'
       ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   end
 
