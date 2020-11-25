@@ -41,13 +41,16 @@ public func sqlType(of type: Any.Type) -> String {
             return "INTEGER"
 
         case is Float.Type: fallthrough
-        case is Double.Type:
+        case is Double.Type: fallthrough
+        case is NSNumber.Type:
             return "REAL"
 
-        case is String.Type:
+        case is String.Type: fallthrough
+        case is NSString.Type:
             return "TEXT"
 
-        case is Data.Type:
+        case is Data.Type: fallthrough
+        case is NSData.Type:
             return "BLOB"
 
         default:
