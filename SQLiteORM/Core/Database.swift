@@ -400,7 +400,7 @@ public final class Database {
                 }
             #else
                 if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
-                    if trace != nil {
+                    if traceHook != nil {
                         sqlite3_trace_v2(_handle, 0, global_trace, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
                     } else {
                         sqlite3_trace_v2(_handle, 0, nil, unsafeBitCast(self, to: UnsafeMutableRawPointer.self))
