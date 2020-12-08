@@ -222,7 +222,7 @@ public final class PlainConfig: Config {
     /// compare index configuration
     func isIndexesEqual(_ other: PlainConfig) -> Bool {
         treate()
-        return uniques == other.uniques && indexes == other.indexes
+        return indexes == other.indexes
     }
 
     /// generate create sql for field
@@ -388,6 +388,7 @@ extension Config: Equatable {
                     lhs.types == rhs.types &&
                     lhs.primaries === rhs.primaries &&
                     lhs.notnulls === rhs.notnulls &&
+                    lhs.uniques === rhs.uniques &&
                     ldflt == rdflt
 
             case let (lhs as FtsConfig, rhs as FtsConfig):

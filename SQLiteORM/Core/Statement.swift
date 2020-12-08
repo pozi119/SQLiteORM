@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/5/5.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 #if SQLITE_HAS_CODEC
     import SQLCipher
@@ -29,6 +29,8 @@ public final class Statement {
 
     /// native sql clause
     fileprivate let sql: String
+
+    fileprivate var values: [Primitive]?
 
     /// initialize
     init(_ db: Database, _ SQL: String) throws {
@@ -61,6 +63,7 @@ public final class Statement {
     public func bind(_ values: [Primitive]) -> Statement {
         guard values.count > 0 else { return self }
         reset()
+        self.values = values
         let count = values.count
         for idx in 0 ..< count { cursor[idx] = values[idx] }
         return self
@@ -72,7 +75,16 @@ public final class Statement {
             return []
         }
 
-        if let results = db.cache.object(forKey: sql) {
+        var key: String = ""
+        var cache: Cache<String, [[String: Primitive]]>?
+        if let table = sqlite3_column_table_name(handle, 0),
+           let name = NSString(utf8String: table),
+           let orm = db.orms.object(forKey: name) as? Orm<Any> {
+            key = sql + (values?.description ?? "")
+            cache = orm.cache
+        }
+
+        if key.count > 0, let results = cache?.object(forKey: key) {
             return results
         }
 
@@ -89,7 +101,7 @@ public final class Statement {
             }
         } while ret
 
-        db.cache.setObject(array, forKey: sql)
+        if key.count > 0 { cache?.setObject(array, forKey: key) }
         return array
     }
 

@@ -5,9 +5,9 @@
 //  Created by Valo on 2019/5/5.
 //
 
+import AnyCoder
 import Dispatch
 import Foundation
-import AnyCoder
 
 #if SQLITE_HAS_CODEC
     import SQLCipher
@@ -51,27 +51,6 @@ public final class Database {
     fileprivate var flags: Int32 {
         get { return _flags }
         set { _flags = newValue | _essential }
-    }
-
-    private static var _caches = [String: Cache<String, [[String: Primitive]]>]()
-
-    fileprivate var needClearCache = false
-
-    private lazy var _cache: Cache<String, [[String: Primitive]]> = {
-        var c = Database._caches[path]
-        if c == nil {
-            c = Cache<String, [[String: Primitive]]>()
-            Database._caches[path] = c
-        }
-        return c!
-    }()
-
-    /// query results cache
-    var cache: Cache<String, [[String: Primitive]]> {
-        if needClearCache {
-            _cache.removeAllObjects()
-        }
-        return _cache
     }
 
     lazy var orms = NSMapTable<NSString, AnyObject>(keyOptions: .copyIn, valueOptions: .weakMemory)
@@ -482,7 +461,8 @@ fileprivate let global_trace: cTraceHook = { (mask, pCtx, p, x) -> Int32 in
 fileprivate let global_update: cUpdateHook = { (pCtx, op, dbname, table, rowid) -> Void in
     guard let ctx = pCtx else { return }
     let db = unsafeBitCast(ctx, to: Database.self)
-    db.needClearCache = true
+    if let name = table, let key = NSString(utf8String: name),
+       let orm = db.orms.object(forKey: key) as? Orm<Any> { orm.clearCache = true }
     guard let update = db.updateHook else { return }
     update(op, dbname!, table!, rowid)
 }
@@ -490,7 +470,6 @@ fileprivate let global_update: cUpdateHook = { (pCtx, op, dbname, table, rowid) 
 fileprivate let global_commit: cCommitHook = { (pCtx) -> Int32 in
     guard let ctx = pCtx else { return SQLITE_OK }
     let db = unsafeBitCast(ctx, to: Database.self)
-    db.needClearCache = true
     guard let commit = db.commitHook else { return SQLITE_OK }
     return commit()
 }

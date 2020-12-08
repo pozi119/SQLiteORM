@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/5/7.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 public final class Orm<T> {
     /// table inspection results
@@ -45,6 +45,17 @@ public final class Orm<T> {
             _existingIndexes = indexes.map { ($0["name"] as? String) ?? "" }
         }
         return _existingIndexes!
+    }
+
+    var clearCache = false
+
+    /// query results cache
+    private var _cache: Cache<String, [[String: Primitive]]>?
+    var cache: Cache<String, [[String: Primitive]]>? {
+        if clearCache {
+            _cache?.removeAllObjects()
+        }
+        return _cache
     }
 
     /// initialize orm
@@ -250,10 +261,14 @@ public final class Orm<T> {
     /// create index
     func createIndex() throws {
         guard let cfg = config as? PlainConfig, cfg.indexes.count > 0 else { return }
-        let indexName = "orm_index_\(table)"
-        let indexesString = cfg.indexes.joined(separator: ",")
-        let createSQL = "CREATE INDEX IF NOT EXISTS \(indexName.quoted) on \(table.quoted) (\(indexesString));"
-        try db.run(createSQL)
+        let ascIdx = "orm_asc_idx_\(table)"
+        let descIdx = "orm_desc_idx_\(table)"
+        let ascCols = cfg.indexes.joined(separator: ",")
+        let descCols = cfg.indexes.map { $0 + " DESC" }.joined(separator: ",")
+        let ascIdxSQL = "CREATE INDEX IF NOT EXISTS \(ascIdx.quoted) on \(table.quoted) (\(ascCols));"
+        let descIdxSQL = "CREATE INDEX IF NOT EXISTS \(descIdx.quoted) on \(table.quoted) (\(descCols));"
+        try db.run(ascIdxSQL)
+        try db.run(descIdxSQL)
     }
 
     /// drop indexes

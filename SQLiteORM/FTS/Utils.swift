@@ -280,23 +280,13 @@ public extension String {
 }
 
 public extension NSAttributedString {
-    func trim(to maxLen: Int, with attrs: [NSAttributedString.Key: Any]) -> NSAttributedString {
-        guard length > maxLen else { return copy() as! NSAttributedString }
-        let attributes = attrs as NSDictionary
-
-        var first: NSRange = NSRange()
-        enumerateAttributes(in: NSRange(location: 0, length: length), options: []) { sAttrs, range, stop in
-            let tAttrs = sAttrs as NSDictionary
-            if tAttrs == attributes {
-                first = range
-                stop.assign(repeating: true, count: 1)
-            }
-        }
+    func trim(to maxLen: Int, first range: NSRange) -> NSAttributedString {
+        let upper = range.upperBound
+        guard length > maxLen, upper > length else { return self }
 
         let attrText = mutableCopy() as! NSMutableAttributedString
-        let lower = first.location
-        let upper = first.upperBound
-        let len = first.length
+        let lower = range.location
+        let len = range.length
 
         if upper > maxLen && lower > 2 {
             var rlen = (2 + len > maxLen) ? (lower - 2) : (upper - maxLen)
@@ -308,6 +298,21 @@ public extension NSAttributedString {
         }
 
         return attrText
+    }
+
+    func trim(to maxLen: Int, with attrs: [NSAttributedString.Key: Any]) -> NSAttributedString {
+        let attributes = attrs as NSDictionary
+
+        var first: NSRange = NSRange()
+        enumerateAttributes(in: NSRange(location: 0, length: length), options: []) { sAttrs, range, stop in
+            let tAttrs = sAttrs as NSDictionary
+            if tAttrs == attributes {
+                first = range
+                stop.assign(repeating: true, count: 1)
+            }
+        }
+
+        return trim(to: maxLen, first: first)
     }
 
     convenience init(feature string: String,
