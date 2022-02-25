@@ -22,6 +22,7 @@ extension Orm {
         var dic = bindings
         switch config {
             case let config as PlainConfig:
+                dic.removeValues(forKeys: config.blacks)
                 if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
                     dic.removeValues(forKeys: config.primaries)
                 }
@@ -389,7 +390,7 @@ public extension Orm {
         }
         return count
     }
-
+    
     /// delete records according to condition
     @discardableResult
     func delete(where condition: Where = Where("")) -> Bool {
