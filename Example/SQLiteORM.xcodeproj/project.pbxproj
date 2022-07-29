@@ -303,12 +303,14 @@
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SQLiteORM_Example/Pods-SQLiteORM_Example-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/AnyCoder/AnyCoder.framework",
+				"${BUILT_PRODUCTS_DIR}/Runtime/Runtime.framework",
 				"${BUILT_PRODUCTS_DIR}/SQLCipher/SQLCipher.framework",
 				"${BUILT_PRODUCTS_DIR}/SQLiteORM/SQLiteORM.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/AnyCoder.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Runtime.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SQLCipher.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SQLiteORM.framework",
 			);

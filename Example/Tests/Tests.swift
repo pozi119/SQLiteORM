@@ -212,9 +212,11 @@ extension SQLiteORMTests {
         let one = orm.findOne()
         let all = orm.find()
         let p1 = orm.findOne(W("name") == "王五")
+        let all2 = orm.xFind()
         XCTAssert(one != nil)
         XCTAssert(all.count > 0)
         XCTAssert(p1 != nil)
+        XCTAssert(all2.count > 0)
     }
 
     func testRelativeOrm() {

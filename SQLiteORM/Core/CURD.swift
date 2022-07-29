@@ -73,11 +73,10 @@ extension Orm {
         return count
     }
 
-    func encode<S: Codable>(_ item: S) throws -> [String: Primitive] {
-        return try ManyEncoder().encode(item)
-    }
-
-    func encode<S>(_ item: S) throws -> [String: Primitive] {
+    func encode(_ item: Any) throws -> [String: Primitive] {
+        if let item = item as? any Codable {
+            return try ManyEncoder().encode(item)
+        }
         return try AnyEncoder.encode(item)
     }
 }

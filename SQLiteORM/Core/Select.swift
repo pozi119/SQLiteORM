@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/5/8.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 /// select  statement
 public final class Select {
@@ -146,21 +146,15 @@ extension Select {
         return self.orm(orm).allItems(type: S.self)
     }
 
-    public func allItems<S: Codable>(type: S.Type) -> [S] {
-        let keyValues = allKeyValues()
-        do {
-            let array = try ManyDecoder().decode([S].self, from: keyValues)
-            return array
-        } catch {
-            print(error)
-            return []
-        }
-    }
-
     public func allItems<S>(type: S.Type) -> [S] {
         let keyValues = allKeyValues()
         do {
-            let array = try AnyDecoder.decode(S.self, from: keyValues)
+            var array: [S] = []
+            if let u = [S].self as? Codable.Type {
+                array = try ManyDecoder().decode(u.self, from: keyValues) as! [S]
+            } else {
+                array = try AnyDecoder.decode(S.self, from: keyValues)
+            }
             return array
         } catch {
             print(error)

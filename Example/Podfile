@@ -1,6 +1,6 @@
 use_frameworks!
 
-platform :ios, '10.0'
+platform :ios, '12.0'
 install!'cocoapods', :warn_for_unused_master_specs_repo => false
 
 target 'SQLiteORM_Example' do

@@ -7,6 +7,7 @@
 
 import Foundation
 import AnyCoder
+import Runtime
 
 // sqlite view
 public class View<T> {

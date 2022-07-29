@@ -220,22 +220,15 @@ public final class Database {
     }
 
     /// execute native sql query
-    public func query<T: Codable>(_ statement: String, type: T.Type, bind bindings: [Primitive] = []) -> [T] {
-        let keyValues = query(statement, bind: bindings)
-        do {
-            let array = try ManyDecoder().decode([T].self, from: keyValues)
-            return array
-        } catch {
-            print(error)
-            return []
-        }
-    }
-
-    /// execute native sql query
     public func query<T>(_ statement: String, type: T.Type, bind bindings: [Primitive] = []) -> [T] {
         let keyValues = query(statement, bind: bindings)
         do {
-            let array = try AnyDecoder.decode(T.self, from: keyValues)
+            var array: [T] = []
+            if let u = [T].self as? Codable.Type {
+                array = try ManyDecoder().decode(u.self, from: keyValues) as! [T]
+            } else {
+                array = try AnyDecoder.decode(T.self, from: keyValues)
+            }
             return array
         } catch {
             print(error)
@@ -444,21 +437,21 @@ fileprivate typealias cCommitHook = @convention(c) (UnsafeMutableRawPointer?) ->
 fileprivate typealias cRollbackHook = @convention(c) (UnsafeMutableRawPointer?) -> Void
 fileprivate typealias cUpdateHook = @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<Int8>?, UnsafePointer<Int8>?, sqlite3_int64) -> Void
 
-fileprivate let global_busy: cBusyHandler = { (pCtx, times) -> Int32 in
+fileprivate let global_busy: cBusyHandler = { pCtx, times -> Int32 in
     guard let ctx = pCtx else { return SQLITE_OK }
     let db = unsafeBitCast(ctx, to: Database.self)
     guard let busy = db.busyHandler else { return SQLITE_OK }
     return busy(times)
 }
 
-fileprivate let global_trace: cTraceHook = { (mask, pCtx, p, x) -> Int32 in
+fileprivate let global_trace: cTraceHook = { mask, pCtx, p, x -> Int32 in
     guard let ctx = pCtx else { return SQLITE_OK }
     let db = unsafeBitCast(ctx, to: Database.self)
     guard let trace = db.traceHook else { return SQLITE_OK }
     return trace(mask, p, x)
 }
 
-fileprivate let global_update: cUpdateHook = { (pCtx, op, dbname, table, rowid) -> Void in
+fileprivate let global_update: cUpdateHook = { pCtx, op, dbname, table, rowid in
     guard let ctx = pCtx else { return }
     let db = unsafeBitCast(ctx, to: Database.self)
     if let name = table, let key = NSString(utf8String: name),
@@ -467,14 +460,14 @@ fileprivate let global_update: cUpdateHook = { (pCtx, op, dbname, table, rowid) 
     update(op, dbname!, table!, rowid)
 }
 
-fileprivate let global_commit: cCommitHook = { (pCtx) -> Int32 in
+fileprivate let global_commit: cCommitHook = { pCtx -> Int32 in
     guard let ctx = pCtx else { return SQLITE_OK }
     let db = unsafeBitCast(ctx, to: Database.self)
     guard let commit = db.commitHook else { return SQLITE_OK }
     return commit()
 }
 
-fileprivate let global_rollback: cRollbackHook = { (pCtx) -> Void in
+fileprivate let global_rollback: cRollbackHook = { pCtx in
     guard let ctx = pCtx else { return }
     let db = unsafeBitCast(ctx, to: Database.self)
     guard let rollback = db.rollbackHook else { return }
@@ -490,12 +483,12 @@ extension Database: CustomStringConvertible {
 extension Database.Location: CustomStringConvertible {
     public var description: String {
         switch self {
-            case .memory:
-                return ":memory:"
-            case .temporary:
-                return ""
-            case let .uri(URI):
-                return URI
+        case .memory:
+            return ":memory:"
+        case .temporary:
+            return ""
+        case let .uri(URI):
+            return URI
         }
     }
 }
@@ -528,12 +521,12 @@ public enum Result: Error {
 extension Result: CustomStringConvertible {
     public var description: String {
         switch self {
-            case let .error(message, errorCode, statement):
-                if let statement = statement {
-                    return "\(message) (\(statement)) (code: \(errorCode))"
-                } else {
-                    return "\(message) (code: \(errorCode))"
-                }
+        case let .error(message, errorCode, statement):
+            if let statement = statement {
+                return "\(message) (\(statement)) (code: \(errorCode))"
+            } else {
+                return "\(message) (code: \(errorCode))"
+            }
         }
     }
 }
