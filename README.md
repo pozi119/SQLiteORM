@@ -6,14 +6,14 @@
 2. 对swift的枚举类型支持并不完美, 目前编码为Int类型,按定义顺序从0依次递增, 请谨慎使用.
 3. 大致用法请参考[VVSequelize](https://github.com/pozi119/VVSequelize)
 
-## 改动(0.1.4-beta)
-1. 同步VVSequelize
-2. 调整Orm,Select
+## 改动(0.1.4)
+1. 支持Codable
 
 ## 安装
 
 ```ruby
-pod 'SQLiteORM', '~> 0.1.4-beta'
+pod 'SQLiteORM', '~> 0.1.4'
+pod 'Runtime', :git => 'https://github.com/wickwirew/Runtime.git' // The version in pods is 2.2.2, which requires 2.2.4
 ```
 
 ## Author
