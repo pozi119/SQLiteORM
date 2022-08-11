@@ -264,8 +264,8 @@ public final class Orm<T> {
         guard let cfg = config as? PlainConfig, cfg.indexes.count > 0 else { return }
         let ascIdx = "orm_asc_idx_\(table)"
         let descIdx = "orm_desc_idx_\(table)"
-        let ascCols = cfg.indexes.joined(separator: ",")
-        let descCols = cfg.indexes.map { $0 + " DESC" }.joined(separator: ",")
+        let ascCols = cfg.indexes.map { $0.quoted }.joined(separator: ",")
+        let descCols = cfg.indexes.map { $0.quoted + " DESC" }.joined(separator: ",")
         let ascIdxSQL = "CREATE INDEX IF NOT EXISTS \(ascIdx.quoted) on \(table.quoted) (\(ascCols));"
         let descIdxSQL = "CREATE INDEX IF NOT EXISTS \(descIdx.quoted) on \(table.quoted) (\(descCols));"
         try db.run(ascIdxSQL)

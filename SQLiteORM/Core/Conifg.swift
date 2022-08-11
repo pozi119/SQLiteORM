@@ -212,7 +212,7 @@ public final class PlainConfig: Config {
         notnulls = Array(Set(notnulls).intersection(columns).subtracting(primaries))
         uniques = Array(Set(uniques).intersection(columns).subtracting(primaries))
 
-        let indexesSet = NSMutableOrderedSet(array: columns)
+        let indexesSet = NSMutableOrderedSet(array: indexes)
         indexesSet.minusSet(Set(uniques))
         indexesSet.minusSet(Set(primaries))
         indexes = indexesSet.array as! [String]
