@@ -117,12 +117,12 @@ public extension View {
     ///
     /// - Parameters:
     /// - Returns: [String:Primitive], decoding with ORMDecoder
-    func findOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> [String: Primitive]? {
+    func findOne(_ condition: Where = .empty, orderBy: OrderBy = .empty) -> [String: Primitive]? {
         return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues().first
     }
 
     /// find a record, decoded
-    func xFindOne(_ condition: Where = Where(""), orderBy: OrderBy = OrderBy("")) -> T? {
+    func xFindOne(_ condition: Where = .empty, orderBy: OrderBy = .empty) -> T? {
         return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allItems(type: T.self).first
     }
 
@@ -138,12 +138,12 @@ public extension View {
     ///   - limit: maximum number of results
     ///   - offset: starting position
     /// - Returns: [String:Primitive], decoding with ORMDecoder
-    func find(_ condition: Where = Where(""),
+    func find(_ condition: Where = .empty,
               distinct: Bool = false,
-              fields: Fields = Fields("*"),
-              groupBy: GroupBy = GroupBy(""),
-              having: Where = Where(""),
-              orderBy: OrderBy = OrderBy(""),
+              fields: Fields = .empty,
+              groupBy: GroupBy = .empty,
+              having: Where = .empty,
+              orderBy: OrderBy = .empty,
               limit: Int64 = 0,
               offset: Int64 = 0) -> [[String: Primitive]] {
         return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
@@ -152,12 +152,12 @@ public extension View {
     }
 
     /// find data, decoded
-    func xFind(_ condition: Where = Where(""),
+    func xFind(_ condition: Where = .empty,
                distinct: Bool = false,
-               fields: Fields = Fields("*"),
-               groupBy: GroupBy = GroupBy(""),
-               having: Where = Where(""),
-               orderBy: OrderBy = OrderBy(""),
+               fields: Fields = .empty,
+               groupBy: GroupBy = .empty,
+               having: Where = .empty,
+               orderBy: OrderBy = .empty,
                limit: Int64 = 0,
                offset: Int64 = 0) -> [T] {
         return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
@@ -166,7 +166,7 @@ public extension View {
     }
 
     /// get number of records
-    func count(_ condition: Where = Where("")) -> Int64 {
+    func count(_ condition: Where = .empty) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
@@ -183,17 +183,17 @@ public extension View {
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: Where = Where("")) -> Primitive? {
+    func max(of field: String, condition: Where = .empty) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: Where = Where("")) -> Primitive? {
+    func min(of field: String, condition: Where = .empty) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: Where = Where("")) -> Primitive? {
+    func sum(of field: String, condition: Where = .empty) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -202,7 +202,7 @@ public extension View {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: Where = Where("")) -> Primitive? {
+    func function(_ function: String, condition: Where = .empty) -> Primitive? {
         let dic = Select().db(db).table(name).fields(Fields(function)).where(condition).allKeyValues().first
         return dic?.values.first
     }

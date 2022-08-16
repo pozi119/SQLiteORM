@@ -5,17 +5,22 @@
 //  Created by Valo on 2019/5/8.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 public protocol SQLable: CustomStringConvertible {
     /// sql statement
     var sql: String { get }
+    init(_ string:String)
 }
 
 extension SQLable {
     public var description: String {
         return sql
+    }
+    
+    public static var empty: Self {
+        return .init("")
     }
 }
 
@@ -30,35 +35,6 @@ extension String: Filtrable {}
 extension Array: Filtrable {}
 
 // MARK: - where
-
-public struct Where: SQLable {
-    public private(set) var sql: String
-
-    public init(_ condition: String) {
-        sql = condition
-    }
-
-    public init(_ keyValues: [[String: Primitive]]) {
-        let array = keyValues.map { Where($0) }
-        sql = array.map { "(\($0))" }.joined(separator: " OR ")
-    }
-
-    public init(_ conditions: [Where]) {
-        sql = conditions.map { "(\($0))" }.joined(separator: " OR ")
-    }
-
-    public init(_ conditions: [String]) {
-        sql = conditions.joined(separator: " OR ")
-    }
-
-    public init(_ keyValue: [String: Primitive]) {
-        sql = keyValue.map { "(\($0.key.quoted) == \($0.value.sqlValue))" }.joined(separator: " AND ")
-    }
-
-    public var quoted: String {
-        return sql.quoted
-    }
-}
 
 extension Where: ExpressibleByStringLiteral {
     public typealias StringLiteralType = String
@@ -86,6 +62,43 @@ extension Where: ExpressibleByDictionaryLiteral {
     }
 }
 
+@dynamicMemberLookup
+public struct Where: SQLable {
+    var raw: String = ""
+
+    public var sql: String {
+        return raw
+    }
+
+    public init(_ string: String) {
+        raw = string
+    }
+
+    public init(_ keyValues: [[String: Primitive]]) {
+        let array = keyValues.map { Where($0) }
+        raw = array.map { "(\($0))" }.joined(separator: " OR ")
+    }
+
+    public init(_ conditions: [Where]) {
+        raw = conditions.map { "(\($0))" }.joined(separator: " OR ")
+    }
+
+    public init(_ conditions: [String]) {
+        raw = conditions.joined(separator: " OR ")
+    }
+
+    public init(_ keyValue: [String: Primitive]) {
+        raw = keyValue.map { "(\($0.key.quoted) == \($0.value.sqlValue))" }.joined(separator: " AND ")
+    }
+
+    public static subscript(dynamicMember member: String) -> Where {
+        get {
+            Where(member)
+        }
+        set { }
+    }
+}
+
 // MARK: operator
 
 infix operator !>: ComparisonPrecedence
@@ -95,7 +108,7 @@ infix operator <>: ComparisonPrecedence
 // MARK: comparison
 
 fileprivate func _operator(_ op: String, lhs: Where, value: Primitive) -> Where {
-    return Where(lhs.quoted + " " + op + " " + value.sqlValue)
+    return Where(lhs.raw.quoted + " " + op + " " + value.sqlValue)
 }
 
 public func == (lhs: Where, value: Primitive) -> Where {
@@ -138,25 +151,25 @@ public func !< (lhs: Where, value: Primitive) -> Where {
 
 public func && (lhs: Where, rhs: Where) -> Where {
     switch (lhs.sql.count, rhs.sql.count) {
-        case (0, 0): return lhs
-        case (_, 0): return lhs
-        case (0, _): return rhs
-        case (_, _): return Where("(\(lhs))" + " AND " + "(\(rhs))")
+    case (0, 0): return lhs
+    case (_, 0): return lhs
+    case (0, _): return rhs
+    case (_, _): return Where("(\(lhs))" + " AND " + "(\(rhs))")
     }
 }
 
 public func || (lhs: Where, rhs: Where) -> Where {
     switch (lhs.sql.count, rhs.sql.count) {
-        case (0, 0): return lhs
-        case (_, 0): return lhs
-        case (0, _): return rhs
-        case (_, _): return Where("(\(lhs))" + " OR " + "(\(rhs))")
+    case (0, 0): return lhs
+    case (_, 0): return lhs
+    case (0, _): return rhs
+    case (_, _): return Where("(\(lhs))" + " OR " + "(\(rhs))")
     }
 }
 
 public extension Where {
     fileprivate func _logic(_ logic: String, value: Primitive) -> Where {
-        return Where(quoted + " " + logic + " " + value.sqlValue)
+        return Where(raw.quoted + " " + logic + " " + value.sqlValue)
     }
 
     func match(_ value: Primitive) -> Where {
@@ -188,7 +201,7 @@ public extension Where {
     }
 
     func isNull() -> Where {
-        return Where("\(quoted) IS NULL")
+        return Where("\(raw.quoted) IS NULL")
     }
 
     func exists(_ value: Primitive) -> Where {
@@ -200,59 +213,82 @@ public extension Where {
     }
 
     func between(_ turple: (start: Primitive, end: Primitive)) -> Where {
-        return Where(quoted + " BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
+        return Where(raw.quoted + " BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
     func notBetween(_ turple: (start: Primitive, end: Primitive)) -> Where {
-        return Where(quoted + " NOT BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
+        return Where(raw.quoted + " NOT BETWEEN " + turple.start.sqlValue + " AND " + turple.end.sqlValue)
     }
 
     func `in`<T: Primitive>(_ array: [T]) -> Where {
-        return Where(quoted + " IN (" + array.sqlJoined + ")")
+        return Where(raw.quoted + " IN (" + array.sqlJoined + ")")
     }
 
     func notIn<T: Primitive>(_ array: [T]) -> Where {
-        return Where(quoted + " NOT IN (" + array.sqlJoined + ")")
+        return Where(raw.quoted + " NOT IN (" + array.sqlJoined + ")")
     }
 }
 
 // MARK: - table
+@dynamicMemberLookup
+public struct Table: SQLable {
+    var raw: String = ""
+    
+    public var sql: String {
+        return raw
+    }
+    
+    public init(_ string: String) {
+        raw = string
+    }
+    
+    public static subscript(dynamicMember table: String) -> Table {
+        get {
+            Table(table)
+        }
+        set { }
+    }
+}
 
-public extension String {
-    func innerJoin(_ other: String) -> String {
-        return quoted + " JOIN " + other.quoted
+public extension Table {
+    func innerJoin(_ other: String) -> Table {
+        return Table(raw.quoted + " JOIN " + other.quoted)
     }
 
-    func outerJoin(_ other: String) -> String {
-        return quoted + " LEFT OUTER JOIN " + other.quoted
+    func outerJoin(_ other: String) -> Table {
+        return Table(raw.quoted + " LEFT OUTER JOIN " + other.quoted)
     }
 
-    func crossJoin(_ other: String) -> String {
-        return quoted + " CROSS JOIN " + other.quoted
+    func crossJoin(_ other: String) -> Table {
+        return Table(raw.quoted + " CROSS JOIN " + other.quoted)
     }
 
-    func column(_ column: String) -> String {
-        return self + "." + column
+    func column(_ column: String) -> Table {
+        return Table(raw + "." + column)
     }
 
-    func on(_ condition: Where) -> String {
-        return self + " ON " + condition.sql
+    func on(_ condition: Where) -> Table {
+        return Table(raw + " ON " + condition.sql)
     }
 
-    func concat(_ concat: String, value: Primitive) -> String {
-        return self + " " + concat + " " + value.sqlValue
+    func concat(_ concat: String, value: Primitive) -> Table {
+        return Table(raw + " " + concat + " " + value.sqlValue)
     }
 }
 
 // MARK: - order by
 
 public struct OrderBy: SQLable {
-    public private(set) var sql: String
+    var raw: String = ""
+
+    public var sql: String {
+        return raw
+    }
 
     private let rx = "( +ASC *$)|( +DESC *$)"
 
     public init(_ order: String) {
-        sql = order.count == 0 ? "" : (order.match(rx) ? order : (order + " ASC"))
+        raw = order.count == 0 ? "" : (order.match(rx) ? order : (order + " ASC"))
     }
 
     public init(_ orders: [String]) {
@@ -262,7 +298,7 @@ public struct OrderBy: SQLable {
             let t = order.match(rx) ? order : (order + " ASC")
             array.append(t)
         }
-        sql = array.joined(separator: ",")
+        raw = array.joined(separator: ",")
     }
 }
 
@@ -283,14 +319,18 @@ extension OrderBy: ExpressibleByArrayLiteral {
 // MARK: - group by
 
 public struct GroupBy: SQLable {
-    public private(set) var sql: String
+    var raw: String = ""
+
+    public var sql: String {
+        return raw
+    }
 
     public init(_ group: String) {
-        sql = group
+        raw = group
     }
 
     public init(_ groups: [String]) {
-        sql = groups.joined(separator: ",")
+        raw = groups.joined(separator: ",")
     }
 }
 
@@ -311,18 +351,18 @@ extension GroupBy: ExpressibleByArrayLiteral {
 // MARK: - fields
 
 public struct Fields: SQLable {
-    public private(set) var sql: String
+    var raw: String = ""
+
+    public var sql: String {
+        return raw == "" ? "*" : raw
+    }
 
     public init(_ field: String) {
-        sql = field
+        raw = field
     }
 
     public init(_ fields: [String]) {
-        sql = fields.joined(separator: ",")
-    }
-
-    public init() {
-        sql = "*"
+        raw = fields.joined(separator: ",")
     }
 }
 

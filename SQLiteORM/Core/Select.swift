@@ -23,16 +23,16 @@ public final class Select {
     var fields: Fields = "*"
 
     /// query condition
-    var `where`: Where = ""
+    var `where`: Where = .empty
 
     /// sort criteria
-    var orderBy: OrderBy = ""
+    var orderBy: OrderBy = .empty
 
     /// fields for group
-    var groupBy: GroupBy = ""
+    var groupBy: GroupBy = .empty
 
     /// condition for group
-    var having: Where = ""
+    var having: Where = .empty
 
     /// maximum number of results
     var limit: Int64 = 0
