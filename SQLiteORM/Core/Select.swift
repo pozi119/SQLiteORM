@@ -48,7 +48,7 @@ public final class Select {
 
         let fieldsClause = fields.sql
 
-        let tableClause = " FROM " + table
+        let tableClause = " FROM " + table.quoted
 
         var whereClause = `where`.sql
         whereClause = whereClause.count > 0 ? " WHERE \(whereClause)" : ""

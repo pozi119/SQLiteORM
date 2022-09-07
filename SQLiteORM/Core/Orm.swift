@@ -101,9 +101,9 @@ public final class Orm<T> {
             self.table = info?.name ?? ""
         }
         switch setup {
-            case .create: try? create()
-            case .rebuild: try? rebuild()
-            default: break
+        case .create: try? create()
+        case .rebuild: try? rebuild()
+        default: break
         }
         db.orms.setObject(self, forKey: table as NSString)
     }
@@ -118,9 +118,9 @@ public final class Orm<T> {
         self.content_table = content_table
         self.content_rowid = content_rowid
         switch setup {
-            case .create: try? create()
-            case .rebuild: try? rebuild()
-            default: break
+        case .create: try? create()
+        case .rebuild: try? rebuild()
+        default: break
         }
     }
 
@@ -146,7 +146,7 @@ public final class Orm<T> {
         }
 
         let fts_table = "fts_" + orm.table
-        self.init(config: config, db: orm.db, table: fts_table, setup: .create)
+        self.init(config: config, db: orm.db, table: fts_table, setup: .none)
         content_table = orm.table
         self.content_rowid = content_rowid
 
@@ -160,15 +160,15 @@ public final class Orm<T> {
         let del_tri_name = fts_table + "_delete"
         let upd_tri_name = fts_table + "_update"
 
-        let ins_trigger = "CREATE TRIGGER IF NOT EXISTS \(ins_tri_name) AFTER INSERT ON \(orm.table) BEGIN \n"
-            + "INSERT INTO \(fts_table) (\(ins_rows)) VALUES (\(ins_vals)); \n"
+        let ins_trigger = "CREATE TRIGGER IF NOT EXISTS \(ins_tri_name) AFTER INSERT ON \(orm.table.quoted) BEGIN \n"
+            + "INSERT INTO \(fts_table.quoted) (\(ins_rows)) VALUES (\(ins_vals)); \n"
             + "END;"
-        let del_trigger = "CREATE TRIGGER IF NOT EXISTS \(del_tri_name) AFTER DELETE ON \(orm.table) BEGIN \n"
-            + "INSERT INTO \(fts_table) (\(del_rows)) VALUES (\(del_vals)); \n"
+        let del_trigger = "CREATE TRIGGER IF NOT EXISTS \(del_tri_name) AFTER DELETE ON \(orm.table.quoted) BEGIN \n"
+            + "INSERT INTO \(fts_table.quoted) (\(del_rows)) VALUES (\(del_vals)); \n"
             + "END;"
-        let upd_trigger = "CREATE TRIGGER IF NOT EXISTS \(upd_tri_name) AFTER UPDATE ON \(orm.table) BEGIN \n"
-            + "INSERT INTO \(fts_table) (\(del_rows)) VALUES (\(del_vals)); \n"
-            + "INSERT INTO \(fts_table) (\(ins_rows)) VALUES (\(ins_vals)); \n"
+        let upd_trigger = "CREATE TRIGGER IF NOT EXISTS \(upd_tri_name) AFTER UPDATE ON \(orm.table.quoted) BEGIN \n"
+            + "INSERT INTO \(fts_table.quoted) (\(del_rows)) VALUES (\(del_vals)); \n"
+            + "INSERT INTO \(fts_table.quoted) (\(ins_rows)) VALUES (\(ins_vals)); \n"
             + "END;"
 
         do {
@@ -250,11 +250,11 @@ public final class Orm<T> {
         if db.exists(table) { return }
         var sql = ""
         switch config {
-            case let cfg as PlainConfig:
-                sql = cfg.sqlToCreate(table: table)
-            case let cfg as FtsConfig:
-                sql = cfg.sqlToCreate(table: table, content_table: content_table, content_rowid: content_rowid)
-            default: break
+        case let cfg as PlainConfig:
+            sql = cfg.sqlToCreate(table: table)
+        case let cfg as FtsConfig:
+            sql = cfg.sqlToCreate(table: table, content_table: content_table, content_rowid: content_rowid)
+        default: break
         }
         try db.run(sql)
     }

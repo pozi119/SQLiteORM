@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/5/7.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 // MARK: - private functions
 
@@ -18,37 +18,37 @@ extension Orm {
     fileprivate func _update(_ bindings: [String: Primitive], type: Update = .insert, condition: Where = .empty) -> Bool {
         guard bindings.count > 0 else { return false }
         try? create()
-        
+
         var dic = bindings
         switch config {
-            case let config as PlainConfig:
-                dic.removeValues(forKeys: config.blacks)
-                if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
-                    dic.removeValues(forKeys: config.primaries)
+        case let config as PlainConfig:
+            dic.removeValues(forKeys: config.blacks)
+            if type == .insert && config.primaries.count == 1 && config.pkAutoInc {
+                dic.removeValues(forKeys: config.primaries)
+            }
+            if config.logAt {
+                let now = NSDate().timeIntervalSince1970
+                if type != .update {
+                    dic[Config.createAt] = now
                 }
-                if config.logAt {
-                    let now = NSDate().timeIntervalSince1970
-                    if type != .update {
-                        dic[Config.createAt] = now
-                    }
-                    dic[Config.updateAt] = now
-                }
-            default:
-                break
+                dic[Config.updateAt] = now
+            }
+        default:
+            break
         }
         var sql = ""
         let fields = dic.keys
         let values = fields.map { dic[$0] } as! [Primitive]
         switch type {
-            case .insert, .upsert:
-                let keys = fields.map { $0.quoted }.joined(separator: ",")
-                let marks = Array(repeating: "?", count: dic.count).joined(separator: ",")
-                sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keys)) VALUES (\(marks))"
-            case .update:
-                let sets = fields.map { $0.quoted + "=?" }.joined(separator: ",")
-                var whereClause = condition.sql
-                whereClause = whereClause.count > 0 ? "WHERE \(whereClause)" : ""
-                sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
+        case .insert, .upsert:
+            let keys = fields.map { $0.quoted }.joined(separator: ",")
+            let marks = Array(repeating: "?", count: dic.count).joined(separator: ",")
+            sql = ((type == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keys)) VALUES (\(marks))"
+        case .update:
+            let sets = fields.map { $0.quoted + "=?" }.joined(separator: ",")
+            var whereClause = condition.sql
+            whereClause = whereClause.count > 0 ? "WHERE \(whereClause)" : ""
+            sql = "UPDATE \(table.quoted) SET \(sets) \(whereClause)"
         }
         do {
             try db.prepare(sql, bind: values).run()
@@ -74,10 +74,14 @@ extension Orm {
     }
 
     func encode(_ item: Any) throws -> [String: Primitive] {
+        let dic: [String: Primitive]
         if let item = item as? any Codable {
-            return try ManyEncoder().encode(item)
+            dic = try ManyEncoder().encode(item)
+        } else {
+            dic = try AnyEncoder.encode(item)
         }
-        return try AnyEncoder.encode(item)
+        let filtered = dic.filter { config.columns.contains($0.key) }
+        return filtered
     }
 }
 
@@ -165,7 +169,7 @@ public extension Orm {
     ///   - bindings: [filed:data]
     @discardableResult
     func update(_ condition: Where, with bindings: [String: Primitive]) -> Bool {
-        return _update(bindings, type: .upsert, condition: condition)
+        return _update(bindings, type: .update, condition: condition)
     }
 
     /// update a item
@@ -174,7 +178,7 @@ public extension Orm {
         guard let condition = config.constraint(for: item, properties: properties) else { return false }
         do {
             let encoded = try encode(item)
-            return _update(encoded, type: .upsert, condition: condition)
+            return _update(encoded, type: .update, condition: condition)
         } catch {
             return false
         }
@@ -188,7 +192,7 @@ public extension Orm {
             var encoded = try encode(item)
             let trashKeys = Array(Set(encoded.keys).subtracting(fields))
             encoded.removeValues(forKeys: trashKeys)
-            return _update(encoded, type: .upsert, condition: condition)
+            return _update(encoded, type: .update, condition: condition)
         } catch {
             return false
         }
@@ -389,7 +393,7 @@ public extension Orm {
         }
         return count
     }
-    
+
     /// delete records according to condition
     @discardableResult
     func delete(where condition: Where = .empty) -> Bool {

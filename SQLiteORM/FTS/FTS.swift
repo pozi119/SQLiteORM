@@ -35,7 +35,7 @@ func fts5_xCreate(_ pUnused: UnsafeMutableRawPointer?,
                 if mask > 0 {
                     tok.pointee.mask = mask
                 } else {
-                    tok.pointee.locale = String(cString: cstr)
+                    // tok.pointee.locale = String(cString: cstr) //MARK: Not supported now
                 }
             }
         }
@@ -57,11 +57,11 @@ func fts5_xTokenize(_ pTokenizer: OpaquePointer?,
                     _ nText: Int32,
                     _ xToken: (@convention(c) (UnsafeMutableRawPointer?, Int32, UnsafePointer<Int8>?, Int32, Int32, Int32) -> Int32)?) -> Int32 {
     guard nText > 0,
-        let text = pText,
-        let source = String(utf8String: text)
+          let text = pText,
+          let source = String(utf8String: text)
     else { return SQLITE_OK }
     guard let xxToken = xToken,
-        let pTok = UnsafeMutablePointer<Fts5Tokenizer>.init(pTokenizer)
+          let pTok = UnsafeMutablePointer<Fts5Tokenizer>.init(pTokenizer)
     else { return SQLITE_NOMEM }
     guard let pEnum = pTok.pointee.enumerator
     else { return SQLITE_ERROR }
