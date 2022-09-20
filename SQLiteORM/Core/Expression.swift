@@ -177,19 +177,19 @@ public extension Where {
     }
 
     func like(_ value: Primitive) -> Where {
-        return _logic("LIKE", value: value)
+        return _logic("LIKE", value: "\(value)".quote("%"))
     }
 
     func notLike(_ value: Primitive) -> Where {
-        return _logic("NOT LIKE", value: value)
+        return _logic("NOT LIKE", value: "\(value)".quote("%"))
     }
 
     func glob(_ value: Primitive) -> Where {
-        return _logic("GLOB", value: value)
+        return _logic("GLOB", value: "\(value)".quote("*"))
     }
 
     func notGlob(_ value: Primitive) -> Where {
-        return _logic("NOT GLOB", value: value)
+        return _logic("NOT GLOB", value: "\(value)".quote("*"))
     }
 
     func `is`(_ value: Primitive) -> Where {
