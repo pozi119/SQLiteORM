@@ -75,7 +75,7 @@ import Foundation
                 if rc != SQLITE_OK { break }
             }
             sqlite3_close(handle)
-            
+
             if rc == SQLITE_OK && target.count == 0 {
                 do {
                     try fm.removeItem(atPath: source)

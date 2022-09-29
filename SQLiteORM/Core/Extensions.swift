@@ -5,8 +5,8 @@
 //  Created by Valo on 2020/7/21.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 public extension String {
     var trim: String {
@@ -22,7 +22,7 @@ public extension String {
     }
 
     func quote(_ mark: Character? = "\"") -> String {
-        guard mark != nil else {
+        guard mark != nil && count > 0 else {
             return self
         }
         let ch = mark!
@@ -54,10 +54,44 @@ public extension Array where Element: Hashable {
     }
 }
 
+public extension Array where Element == Dictionary<String, any Primitive> {
+    func toItems<T>(_ type: T.Type) -> [T] {
+        do {
+            var array: [T] = []
+            if let u = [T].self as? Codable.Type {
+                array = try ManyDecoder().decode(u.self, from: self) as! [T]
+            } else {
+                array = try AnyDecoder.decode(T.self, from: self)
+            }
+            return array
+        } catch {
+            print(error)
+            return []
+        }
+    }
+}
+
 public extension Dictionary {
     mutating func removeValues(forKeys: [Key]) {
         for key in forKeys {
             removeValue(forKey: key)
+        }
+    }
+}
+
+public extension Dictionary where Key == String, Value: Primitive {
+    func toItem<T>(_ type: T.Type) -> T? {
+        do {
+            var obj: T?
+            if let u = T.self as? Codable.Type {
+                obj = try ManyDecoder().decode(u.self, from: self) as? T
+            } else {
+                obj = try AnyDecoder.decode(T.self, from: self)
+            }
+            return obj
+        } catch {
+            print(error)
+            return nil
         }
     }
 }

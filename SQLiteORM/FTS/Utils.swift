@@ -157,14 +157,14 @@ public extension String {
         for i in 0 ..< count {
             var ch = string.character(at: i)
             switch ch {
-                case 0xFF01 ... 0xFF5E: ch -= 0xFEE0
-                case 0xFFE0: ch = 0xA2
-                case 0xFFE1: ch = 0xA3
-                case 0xFFE2: ch = 0xAC
-                case 0xFFE3: ch = 0xAF
-                case 0xFFE4: ch = 0xA6
-                case 0xFFE5: ch = 0xA5
-                default: break
+            case 0xFF01 ... 0xFF5E: ch -= 0xFEE0
+            case 0xFFE0: ch = 0xA2
+            case 0xFFE1: ch = 0xA3
+            case 0xFFE2: ch = 0xAC
+            case 0xFFE3: ch = 0xAF
+            case 0xFFE4: ch = 0xA6
+            case 0xFFE5: ch = 0xA5
+            default: break
             }
             array.append(ch)
         }
@@ -178,14 +178,14 @@ public extension String {
         for i in 0 ..< count {
             var ch = string.character(at: i)
             switch ch {
-                case 0x21 ... 0x7E: ch += 0xFEE0
-                case 0xA2: ch = 0xFFE0
-                case 0xA3: ch = 0xFFE1
-                case 0xAC: ch = 0xFFE2
-                case 0xAF: ch = 0xFFE3
-                case 0xA6: ch = 0xFFE4
-                case 0xA5: ch = 0xFFE5
-                default: break
+            case 0x21 ... 0x7E: ch += 0xFEE0
+            case 0xA2: ch = 0xFFE0
+            case 0xA3: ch = 0xFFE1
+            case 0xAC: ch = 0xFFE2
+            case 0xAF: ch = 0xFFE3
+            case 0xA6: ch = 0xFFE4
+            case 0xA5: ch = 0xFFE5
+            default: break
             }
             array.append(ch)
         }

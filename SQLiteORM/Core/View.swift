@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/10/15.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 import Runtime
 
 // sqlite view
@@ -19,7 +19,6 @@ public class View<T> {
 
     public let db: Database
     public let config: Config
-    public let properties: [String: PropertyInfo]
 
     private let decoder = ManyDecoder()
 
@@ -40,14 +39,7 @@ public class View<T> {
         self.db = db
         self.config = config
 
-        var props: [String: PropertyInfo] = [:]
         let info = try? typeInfo(of: config.type!)
-        if info != nil {
-            for prop in info!.properties {
-                props[prop.name] = prop
-            }
-        }
-        properties = props
 
         if table.count > 0 {
             self.table = table
@@ -117,83 +109,41 @@ public extension View {
     ///
     /// - Parameters:
     /// - Returns: [String:Primitive], decoding with ORMDecoder
-    func findOne(_ condition: Where = .empty, orderBy: OrderBy = .empty) -> [String: Primitive]? {
-        return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allKeyValues().first
-    }
-
-    /// find a record, decoded
-    func xFindOne(_ condition: Where = .empty, orderBy: OrderBy = .empty) -> T? {
-        return Select().db(db).table(name).where(condition).orderBy(orderBy).limit(1).allItems(type: T.self).first
-    }
-
-    /// find data, not decoded
-    ///
-    /// - Parameters:
-    ///   - condition: query terms
-    ///   - distinct: remove duplicate
-    ///   - fields: special fields
-    ///   - groupBy: fields for group
-    ///   - having: condition for group
-    ///   - orderBy: sort criteria
-    ///   - limit: maximum number of results
-    ///   - offset: starting position
-    /// - Returns: [String:Primitive], decoding with ORMDecoder
-    func find(_ condition: Where = .empty,
-              distinct: Bool = false,
-              fields: Fields = .empty,
-              groupBy: GroupBy = .empty,
-              having: Where = .empty,
-              orderBy: OrderBy = .empty,
-              limit: Int64 = 0,
-              offset: Int64 = 0) -> [[String: Primitive]] {
-        return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
-            .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allKeyValues()
-    }
-
-    /// find data, decoded
-    func xFind(_ condition: Where = .empty,
-               distinct: Bool = false,
-               fields: Fields = .empty,
-               groupBy: GroupBy = .empty,
-               having: Where = .empty,
-               orderBy: OrderBy = .empty,
-               limit: Int64 = 0,
-               offset: Int64 = 0) -> [T] {
-        return Select().db(db).table(name).where(condition).distinct(distinct).fields(fields)
-            .groupBy(groupBy).having(having).orderBy(orderBy)
-            .limit(limit).offset(offset).allItems(type: T.self)
+    func find() -> Select {
+        return Select().db { db }.table { table }
     }
 
     /// get number of records
-    func count(_ condition: Where = .empty) -> Int64 {
+    func count(_ condition: (() -> Where)? = nil) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
     /// check if a record exists
     func exist(_ item: T) -> Bool {
-        guard let condition = config.constraint(for: item, properties: properties) else { return false }
-        return count(condition) > 0
+        let condition = constraint(for: item, config)
+        guard condition.count > 0 else { return false }
+        return count { Where(condition) } > 0
     }
 
     /// check if a record exists
     func exist(_ keyValues: [String: Primitive]) -> Bool {
-        guard let condition = config.constraint(for: keyValues) else { return false }
-        return count(condition) > 0
+        let condition = constraint(of: keyValues, config)
+        guard condition.count > 0 else { return false }
+        return count { Where(condition) } > 0
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: Where = .empty) -> Primitive? {
+    func max(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: Where = .empty) -> Primitive? {
+    func min(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: Where = .empty) -> Primitive? {
+    func sum(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -202,8 +152,12 @@ public extension View {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: Where = .empty) -> Primitive? {
-        let dic = Select().db(db).table(name).fields(Fields(function)).where(condition).allKeyValues().first
+    func function(_ function: String, condition: (() -> Where)? = nil) -> Primitive? {
+        let select = find().fields { Fields(function) }
+        if let condition = condition {
+            select.where(condition)
+        }
+        let dic = select.allKeyValues().first
         return dic?.values.first
     }
 }

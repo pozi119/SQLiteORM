@@ -166,70 +166,70 @@ extension Cursor: Sequence {
     subscript(idx: Int) -> Primitive? {
         get {
             switch sqlite3_column_type(handle, Int32(idx)) {
-                case SQLITE_BLOB:
-                    if let pointer = sqlite3_column_blob(handle, Int32(idx)) {
-                        let length = Int(sqlite3_column_bytes(handle, Int32(idx)))
-                        return Data(bytes: pointer, count: length)
-                    } else {
-                        return Data()
-                    }
+            case SQLITE_BLOB:
+                if let pointer = sqlite3_column_blob(handle, Int32(idx)) {
+                    let length = Int(sqlite3_column_bytes(handle, Int32(idx)))
+                    return Data(bytes: pointer, count: length)
+                } else {
+                    return Data()
+                }
 
-                case SQLITE_FLOAT:
-                    return sqlite3_column_double(handle, Int32(idx)) as Double
-                case SQLITE_INTEGER:
-                    return sqlite3_column_int64(handle, Int32(idx)) as Int64
-                case SQLITE_NULL:
-                    return nil
-                case SQLITE_TEXT: fallthrough
-                case SQLITE3_TEXT:
-                    return String(cString: UnsafePointer(sqlite3_column_text(handle, Int32(idx))))
-                case let type:
-                    assert(false, "unsupported column type: \(type)")
-                    return nil
+            case SQLITE_FLOAT:
+                return sqlite3_column_double(handle, Int32(idx)) as Double
+            case SQLITE_INTEGER:
+                return sqlite3_column_int64(handle, Int32(idx)) as Int64
+            case SQLITE_NULL:
+                return nil
+            case SQLITE_TEXT: fallthrough
+            case SQLITE3_TEXT:
+                return String(cString: UnsafePointer(sqlite3_column_text(handle, Int32(idx))))
+            case let type:
+                assert(false, "unsupported column type: \(type)")
+                return nil
             }
         }
         set(newValue) {
             let index = Int32(idx + 1)
             switch newValue {
-                case let newValue where newValue == nil:
-                    sqlite3_bind_null(handle, Int32(idx))
-                case let newValue as Data:
-                    let bytes = [UInt8](newValue)
-                    if bytes.count > INT_MAX {
-                        sqlite3_bind_blob64(handle, index, bytes, sqlite3_uint64(bytes.count), SQLITE_TRANSIENT)
-                    } else {
-                        sqlite3_bind_blob(handle, index, bytes, Int32(bytes.count), SQLITE_TRANSIENT)
-                    }
-                case let newValue as Int:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as Int8:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as Int16:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as Int32:
-                    sqlite3_bind_int(handle, index, newValue)
-                case let newValue as Int64:
-                    sqlite3_bind_int64(handle, index, newValue)
-                case let newValue as UInt:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as UInt8:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as UInt16:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as UInt32:
-                    sqlite3_bind_int(handle, index, Int32(newValue))
-                case let newValue as UInt64:
-                    sqlite3_bind_int64(handle, index, Int64(newValue))
-                case let newValue as Float:
-                    sqlite3_bind_double(handle, index, Double(newValue))
-                case let newValue as Double:
-                    sqlite3_bind_double(handle, index, newValue)
-                case let newValue as Bool:
-                    sqlite3_bind_int(handle, index, newValue ? 1 : 0)
-                case let newValue as String:
-                    sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
-                default:
-                    assert(false, "tried to bind unexpected value \(newValue ?? "")")
+            case let newValue where newValue == nil:
+                sqlite3_bind_null(handle, Int32(idx))
+            case let newValue as Data:
+                let bytes = [UInt8](newValue)
+                if bytes.count > INT_MAX {
+                    sqlite3_bind_blob64(handle, index, bytes, sqlite3_uint64(bytes.count), SQLITE_TRANSIENT)
+                } else {
+                    sqlite3_bind_blob(handle, index, bytes, Int32(bytes.count), SQLITE_TRANSIENT)
+                }
+            case let newValue as Int:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as Int8:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as Int16:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as Int32:
+                sqlite3_bind_int(handle, index, newValue)
+            case let newValue as Int64:
+                sqlite3_bind_int64(handle, index, newValue)
+            case let newValue as UInt:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as UInt8:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as UInt16:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as UInt32:
+                sqlite3_bind_int(handle, index, Int32(newValue))
+            case let newValue as UInt64:
+                sqlite3_bind_int64(handle, index, Int64(newValue))
+            case let newValue as Float:
+                sqlite3_bind_double(handle, index, Double(newValue))
+            case let newValue as Double:
+                sqlite3_bind_double(handle, index, newValue)
+            case let newValue as Bool:
+                sqlite3_bind_int(handle, index, newValue ? 1 : 0)
+            case let newValue as String:
+                sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
+            default:
+                assert(false, "tried to bind unexpected value \(newValue ?? "")")
             }
         }
     }

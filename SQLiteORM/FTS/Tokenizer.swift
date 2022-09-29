@@ -100,7 +100,7 @@ public class NaturalEnumerator: Enumerator {
             tokenizer.string = source
 
             let range = source.startIndex ..< source.endIndex
-            tokenizer.enumerateTokens(in: range) { (tokenRange, _) -> Bool in
+            tokenizer.enumerateTokens(in: range) { tokenRange, _ -> Bool in
                 let tk = source[tokenRange]
                 let pre = source[source.startIndex ..< tokenRange.lowerBound]
                 let start = pre.utf8.count
@@ -193,32 +193,32 @@ func utf82unicode(_ utf8: [UInt8], _ len: Int) -> UInt32 {
 
     var ch: UInt32 = 0
     switch len {
-        case 1:
-            ch = (UInt32)(utf8[0] & 0x7F)
-            break
+    case 1:
+        ch = UInt32(utf8[0] & 0x7F)
+        break
 
-        case 2:
-            ch = ((UInt32)(utf8[0] & 0x1F) << 6) | (UInt32)(utf8[1] & 0x3F)
-            break
+    case 2:
+        ch = (UInt32(utf8[0] & 0x1F) << 6) | UInt32(utf8[1] & 0x3F)
+        break
 
-        case 3:
-            ch = ((UInt32)(utf8[0] & 0xF) << 12) | ((UInt32)(utf8[1] & 0x3F) << 6) | (UInt32)(utf8[2] & 0x3F)
-            break
+    case 3:
+        ch = (UInt32(utf8[0] & 0xF) << 12) | (UInt32(utf8[1] & 0x3F) << 6) | UInt32(utf8[2] & 0x3F)
+        break
 
-        case 4:
-            ch = ((UInt32)(utf8[0] & 0x7) << 18) | ((UInt32)(utf8[1] & 0x3F) << 12) | ((UInt32)(utf8[2] & 0x3F) << 6) | (UInt32)(utf8[3] & 0x3F)
-            break
+    case 4:
+        ch = (UInt32(utf8[0] & 0x7) << 18) | (UInt32(utf8[1] & 0x3F) << 12) | (UInt32(utf8[2] & 0x3F) << 6) | UInt32(utf8[3] & 0x3F)
+        break
 
-        case 5:
-            ch = ((UInt32)(utf8[0] & 0x3) << 24) | ((UInt32)(utf8[1] & 0x3F) << 18) | ((UInt32)(utf8[2] & 0x3F) << 12) | ((UInt32)(utf8[3] & 0x3F) << 6) | (UInt32)(utf8[4] & 0x3F)
-            break
+    case 5:
+        ch = (UInt32(utf8[0] & 0x3) << 24) | (UInt32(utf8[1] & 0x3F) << 18) | (UInt32(utf8[2] & 0x3F) << 12) | (UInt32(utf8[3] & 0x3F) << 6) | UInt32(utf8[4] & 0x3F)
+        break
 
-        case 6:
-            ch = ((UInt32)(utf8[0] & 0x1) << 30) | ((UInt32)(utf8[1] & 0x3F) << 24) | ((UInt32)(utf8[2] & 0x3F) << 18) | ((UInt32)(utf8[3] & 0x3F) << 12) | ((UInt32)(utf8[4] & 0x3F) << 6) | (UInt32)(utf8[5] & 0x3F)
-            break
+    case 6:
+        ch = (UInt32(utf8[0] & 0x1) << 30) | (UInt32(utf8[1] & 0x3F) << 24) | (UInt32(utf8[2] & 0x3F) << 18) | (UInt32(utf8[3] & 0x3F) << 12) | (UInt32(utf8[4] & 0x3F) << 6) | UInt32(utf8[5] & 0x3F)
+        break
 
-        default:
-            break
+    default:
+        break
     }
     return ch
 }
@@ -269,25 +269,25 @@ public class OrmEnumerator: Enumerator {
                 assert(false, "wrong utf-8 text")
                 break
             }
-            
+
             var word = [UInt8](buff[idx ..< (idx + length)])
             var wordlen = length
 
             // full width to half width
             if length == 3 && word[0] == 0xEF {
-                let uni = ((unichar)(word[0] & 0xF) << 12) | ((unichar)(word[1] & 0x3F) << 6) | (unichar)(word[2] & 0x3F)
+                let uni = (unichar(word[0] & 0xF) << 12) | (unichar(word[1] & 0x3F) << 6) | unichar(word[2] & 0x3F)
                 if uni >= 0xFF01 && uni <= 0xFF5E {
                     word[0] = UInt8(uni - 0xFEE0)
                     wordlen = 1
                 } else if uni >= 0xFFE0 && uni <= 0xFFE5 {
                     switch uni {
-                        case 0xFFE0: word[1] = 0xA2; break
-                        case 0xFFE1: word[1] = 0xA3; break
-                        case 0xFFE2: word[1] = 0xAC; break
-                        case 0xFFE3: word[1] = 0xAF; break
-                        case 0xFFE4: word[1] = 0xA6; break
-                        case 0xFFE5: word[1] = 0xA5; break
-                        default: break
+                    case 0xFFE0: word[1] = 0xA2; break
+                    case 0xFFE1: word[1] = 0xA3; break
+                    case 0xFFE2: word[1] = 0xAC; break
+                    case 0xFFE3: word[1] = 0xAF; break
+                    case 0xFFE4: word[1] = 0xA6; break
+                    case 0xFFE5: word[1] = 0xA5; break
+                    default: break
                     }
                     word[0] = 0xC2
                     wordlen = 2

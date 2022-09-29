@@ -5,8 +5,8 @@
 //  Created by Valo on 2020/7/29.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 
 public protocol Ormable: Codable {
     /// primary keys

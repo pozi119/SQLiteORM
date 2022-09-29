@@ -5,8 +5,8 @@
 //  Created by Valo on 2019/5/6.
 //
 
-import Foundation
 import AnyCoder
+import Foundation
 import Runtime
 
 public class Config {
@@ -49,14 +49,14 @@ public class Config {
         var columns = [String]()
         var types = [String: String]()
         switch info.kind {
-            case .class, .struct:
-                for prop in info.properties {
-                    columns.append(prop.name)
-                    types[prop.name] = sqlType(of: prop.type)
-                }
+        case .class, .struct:
+            for prop in info.properties {
+                columns.append(prop.name)
+                types[prop.name] = sqlType(of: prop.type)
+            }
 
-            default:
-                assert(false, "unsupported type")
+        default:
+            assert(false, "unsupported type")
         }
         self.columns = columns
         self.types = types
@@ -240,7 +240,7 @@ public final class PlainConfig: Config {
         let dfltString = defaultValue != nil ? " DEFAULT(\(String(describing: defaultValue)))" : ""
         return "\(column.quoted) " + typeString + pkString + nullString + uniqueString + dfltString
     }
-    
+
     func sqlToAlert(column: String, table: String) -> String {
         return "ALTER TABLE \(table.quoted) ADD COLUMN " + sqlToCreate(column: column)
     }
@@ -271,9 +271,9 @@ public final class FtsConfig: Config {
     /// fts version
     public var version: UInt {
         switch module {
-            case let module where module.match("fts5"): return 5
-            case let module where module.match("fts4"): return 4
-            default: return 3
+        case let module where module.match("fts5"): return 5
+        case let module where module.match("fts4"): return 4
+        default: return 3
         }
     }
 
@@ -379,82 +379,26 @@ extension Config: Equatable {
         lhs.treate()
         rhs.treate()
         switch (lhs, rhs) {
-            case let (lhs as PlainConfig, rhs as PlainConfig):
-                var ldflt = [String: String]()
-                var rdflt = [String: String]()
-                lhs.dfltVals.forEach { ldflt[$0.key] = String(describing: $0.value) }
-                rhs.dfltVals.forEach { rdflt[$0.key] = String(describing: $0.value) }
-                return lhs.pkAutoInc == rhs.pkAutoInc &&
-                    lhs.columns === rhs.columns &&
-                    lhs.types == rhs.types &&
-                    lhs.primaries === rhs.primaries &&
-                    lhs.notnulls === rhs.notnulls &&
-                    lhs.uniques === rhs.uniques &&
-                    ldflt == rdflt
+        case let (lhs as PlainConfig, rhs as PlainConfig):
+            var ldflt = [String: String]()
+            var rdflt = [String: String]()
+            lhs.dfltVals.forEach { ldflt[$0.key] = String(describing: $0.value) }
+            rhs.dfltVals.forEach { rdflt[$0.key] = String(describing: $0.value) }
+            return lhs.pkAutoInc == rhs.pkAutoInc &&
+                lhs.columns === rhs.columns &&
+                lhs.types == rhs.types &&
+                lhs.primaries === rhs.primaries &&
+                lhs.notnulls === rhs.notnulls &&
+                lhs.uniques === rhs.uniques &&
+                ldflt == rdflt
 
-            case let (lhs as FtsConfig, rhs as FtsConfig):
-                return lhs.module == rhs.module &&
-                    lhs.tokenizer == rhs.tokenizer &&
-                    lhs.columns === rhs.columns &&
-                    lhs.indexes === rhs.indexes
+        case let (lhs as FtsConfig, rhs as FtsConfig):
+            return lhs.module == rhs.module &&
+                lhs.tokenizer == rhs.tokenizer &&
+                lhs.columns === rhs.columns &&
+                lhs.indexes === rhs.indexes
 
-            default: return false
+        default: return false
         }
-    }
-}
-
-public extension Config {
-    /// generate constraint
-    func constraint(for item: Any, properties: [String: PropertyInfo], unique: Bool = true) -> Where? {
-        var condition = [String: Primitive]()
-        switch self {
-            case let self as PlainConfig:
-                if self.primaries.count > 0 {
-                    var dic = [String: Primitive]()
-                    for pk in self.primaries {
-                        let prop = properties[pk]
-                        if let val = (try? prop?.get(from: item)) as? Primitive {
-                            dic[pk] = val
-                        }
-                    }
-                    if (!unique && dic.count > 0) || dic.count == self.primaries.count {
-                        condition = dic
-                        break
-                    }
-                }
-                for unique in self.uniques {
-                    let prop = properties[unique]
-                    if let val = (try? prop?.get(from: item)) as? Primitive {
-                        condition = [unique: val]
-                        break
-                    }
-                }
-            default: break
-        }
-        guard condition.count > 0 else { return nil }
-        return Where(condition)
-    }
-
-    func constraint(for KeyValues: [String: Primitive], unique: Bool = true) -> Where? {
-        var condition = [String: Primitive]()
-        switch self {
-            case let self as PlainConfig:
-                var dic = [String: Primitive]()
-                self.primaries.forEach { dic[$0] = KeyValues[$0] }
-                if (!unique && dic.count > 0) || dic.count == self.primaries.count {
-                    condition = dic
-                    break
-                }
-
-                for col in self.uniques {
-                    if let val = KeyValues[col] {
-                        condition = [col: val]
-                        break
-                    }
-                }
-            default: break
-        }
-        guard condition.count > 0 else { return nil }
-        return Where(condition)
     }
 }

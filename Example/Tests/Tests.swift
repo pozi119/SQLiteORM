@@ -44,7 +44,7 @@ final class SQLiteORMTests: XCTestCase {
 
     fileprivate lazy var infos: [String] = {
         var _infos = [String]()
-        autoreleasepool(invoking: { () -> Void in
+        autoreleasepool(invoking: { () in
             let path = Bundle.main.path(forResource: "神话纪元", ofType: "txt")!
             let text = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
             let set1: CharacterSet = .whitespacesAndNewlines
@@ -163,6 +163,9 @@ extension SQLiteORMTests {
         XCTAssertEqual(f2.sql, "age,name")
         XCTAssertEqual(f3.sql, "count(*)")
     }
+
+    func testSetter() {
+    }
 }
 
 // MARK: - ORM
@@ -182,7 +185,7 @@ extension SQLiteORMTests {
         let p3 = Person(name: "王五", age: 21, id: 3, sex: .male, intro: "呵呵呵")
         let r1 = orm.insert(p1)
         let r2 = orm.insert(multi: [p2, p3])
-        let s1 = orm.xFindOne()
+        let s1 = orm.find().one()
         XCTAssert(r1)
         XCTAssert(r2 > 0)
         XCTAssert(p1 == s1!)
@@ -209,10 +212,10 @@ extension SQLiteORMTests {
     }
 
     func testSelect() {
-        let one = orm.findOne()
-        let all = orm.find()
-        let p1 = orm.findOne(W("name") == "王五")
-        let all2 = orm.xFind()
+        let one = orm.find().one()
+        let all = orm.find().allKeyValues()
+        let p1 = orm.find().where { W("name") == "王五" }.one()
+        let all2 = orm.find().allItems()
         XCTAssert(one != nil)
         XCTAssert(all.count > 0)
         XCTAssert(p1 != nil)
@@ -232,12 +235,12 @@ extension SQLiteORMTests {
         let p2 = Person(name: "李四", age: 22, id: 2, sex: .female, intro: "我是李四")
         var p3 = Person(name: "王五", age: 23, id: 3, sex: .male, intro: "我是王五")
         orm.insert(multi: [p1, p2, p3])
-        let r1 = ftsorm.xFind()
+        let r1 = ftsorm.find().allItems()
         orm.delete(p2)
-        let r2 = ftsorm.xFind(fields: "rowid as id, *")
+        let r2 = ftsorm.find().fields { "rowid as id, *" }.allItems()
         p3.name = "王六"
         orm.update(p3)
-        let r3 = ftsorm.xFind()
+        let r3 = ftsorm.find().allItems()
         if r1.count + r2.count + r3.count > 0 {}
     }
 }
@@ -306,7 +309,6 @@ extension SQLiteORMTests {
         XCTAssert(r2 > 0)
     }
 
-
     func testBigBatch() {
         var r = orm.delete()
         XCTAssert(r)
@@ -323,7 +325,7 @@ extension SQLiteORMTests {
         let total = loop * batch
 
         for i in 0 ..< loop {
-            autoreleasepool(invoking: { () -> Void in
+            autoreleasepool(invoking: { () in
                 let begin = CFAbsoluteTimeGetCurrent()
                 var persons: [Person] = []
                 for j in 0 ..< batch {
@@ -419,7 +421,7 @@ extension SQLiteORMTests {
         if !view.exist {
             XCTAssert(view.create())
         }
-        let p1 = view.xFindOne()
+        let p1 = view.find().oneKeyValue()
         XCTAssert(p1 != nil)
     }
 }

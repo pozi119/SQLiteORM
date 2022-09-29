@@ -35,7 +35,7 @@ class TableViewController: UITableViewController {
 
     lazy var infos: [String] = {
         var _infos = [String]()
-        autoreleasepool(invoking: { () -> Void in
+        autoreleasepool(invoking: { () in
             let path = Bundle.main.path(forResource: "神话纪元", ofType: "txt")!
             let text = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
             let set1: CharacterSet = .whitespacesAndNewlines
@@ -155,7 +155,7 @@ class TableViewController: UITableViewController {
             let loop = thousands
 
             for _ in 0 ..< loop {
-                autoreleasepool(invoking: { () -> Void in
+                autoreleasepool(invoking: { () in
                     let begin = CFAbsoluteTimeGetCurrent()
                     let messages = Message.mockThousand(with: self.infos, startId: startId)
                     let step1 = CFAbsoluteTimeGetCurrent()
@@ -204,7 +204,7 @@ class TableViewController: UITableViewController {
         updateUI(action: false, search: true, log: "")
         DispatchQueue.global(qos: .background).async {
             let begin = CFAbsoluteTimeGetCurrent()
-            let messages = item.orm.find(Where("info").glob(keyword))
+            let messages = item.orm.find().where { Where("info").glob(keyword) }.allItems()
             let end = CFAbsoluteTimeGetCurrent()
             let str = "[query] normal: \(keyword), hit: \(messages.count), consumed: \(end - begin)"
             print(str)
@@ -227,8 +227,11 @@ class TableViewController: UITableViewController {
         let fields = item.ftsOrm.fts5Highlight(of: ["info"])
         DispatchQueue.global(qos: .background).async {
             let begin = CFAbsoluteTimeGetCurrent()
-            let select = Select().orm(item.ftsOrm).fields(Fields(fields)).where(Where(item.ftsOrm.table).match(fts5keyword)).limit(10)
-            let messages = select.allItems(item.ftsOrm)
+            let select = item.ftsOrm.find()
+                .fields { Fields(fields) }
+                .where { Where(item.ftsOrm.table).match(fts5keyword) }
+                .limit { 10 }
+            let messages = select.allItems()
             let end = CFAbsoluteTimeGetCurrent()
             let str = "[query] fts: \(keyword), hit: \(messages.count), consumed: \(end - begin)"
             print(str)

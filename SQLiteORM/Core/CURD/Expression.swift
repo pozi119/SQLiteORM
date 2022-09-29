@@ -8,17 +8,51 @@
 import AnyCoder
 import Foundation
 
+@dynamicMemberLookup
+public struct Expr: RawRepresentable, ExpressibleByStringLiteral {
+    public typealias RawValue = String
+    public var rawValue: String
+
+    public init?(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public static var empty: Self {
+        return .init("")
+    }
+
+    public var sql: String {
+        return rawValue
+    }
+
+    public static subscript(dynamicMember member: String) -> Expr {
+        get {
+            Expr(member)
+        }
+        set { }
+    }
+
+    public typealias StringLiteralType = String
+    public init(stringLiteral value: StringLiteralType) {
+        self.init(value)
+    }
+}
+
 public protocol SQLable: CustomStringConvertible {
     /// sql statement
     var sql: String { get }
-    init(_ string:String)
+    init(_ string: String)
 }
 
 extension SQLable {
     public var description: String {
         return sql
     }
-    
+
     public static var empty: Self {
         return .init("")
     }
@@ -67,7 +101,7 @@ public struct Where: SQLable {
     var raw: String = ""
 
     public var sql: String {
-        return raw
+        return raw.strip
     }
 
     public init(_ string: String) {
@@ -230,18 +264,23 @@ public extension Where {
 }
 
 // MARK: - table
+
 @dynamicMemberLookup
 public struct Table: SQLable {
     var raw: String = ""
-    
+
     public var sql: String {
         return raw
     }
-    
+
     public init(_ string: String) {
         raw = string
     }
-    
+
+    public init(_ closure: () -> String) {
+        raw = closure()
+    }
+
     public static subscript(dynamicMember table: String) -> Table {
         get {
             Table(table)
