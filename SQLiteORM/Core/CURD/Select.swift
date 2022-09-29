@@ -14,16 +14,16 @@ public class Select: CURD {
     private var distinct: Bool = false
 
     /// special fields
-    private var fields: Fields = "*"
+    private var fields: String = "*"
 
     /// sort criteria
-    private var orderBy: OrderBy = .empty
+    private var orderBy: String = .empty
 
     /// fields for group
-    private var groupBy: GroupBy = .empty
+    private var groupBy: String = .empty
 
     /// condition for group
-    private var having: Where = .empty
+    private var having: String = .empty
 
     /// maximum number of results
     private var limit: Int64 = 0
@@ -37,20 +37,20 @@ public class Select: CURD {
 
         let distinctClause = distinct ? " DISTINCT " : ""
 
-        let fieldsClause = fields.sql
+        let fieldsClause = fields
 
         let tableClause = " FROM " + table.quoted
 
-        var whereClause = `where`.sql
+        var whereClause = `where`
         whereClause = whereClause.count > 0 ? " WHERE \(whereClause)" : ""
 
-        var orderByClause = orderBy.sql
+        var orderByClause = orderBy
         orderByClause = orderByClause.count > 0 ? " ORDER BY \(orderByClause)" : ""
 
-        var groupByClause = groupBy.sql
+        var groupByClause = groupBy
         groupByClause = groupByClause.count > 0 ? " GROUP BY \(groupByClause)" : ""
 
-        var havingClause = having.sql
+        var havingClause = having
         havingClause = havingClause.count > 0 ? " HAVING \(havingClause)" : ""
 
         if offset > 0 && limit <= 0 { limit = Int64.max }
@@ -70,25 +70,25 @@ public class Select: CURD {
     }
 
     @discardableResult
-    public func fields(_ closure: () -> Fields) -> Self {
+    public func fields(_ closure: () -> String) -> Self {
         fields = closure()
         return self
     }
 
     @discardableResult
-    public func orderBy(_ closure: () -> OrderBy) -> Self {
+    public func orderBy(_ closure: () -> String) -> Self {
         orderBy = closure()
         return self
     }
 
     @discardableResult
-    public func groupBy(_ closure: () -> GroupBy) -> Self {
+    public func groupBy(_ closure: () -> String) -> Self {
         groupBy = closure()
         return self
     }
 
     @discardableResult
-    public func having(_ closure: () -> Where) -> Self {
+    public func having(_ closure: () -> String) -> Self {
         having = closure()
         return self
     }

@@ -16,7 +16,7 @@ open class CURD {
     private(set) var table: String = ""
 
     /// query condition
-    private(set) var `where`: Where = .empty
+    private(set) var `where`: String = .empty
 
     public init() {}
 }
@@ -43,7 +43,7 @@ public extension CURD {
     }
 
     @discardableResult
-    func `where`(_ closure: () -> Where) -> Self {
+    func `where`(_ closure: () -> String) -> Self {
         self.where = closure()
         return self
     }

@@ -204,7 +204,7 @@ class TableViewController: UITableViewController {
         updateUI(action: false, search: true, log: "")
         DispatchQueue.global(qos: .background).async {
             let begin = CFAbsoluteTimeGetCurrent()
-            let messages = item.orm.find().where { Where("info").glob(keyword) }.allItems()
+            let messages = item.orm.find().where { "info".glob(keyword) }.allItems()
             let end = CFAbsoluteTimeGetCurrent()
             let str = "[query] normal: \(keyword), hit: \(messages.count), consumed: \(end - begin)"
             print(str)
@@ -228,8 +228,8 @@ class TableViewController: UITableViewController {
         DispatchQueue.global(qos: .background).async {
             let begin = CFAbsoluteTimeGetCurrent()
             let select = item.ftsOrm.find()
-                .fields { Fields(fields) }
-                .where { Where(item.ftsOrm.table).match(fts5keyword) }
+                .fields { fields }
+                .where { item.ftsOrm.table.match(fts5keyword) }
                 .limit { 10 }
             let messages = select.allItems()
             let end = CFAbsoluteTimeGetCurrent()

@@ -36,9 +36,24 @@ public extension String {
         return "\(ch)\(escaped)\(ch)"
     }
 
+    func bracket(_ left: Character = "(", _ right: Character = ")") -> String {
+        guard count > 0 else { return self }
+        let l = "\(left)"
+        let r = "\(right)"
+        let prefix = l.count > 0 ? l : ""
+        let suffix = r.count > 0 ? r : ""
+        return "\(prefix)\(self)\(suffix)"
+    }
+
     func match(_ regex: String) -> Bool {
         let r = range(of: regex, options: [.regularExpression, .caseInsensitive])
         return r != nil
+    }
+}
+
+public extension Array where Element == String {
+    var joined: String {
+        return joined(separator: ",")
     }
 }
 
@@ -69,6 +84,10 @@ public extension Array where Element == Dictionary<String, any Primitive> {
             return []
         }
     }
+
+    func toWhere() -> String {
+        map { $0.toWhere().bracket() }.joined(separator: " OR ")
+    }
 }
 
 public extension Dictionary {
@@ -79,7 +98,7 @@ public extension Dictionary {
     }
 }
 
-public extension Dictionary where Key == String, Value: Primitive {
+public extension Dictionary where Key == String, Value == any Primitive {
     func toItem<T>(_ type: T.Type) -> T? {
         do {
             var obj: T?
@@ -93,6 +112,10 @@ public extension Dictionary where Key == String, Value: Primitive {
             print(error)
             return nil
         }
+    }
+
+    func toWhere() -> String {
+        map { ($0.key |== $0.value).bracket() }.joined(separator: " AND ")
     }
 }
 

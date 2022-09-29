@@ -68,7 +68,7 @@ open class Update<T>: CURD {
             values = keys.map { kv[$0] } as! [Primitive]
             let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
             let constraints = constraint(of: keyValue, orm.config)
-            let w = (self.where && Where(constraints)).sql
+            let w = self.where |&& constraints.toWhere()
             let whereClause = w.count > 0 ? "WHERE \(w)" : ""
             sql = "UPDATE \(table.quoted) SET \(setsString) \(whereClause)"
         }
@@ -189,7 +189,7 @@ public extension Orm {
     ///   - condition: condit
     ///   - bindings: [filed:data]
     @discardableResult
-    func update(with bindings: [String: Primitive], condition: (() -> Where)? = nil) -> Bool {
+    func update(with bindings: [String: Primitive], condition: (() -> String)? = nil) -> Bool {
         let up = Update(self).method { .update }.items { [bindings] }
         if let condition = condition {
             up.where(condition)
@@ -230,7 +230,7 @@ public extension Orm {
     /// - Parameters:
     ///   - value: update value, example: 2 means plus 2, -2 means minus 2
     @discardableResult
-    func increase(_ field: String, value: Int, condition: (() -> Where)? = nil) -> Bool {
+    func increase(_ field: String, value: Int, condition: (() -> String)? = nil) -> Bool {
         guard value != 0 else { return true }
         let val = field + (value > 0 ? "+\(value)" : "\(value)")
         return update(with: [field: val], condition: condition)

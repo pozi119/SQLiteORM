@@ -15,7 +15,7 @@ public class View<T> {
     public let name: String
     public let columns: [String]?
     public let table: String
-    public let condition: Where
+    public let condition: String
 
     public let db: Database
     public let config: Config
@@ -25,7 +25,7 @@ public class View<T> {
     public init(_ name: String,
                 temp: Bool = false,
                 columns: [String]? = nil,
-                condition: Where,
+                condition: String,
                 table: String = "",
                 db: Database = Database(.temporary),
                 config: Config) {
@@ -51,7 +51,7 @@ public class View<T> {
     public convenience init<S>(_ name: String,
                                temp: Bool = false,
                                columns: [String]? = nil,
-                               condition: Where,
+                               condition: String,
                                orm: Orm<S>) {
         self.init(name, temp: temp, columns: columns, condition: condition, table: orm.table, db: orm.db, config: orm.config)
     }
@@ -71,7 +71,7 @@ public class View<T> {
             " VIEW IF NOT EXISTS " + name.quoted + " AS " +
             " SELECT " + cols.sqlJoined +
             " FROM " + table.quoted +
-            " WHERE " + condition.sql
+            " WHERE " + condition
 
         do {
             try db.execute(sql)
@@ -114,7 +114,7 @@ public extension View {
     }
 
     /// get number of records
-    func count(_ condition: (() -> Where)? = nil) -> Int64 {
+    func count(_ condition: (() -> String)? = nil) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
@@ -122,28 +122,28 @@ public extension View {
     func exist(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
         guard condition.count > 0 else { return false }
-        return count { Where(condition) } > 0
+        return count { condition.toWhere() } > 0
     }
 
     /// check if a record exists
     func exist(_ keyValues: [String: Primitive]) -> Bool {
         let condition = constraint(of: keyValues, config)
         guard condition.count > 0 else { return false }
-        return count { Where(condition) } > 0
+        return count { condition.toWhere() } > 0
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func max(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func min(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func sum(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -152,8 +152,8 @@ public extension View {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: (() -> Where)? = nil) -> Primitive? {
-        let select = find().fields { Fields(function) }
+    func function(_ function: String, condition: (() -> String)? = nil) -> Primitive? {
+        let select = find().fields { function }
         if let condition = condition {
             select.where(condition)
         }

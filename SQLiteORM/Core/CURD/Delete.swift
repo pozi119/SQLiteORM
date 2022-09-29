@@ -32,7 +32,7 @@ public extension Orm {
     func delete(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
         guard condition.count > 0 else { return false }
-        return delete { Where(condition) }
+        return delete { condition.toWhere() }
     }
 
     /// delete multi records
@@ -56,8 +56,8 @@ public extension Orm {
 
     /// delete records according to condition
     @discardableResult
-    func delete(where condition: (() -> Where)? = nil) -> Bool {
-        let clause = condition != nil ? condition!().sql : ""
+    func delete(where condition: (() -> String)? = nil) -> Bool {
+        let clause = condition != nil ? condition!() : ""
         let sql = "DELETE FROM \(table.quoted)" + (clause.count > 0 ? " WHERE \(clause)" : "")
         do {
             try db.run(sql)

@@ -43,7 +43,7 @@ public extension Orm {
     }
 
     /// get number of records
-    func count(_ condition: (() -> Where)? = nil) -> Int64 {
+    func count(_ condition: (() -> String)? = nil) -> Int64 {
         return function("count(*)", condition: condition) as? Int64 ?? 0
     }
 
@@ -51,28 +51,28 @@ public extension Orm {
     func exist(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
         guard condition.count > 0 else { return false }
-        return count { Where(condition) } > 0
+        return count { condition.toWhere() } > 0
     }
 
     /// check if a record exists
     func exist(_ keyValues: [String: Primitive]) -> Bool {
         let condition = constraint(of: keyValues, config)
         guard condition.count > 0 else { return false }
-        return count { Where(condition) } > 0
+        return count { condition.toWhere() } > 0
     }
 
     /// get the maximum value of a field
-    func max(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func max(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("max(\(field))", condition: condition)
     }
 
     /// get the minimum value of a field
-    func min(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func min(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("min(\(field))", condition: condition)
     }
 
     /// get the sum value of a field
-    func sum(of field: String, condition: (() -> Where)? = nil) -> Primitive? {
+    func sum(of field: String, condition: (() -> String)? = nil) -> Primitive? {
         return function("sum(\(field))", condition: condition)
     }
 
@@ -81,8 +81,8 @@ public extension Orm {
     /// - Parameters:
     ///   - function: function name
     /// - Returns: function result
-    func function(_ function: String, condition: (() -> Where)? = nil) -> Primitive? {
-        let retrieve = find().fields { Fields(function) }
+    func function(_ function: String, condition: (() -> String)? = nil) -> Primitive? {
+        let retrieve = find().fields { function }
         if let condition = condition {
             retrieve.where(condition)
         }
