@@ -41,12 +41,20 @@ public extension String {
 }
 
 public extension String {
+    var asc: String {
+        return count > 0 ? self + " ASC" : self
+    }
+
+    var desc: String {
+        return count > 0 ? self + " DESC" : self
+    }
+
     static postfix func ↑ (_ lhs: String) -> String {
-        return lhs.count > 0 ? lhs + " ASC" : lhs
+        return lhs.asc
     }
 
     static postfix func ↓ (_ lhs: String) -> String {
-        return lhs.count > 0 ? lhs + " DESC" : lhs
+        return lhs.desc
     }
 }
 
