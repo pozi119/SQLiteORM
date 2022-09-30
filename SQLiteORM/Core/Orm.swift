@@ -225,7 +225,7 @@ public final class Orm<T> {
         }
 
         if tableConfig != config {
-            let tempTable = table + "_" + String(describing: NSDate().timeIntervalSince1970)
+            let tempTable = table + "_" + String(describing: Date().timeIntervalSinceReferenceDate)
             try rename(to: tempTable)
             try createTable()
             created = true

@@ -42,7 +42,7 @@ open class Update<T>: CURD {
         let dic = try encodeToKeyValue(item)
         var filtered = dic.filter { validKeys.contains($0.key) }
         if let config = orm.config as? PlainConfig, config.logAt {
-            let now = NSDate().timeIntervalSince1970
+            let now = Date().timeIntervalSinceReferenceDate
             if method != .update {
                 filtered[Config.createAt] = now
             }
