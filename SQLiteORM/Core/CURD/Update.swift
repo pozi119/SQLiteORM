@@ -63,7 +63,7 @@ open class Update<T>: CURD {
             let marksString = Array(repeating: "?", count: keyValue.count).joined(separator: ",")
             sql = ((method == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keysString)) VALUES (\(marksString))"
         case .update:
-            let kv = fields.count == 0 ? keyValue : keyValue.filter { fields.contains($0.key) }
+            let kv = fields.count == 0 ? keyValue : keyValue.filter { (fields + [Config.updateAt]).contains($0.key) }
             keys = kv.keys
             values = keys.map { kv[$0] } as! [Primitive]
             let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
