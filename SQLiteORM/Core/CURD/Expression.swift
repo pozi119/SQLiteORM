@@ -42,11 +42,11 @@ public extension String {
 
 public extension String {
     var asc: String {
-        return count > 0 ? self + " ASC" : self
+        return count > 0 ? quoted + " ASC" : self
     }
 
     var desc: String {
-        return count > 0 ? self + " DESC" : self
+        return count > 0 ? quoted + " DESC" : self
     }
 
     static postfix func ↑ (_ lhs: String) -> String {
@@ -178,10 +178,12 @@ public extension String {
     }
 
     func `in`<T: Primitive>(_ array: [T]) -> String {
+        guard array.count > 0 else { return "" }
         return quoted + " IN " + array.sqlJoined.bracket()
     }
 
     func notIn<T: Primitive>(_ array: [T]) -> String {
+        guard array.count > 0 else { return "" }
         return quoted + " NOT IN " + array.sqlJoined.bracket()
     }
 }
