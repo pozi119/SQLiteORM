@@ -22,10 +22,7 @@ public extension String {
     }
 
     func quote(_ mark: Character? = "\"") -> String {
-        guard mark != nil && count > 0 else {
-            return self
-        }
-        let ch = mark!
+        guard let ch = mark else { return self }
         let fix = "\(ch)"
         if hasPrefix(fix) && hasSuffix(fix) {
             return self
