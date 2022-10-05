@@ -67,9 +67,8 @@ open class Update<T>: CURD {
             keys = kv.keys
             values = keys.map { kv[$0] } as! [Primitive]
             let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
-            let constraints = constraint(of: keyValue, orm.config)
-            let w = self.where |&& constraints.toWhere()
-            let whereClause = w.count > 0 ? "WHERE \(w)" : ""
+            let condition = self.where.count > 0 ? self.where : constraint(of: keyValue, orm.config).toWhere()
+            let whereClause = condition.count > 0 ? "WHERE \(condition)" : ""
             sql = "UPDATE \(table.quoted) SET \(setsString) \(whereClause)"
         }
         return (sql, values)
