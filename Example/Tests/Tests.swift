@@ -27,6 +27,7 @@ final class SQLiteORMTests: XCTestCase {
         let url = URL(fileURLWithPath: dir).appendingPathComponent("testFts.db")
         let _db = Database(with: url.path)
         _db.register(OrmEnumerator.self, for: "sqliteorm")
+        
         return _db
     }()
 
