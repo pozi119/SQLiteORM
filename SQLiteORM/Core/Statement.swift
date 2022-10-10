@@ -36,7 +36,7 @@ public final class Statement {
     init(_ db: Database, _ SQL: String) throws {
         self.db = db
         sql = SQL
-        try db.check(sqlite3_prepare_v2(db.handle, SQL, -1, &handle, nil))
+        try db.check(sqlite3_prepare_v2(db.handle, SQL, -1, &handle, nil), statement: self)
     }
 
     deinit {
@@ -127,7 +127,7 @@ public final class Statement {
     }
 
     public func step() throws -> Bool {
-        return try db.check(sqlite3_step(handle)) == SQLITE_ROW
+        return try db.check(sqlite3_step(handle), statement: self) == SQLITE_ROW
     }
 
     /// reset statement
