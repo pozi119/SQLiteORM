@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SQLiteORM'
-  s.version          = '0.1.7'
+  s.version          = '0.1.8'
   s.summary          = 'The swift version of VVSequelize.'
 
   s.description      = <<-DESC
@@ -42,7 +42,7 @@ Pod::Spec.new do |s|
 
   s.subspec 'core' do |ss|
       ss.source_files = 'SQLiteORM/Core/**/*'
-      ss.dependency 'AnyCoder', '~> 0.1.2'
+      ss.dependency 'AnyCoder', '~> 0.1.4'
       ss.pod_target_xcconfig = { 'SWIFT_VERSION' => '5.0' }
   end
 
