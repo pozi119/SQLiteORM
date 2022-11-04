@@ -140,9 +140,7 @@ public final class Statement {
 }
 
 extension Statement: CustomStringConvertible {
-    public var description: String {
-        return String(cString: sqlite3_sql(handle))
-    }
+    public var description: String { sql }
 }
 
 /// search cursor
