@@ -420,7 +420,7 @@ public final class Database {
     public func migrating(_ columns: [String], from fromTable: String, to toTable: String, drop: Bool = false) throws {
         guard columns.count > 0 else { return }
         let fields = columns.joined(separator: ",")
-        let sql = "INSERT INTO \(toTable.quoted) (\(fields)) SELECT \(fields) FROM \(toTable.quoted)"
+        let sql = "INSERT OR IGNORE INTO \(toTable.quoted) (\(fields)) SELECT \(fields) FROM \(fromTable.quoted)"
         try run(sql)
         if drop {
             let dropSQL = "DROP TABLE IF EXISTS \(fromTable.quoted)"

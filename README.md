@@ -4,9 +4,8 @@
 [![License](https://img.shields.io/cocoapods/l/SQLiteORM.svg?style=flat)](https://cocoapods.org/pods/SQLiteORM)
 [![Platform](https://img.shields.io/cocoapods/p/SQLiteORM.svg?style=flat)](https://cocoapods.org/pods/SQLiteORM)
 
-## 改动(0.1.9)
-1. AnyCoder版本改为0.1.5
-3. 修复Debug模式下打印SQL语句可能导致Crash的问题
+## 改动(0.2.0)
+1. 修复重建表结构，从旧表复制数据到新表时，数据丢失的问题。
 
 ## 功能
 * [x] 根据Class/Struct生成数据表
