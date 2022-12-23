@@ -31,7 +31,7 @@ public extension Orm {
     @discardableResult
     func delete(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
-        guard condition.count > 0 else { return false }
+        guard !condition.isEmpty else { return false }
         return delete { condition.toWhere() }
     }
 
@@ -58,7 +58,7 @@ public extension Orm {
     @discardableResult
     func delete(where condition: (() -> String)? = nil) -> Bool {
         let clause = condition != nil ? condition!() : ""
-        let sql = "DELETE FROM \(table.quoted)" + (clause.count > 0 ? " WHERE \(clause)" : "")
+        let sql = "DELETE FROM \(table.quoted)" + (clause.isEmpty ? "" : " WHERE \(clause)")
         do {
             try db.run(sql)
         } catch _ {

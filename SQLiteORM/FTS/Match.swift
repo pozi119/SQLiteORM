@@ -66,7 +66,7 @@ public final class Match {
     init(attrText: NSAttributedString, attributes: [NSAttributedString.Key: Any], keyword: String) {
         source = attrText.string
         self.attrText = attrText
-        guard keyword.count > 0 else { return }
+        guard !keyword.isEmpty else { return }
 
         var ranges: [NSRange] = []
         var fs: String?
@@ -86,7 +86,7 @@ public final class Match {
         }
         self.ranges = ranges
 
-        guard ranges.count > 0, let firstString = fs, let fisrtRange = fr else { return }
+        guard !ranges.isEmpty, let firstString = fs, let fisrtRange = fr else { return }
 
         // lv1
         let lowerkw = keyword.lowercased()

@@ -63,21 +63,21 @@ func encodeToKeyValue(_ item: Any) throws -> [String: Primitive] {
 
 func constraint(of bindings: [String: Primitive], _ config: Config) -> [String: Primitive] {
     guard let config = config as? PlainConfig else { return [:] }
-    if config.primaries.count > 0 {
+    if !config.primaries.isEmpty {
         let filtered = bindings.filter { config.primaries.contains($0.key) }
         if filtered.count == config.primaries.count { return filtered }
     }
-    if config.uniques.count > 0 {
+    if !config.uniques.isEmpty {
         let filtered = bindings.filter { config.uniques.contains($0.key) }
-        if filtered.count > 0 { return filtered }
+        if !filtered.isEmpty { return filtered }
     }
     return [:]
 }
 
 func constraint(of bindings: [String: Primitive], with uniques: [String]) -> [String: Primitive] {
-    guard uniques.count > 0 else { return [:] }
+    guard !uniques.isEmpty else { return [:] }
     let filtered = bindings.filter { uniques.contains($0.key) }
-    if filtered.count > 0 { return filtered }
+    if !filtered.isEmpty { return filtered }
     return [:]
 }
 

@@ -115,7 +115,7 @@ public class Upgrader: NSObject {
 
     public var needUpgrade: Bool {
         pretreat()
-        return stagesItems.count > 0
+        return !stagesItems.isEmpty
     }
 
     override public init() {}
@@ -147,7 +147,7 @@ public class Upgrader: NSObject {
     }
 
     private func add(_ item: Item, to container: inout [UInt: [Item]]) {
-        assert(item.version.count > 0, "Invalid upgrade item.")
+        assert(!item.version.isEmpty, "Invalid upgrade item.")
         if let items = container[item.stage] {
             container[item.stage] = items + [item]
         } else {
@@ -192,7 +192,7 @@ public class Upgrader: NSObject {
         let from = defaults.string(forKey: versionKey) ?? ""
         let to = versions.sorted { $0.compare(version: $1) >= 0 }.first ?? ""
 
-        guard from.count > 0, to.count > 0, from.compare(version: to) < 0 else {
+        guard !from.isEmpty, !to.isEmpty, from.compare(version: to) < 0 else {
             pretreated = true
             return
         }

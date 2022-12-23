@@ -67,7 +67,7 @@ public final class Orm<T> {
                 db: Database = Database(.temporary),
                 table: String = "",
                 setup: Setup = .create) {
-        assert(config.type != nil && config.type! == T.self && config.columns.count > 0, "Invalid config!")
+        assert(config.type != nil && config.type! == T.self && !config.columns.isEmpty, "Invalid config!")
         if let orm = db.orms.object(forKey: table as NSString) as? Orm<T> {
             self.config = orm.config
             self.db = orm.db
@@ -95,10 +95,10 @@ public final class Orm<T> {
         }
         properties = props
 
-        if table.count > 0 {
-            self.table = table
+        if table.isEmpty {
+            self.table = info?.name ?? config.type.debugDescription
         } else {
-            self.table = info?.name ?? ""
+            self.table = table
         }
         switch setup {
         case .create: try? create()
@@ -188,7 +188,7 @@ public final class Orm<T> {
         config.treate()
         try createTable()
         created = true
-        if config.indexes.count == 0 || existingIndexes.contains("orm_index_\(table)") { return }
+        if config.indexes.isEmpty || existingIndexes.contains("orm_index_\(table)") { return }
         try createIndex()
     }
 
@@ -204,7 +204,7 @@ public final class Orm<T> {
         var tableConfig = Config.factory(table, db: db)
         if let tblcfg = tableConfig as? PlainConfig, let cfg = config as? PlainConfig, tblcfg != cfg {
             let added = Set(cfg.columns).subtracting(tblcfg.columns)
-            if added.count > 0 {
+            if !added.isEmpty {
                 try? db.begin()
                 for col in added {
                     let alertSQL = cfg.sqlToAlert(column: col, table: table)
@@ -218,7 +218,7 @@ public final class Orm<T> {
 
                 tableConfig = Config.factory(table, db: db)
                 let removed = Set(tableConfig.columns).subtracting(cfg.columns)
-                if removed.count > 0 {
+                if !removed.isEmpty {
                     tableConfig.columns = tableConfig.columns.filter { !removed.contains($0) }
                 }
             }
@@ -261,7 +261,7 @@ public final class Orm<T> {
 
     /// create index
     func createIndex() throws {
-        guard let cfg = config as? PlainConfig, cfg.indexes.count > 0 else { return }
+        guard let cfg = config as? PlainConfig, !cfg.indexes.isEmpty else { return }
         let ascIdx = "orm_asc_idx_\(table)"
         let descIdx = "orm_desc_idx_\(table)"
         let ascCols = cfg.indexes.map { $0.quoted }.joined(separator: ",")
@@ -275,14 +275,14 @@ public final class Orm<T> {
     /// drop indexes
     func dropIndexes() throws {
         let indexes = existingIndexes.filter { !$0.hasPrefix("sqlite_autoindex_") }
-        guard indexes.count > 0 else { return }
+        guard !indexes.isEmpty else { return }
         let sql = indexes.reduce("") { $0 + "DROP INDEX IF EXISTS \($1);" }
         try db.run(sql)
     }
 
     /// rebuild indexes
     func rebuildIndex() throws {
-        guard config is PlainConfig, config.indexes.count > 0 else { return }
+        guard config is PlainConfig, !config.indexes.isEmpty else { return }
         try dropIndexes()
         try createIndex()
         _existingIndexes = nil

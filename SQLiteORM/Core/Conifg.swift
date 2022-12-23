@@ -86,9 +86,9 @@ public class Config {
         blacks = Array(Set(blacks))
 
         let orderedSet = NSMutableOrderedSet(array: allColumns)
-        if whites.count > 0 {
+        if !whites.isEmpty {
             orderedSet.intersectSet(Set(whites))
-        } else if blacks.count > 0 {
+        } else if !blacks.isEmpty {
             orderedSet.minusSet(Set(blacks))
         }
         columns = orderedSet.array as! [String]
@@ -176,7 +176,7 @@ public final class PlainConfig: Config {
 
         // get primary key configuration
         var pkAutoInc = false
-        if primaries.count > 0 {
+        if !primaries.isEmpty {
             let sql = "SELECT * FROM sqlite_master WHERE tbl_name = \(table.quoted) AND type = 'table'"
             let cols = db.query(sql)
             let tableSql = cols.first?["sql"] as? String ?? ""
@@ -253,7 +253,7 @@ public final class PlainConfig: Config {
             array.append("PRIMARY KEY (" + primaries.joined(separator: ",") + ")")
         }
 
-        guard array.count > 0 else { return "" }
+        guard !array.isEmpty else { return "" }
 
         let sql = array.joined(separator: ",")
         return "CREATE TABLE IF NOT EXISTS \(table.quoted) (\(sql))".strip
@@ -339,7 +339,7 @@ public final class FtsConfig: Config {
 
     /// generate sql for create fts table
     public func sqlToCreate(table: String, content_table: String? = nil, content_rowid: String? = nil) -> String {
-        if indexes.count == 0 {
+        if indexes.isEmpty {
             indexes = columns
         }
         treate()
@@ -348,7 +348,7 @@ public final class FtsConfig: Config {
         let notindexeds = notindexedsSet.array as! [String]
 
         var rows: [String] = columns.map { $0.quoted }
-        if notindexeds.count > 0 {
+        if !notindexeds.isEmpty {
             if version >= 5 {
                 rows = columns.map { notindexeds.contains($0) ? $0.quoted + " UNINDEXED" : $0.quoted }
             } else if version == 4 {
@@ -356,14 +356,14 @@ public final class FtsConfig: Config {
             }
         }
 
-        guard rows.count > 0 else { return "" }
+        guard !rows.isEmpty else { return "" }
 
-        if tokenizer.count > 0 {
+        if !tokenizer.isEmpty {
             rows.append(version < 5 ? "tokenize=\(tokenizer)" : "tokenize = '\(tokenizer)'")
         }
         if let con_tbl = content_table {
             rows.append("content='\(con_tbl)'")
-            if let con_rowid = content_rowid, con_tbl.count > 0 && con_rowid.count > 0 {
+            if let con_rowid = content_rowid, !con_tbl.isEmpty && !con_rowid.isEmpty {
                 rows.append("content_rowid='\(con_rowid)'")
             }
         }

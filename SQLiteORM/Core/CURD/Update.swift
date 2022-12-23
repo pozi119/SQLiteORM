@@ -63,12 +63,12 @@ open class Update<T>: CURD {
             let marksString = Array(repeating: "?", count: keyValue.count).joined(separator: ",")
             sql = ((method == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keysString)) VALUES (\(marksString))"
         case .update:
-            let kv = fields.count == 0 ? keyValue : keyValue.filter { (fields + [Config.updateAt]).contains($0.key) }
+            let kv = fields.isEmpty ? keyValue : keyValue.filter { (fields + [Config.updateAt]).contains($0.key) }
             keys = kv.keys
             values = keys.map { kv[$0] } as! [Primitive]
             let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
-            let condition = self.where.count > 0 ? self.where : constraint(of: keyValue, orm.config).toWhere()
-            let whereClause = condition.count > 0 ? "WHERE \(condition)" : ""
+            let condition = self.where.isEmpty ? constraint(of: keyValue, orm.config).toWhere() : self.where
+            let whereClause = condition.isEmpty ? "" : "WHERE \(condition)"
             sql = "UPDATE \(table.quoted) SET \(setsString) \(whereClause)"
         }
         return (sql, values)
@@ -103,7 +103,7 @@ open class Update<T>: CURD {
 
     public func execute() -> Int64 {
         let array = items.map { try? keyValue(of: $0) }.filter { $0 != nil }
-        guard array.count > 0 else { return 0 }
+        guard !array.isEmpty else { return 0 }
         let tuples = array.map { prepare($0!) }
         if tuples.count == 1 {
             return run(tuples.first!) ? 1 : 0

@@ -34,11 +34,11 @@ public extension String {
     }
 
     func bracket(_ left: Character = "(", _ right: Character = ")") -> String {
-        guard count > 0 else { return self }
+        guard !isEmpty else { return "()" }
         let l = "\(left)"
         let r = "\(right)"
-        let prefix = l.count > 0 ? l : ""
-        let suffix = r.count > 0 ? r : ""
+        let prefix = l.isEmpty ? "" : l
+        let suffix = r.isEmpty ? "" : r
         return "\(prefix)\(self)\(suffix)"
     }
 
@@ -164,7 +164,7 @@ public extension String {
     }
 
     var matchingPattern: String {
-        guard count > 0 else { return self }
+        guard !isEmpty else { return self }
         let string = (lowercased() as NSString).mutableCopy() as! NSMutableString
         CFStringTransform(string as CFMutableString, nil, kCFStringTransformFullwidthHalfwidth, false)
         _ = string.replaceOccurrences(of: "\\s| ", with: " ", options: .regularExpression, range: NSRange(location: 0, length: string.length))

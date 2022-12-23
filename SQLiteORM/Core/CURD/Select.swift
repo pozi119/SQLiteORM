@@ -33,7 +33,7 @@ public class Select: CURD {
 
     /// native sql clause
     private var sql: String {
-        assert(table.count > 0, "set table first!")
+        assert(!table.isEmpty, "set table first!")
 
         let distinctClause = distinct ? " DISTINCT " : ""
 
@@ -42,16 +42,16 @@ public class Select: CURD {
         let tableClause = " FROM " + table.quoted
 
         var whereClause = `where`
-        whereClause = whereClause.count > 0 ? " WHERE \(whereClause)" : ""
+        whereClause = whereClause.isEmpty ? "" : " WHERE \(whereClause)"
 
         var orderByClause = orderBy
-        orderByClause = orderByClause.count > 0 ? " ORDER BY \(orderByClause)" : ""
+        orderByClause = orderByClause.isEmpty ? "" : " ORDER BY \(orderByClause)"
 
         var groupByClause = groupBy
-        groupByClause = groupByClause.count > 0 ? " GROUP BY \(groupByClause)" : ""
+        groupByClause = groupByClause.isEmpty ? "" : " GROUP BY \(groupByClause)"
 
         var havingClause = having
-        havingClause = havingClause.count > 0 ? " HAVING \(havingClause)" : ""
+        havingClause = havingClause.isEmpty ? "" : " HAVING \(havingClause)"
 
         if offset > 0 && limit <= 0 { limit = Int64.max }
 

@@ -28,9 +28,9 @@ import Foundation
         class func change(_ source: String, target: String = "",
                           srcKey: String = "", srcOpts: [String] = [],
                           tarKey: String = "", tarOpts: [String] = []) -> Bool {
-            guard source.count > 0, target.count > 0, source != target else { return true }
+            guard !source.isEmpty, !target.isEmpty, source != target else { return true }
 
-            let xTarget = target.count > 0 ? target : (source + "-tmpcipher")
+            let xTarget = target.isEmpty ? (source + "-tmpcipher") : target
             let dir = (xTarget as NSString).deletingLastPathComponent
             let fm = FileManager.default
             var isdir: ObjCBool = false
@@ -45,7 +45,7 @@ import Foundation
 
             var handle: OpaquePointer?
             guard sqlite3_open(source, &handle) == SQLITE_OK else { return false }
-            if srcKey.count > 0 {
+            if !srcKey.isEmpty {
                 guard sqlite3_key(handle, srcKey, Int32(srcKey.count)) == SQLITE_OK else { return false }
             }
 
@@ -76,7 +76,7 @@ import Foundation
             }
             sqlite3_close(handle)
 
-            if rc == SQLITE_OK && target.count == 0 {
+            if rc == SQLITE_OK && target.isEmpty {
                 do {
                     try fm.removeItem(atPath: source)
                     try fm.moveItem(atPath: xTarget, toPath: source)
@@ -97,7 +97,7 @@ import Foundation
         }
 
         class func move(dbfile srcPath: String, to dstPath: String, force: Bool = false) {
-            guard srcPath.count > 0, dstPath.count > 0, srcPath != dstPath else { return }
+            guard !srcPath.isEmpty, !dstPath.isEmpty, srcPath != dstPath else { return }
             let fm = FileManager.default
             let dstDir = (dstPath as NSString).deletingLastPathComponent
             var isDir: ObjCBool = false
@@ -120,7 +120,7 @@ import Foundation
         }
 
         class func copy(dbfile srcPath: String, to dstPath: String, force: Bool = false) {
-            guard srcPath.count > 0, dstPath.count > 0, srcPath != dstPath else { return }
+            guard !srcPath.isEmpty, !dstPath.isEmpty, srcPath != dstPath else { return }
             let fm = FileManager.default
             let dstDir = (dstPath as NSString).deletingLastPathComponent
             var isDir: ObjCBool = false
@@ -143,7 +143,7 @@ import Foundation
         }
 
         private class func crypt(_ path: String, key: String, encrypt flag: Bool) -> Bool {
-            guard key.count > 0 else { return false }
+            guard !key.isEmpty else { return false }
 
             let target = path + "-tmpcipher"
             var sqls: [String]
@@ -180,7 +180,7 @@ import Foundation
         }
 
         private class func pretreat(_ options: [String], db: String = "") -> [String] {
-            guard db.count > 0 else { return options }
+            guard !db.isEmpty else { return options }
             var results: [String] = []
             for option in options {
                 let subopts = option.split(separator: ";")

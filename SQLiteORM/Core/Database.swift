@@ -87,7 +87,7 @@ public final class Database {
 
         // encrypt
         #if SQLITE_HAS_CODEC
-            if encrypt.count > 0 {
+            if !encrypt.isEmpty {
                 try cipherDefaultOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
                 _ = try sync { try check(sqlite3_key(_handle, encrypt, Int32(encrypt.count))) }
                 try cipherOptions.forEach { try check(sqlite3_exec(_handle, $0, nil, nil, nil)) }
@@ -418,7 +418,7 @@ public final class Database {
 
     /// migrating data from old table to new table
     public func migrating(_ columns: [String], from fromTable: String, to toTable: String, drop: Bool = false) throws {
-        guard columns.count > 0 else { return }
+        guard !columns.isEmpty else { return }
         let fields = columns.joined(separator: ",")
         let sql = "INSERT OR IGNORE INTO \(toTable.quoted) (\(fields)) SELECT \(fields) FROM \(fromTable.quoted)"
         try run(sql)

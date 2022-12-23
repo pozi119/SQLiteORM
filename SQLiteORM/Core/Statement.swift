@@ -61,7 +61,7 @@ public final class Statement {
     ///
     /// - Parameter values: [Primitive] array, corresponding to sql statement
     public func bind(_ values: [Primitive]) -> Statement {
-        guard values.count > 0 else { return self }
+        guard !values.isEmpty else { return self }
         reset()
         self.values = values
         let count = values.count
@@ -84,7 +84,7 @@ public final class Statement {
             cache = orm.cache
         }
 
-        if key.count > 0, let results = cache?.object(forKey: key) {
+        if !key.isEmpty, let results = cache?.object(forKey: key) {
             return results
         }
 
@@ -101,7 +101,7 @@ public final class Statement {
             }
         } while ret
 
-        if key.count > 0 { cache?.setObject(array, forKey: key) }
+        if !key.isEmpty { cache?.setObject(array, forKey: key) }
         return array
     }
 

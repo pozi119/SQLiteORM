@@ -29,7 +29,7 @@ public class View<T> {
                 table: String = "",
                 db: Database = Database(.temporary),
                 config: Config) {
-        assert(config.type != nil && config.columns.count > 0, "invalid config")
+        assert(config.type != nil && !config.columns.isEmpty, "invalid config")
 
         self.temp = temp
         self.name = name
@@ -41,10 +41,10 @@ public class View<T> {
 
         let info = try? typeInfo(of: config.type!)
 
-        if table.count > 0 {
-            self.table = table
+        if table.isEmpty {
+            self.table = info?.name ?? config.type.debugDescription
         } else {
-            self.table = info?.name ?? ""
+            self.table = table
         }
     }
 
@@ -59,7 +59,7 @@ public class View<T> {
     @discardableResult
     public func create() -> Bool {
         var cols: [String] = []
-        if let c = columns, c.count > 0 {
+        if let c = columns, !c.isEmpty {
             let all = Set(config.columns)
             let sub = Set(c)
             cols = Array(sub.intersection(all))
@@ -121,14 +121,14 @@ public extension View {
     /// check if a record exists
     func exist(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
-        guard condition.count > 0 else { return false }
+        guard !condition.isEmpty else { return false }
         return count { condition.toWhere() } > 0
     }
 
     /// check if a record exists
     func exist(_ keyValues: [String: Primitive]) -> Bool {
         let condition = constraint(of: keyValues, config)
-        guard condition.count > 0 else { return false }
+        guard !condition.isEmpty else { return false }
         return count { condition.toWhere() } > 0
     }
 

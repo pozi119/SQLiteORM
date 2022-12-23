@@ -22,7 +22,7 @@ final class PinYin {
         let path = PinYin.path(of: "transform.txt")
         let text: String = (try? String(contentsOfFile: path)) ?? ""
         let array = text.split(separator: "\n")
-        assert(array.count >= 2 && array[0].count == array[1].count && array[0].count > 0, "Invalid transform file")
+        assert(array.count >= 2 && array[0].count == array[1].count && !array[0].isEmpty, "Invalid transform file")
         return (String(array[0]), String(array[1]))
     }()
 
@@ -203,9 +203,9 @@ public extension String {
 
     private var headPinyins: [String] {
         let bytes = self.bytes
-        guard bytes.count > 0 else { return [] }
+        guard !bytes.isEmpty else { return [] }
         let s = String(first!)
-        guard let array = PinYin.shared.pinyins[s], array.count > 0 else { return [] }
+        guard let array = PinYin.shared.pinyins[s], !array.isEmpty else { return [] }
         var results: [String] = []
         var spare = false
         for pinyin in array {
@@ -216,14 +216,14 @@ public extension String {
                 if Array(subbytes[0 ..< bytes.count]) == bytes { spare = true }
             }
         }
-        if results.count == 0 && spare { results.append(self) }
+        if results.isEmpty && spare { results.append(self) }
         return results
     }
 
     private var _pinyinSegmentation: [[String]] {
         var results: [[String]] = []
         let heads = headPinyins
-        guard heads.count > 0 else { return [] }
+        guard !heads.isEmpty else { return [] }
 
         for head in heads {
             if head.count == count {
@@ -253,8 +253,8 @@ public extension String {
                               resultColumns: [String] = [],
                               left: String = "<b>",
                               right: String = "</b>") -> String {
-        let resultCols = resultColumns.count > 0 ? resultColumns : tableColumns
-        guard fields.count > 0, tableName.count > 0, tableColumns.count > 0 else { return resultCols.joined(separator: ",") }
+        let resultCols = resultColumns.isEmpty ? tableColumns : resultColumns
+        guard !fields.isEmpty, !tableName.isEmpty, !tableColumns.isEmpty else { return resultCols.joined(separator: ",") }
 
         let count = tableColumns.count
         var array: [String] = []
@@ -319,12 +319,12 @@ public extension NSAttributedString {
                      attibutes: [NSAttributedString.Key: Any],
                      left: String = "<b>",
                      right: String = "</b>") {
-        let llen = left.count
-        let rlen = right.count
-        guard llen > 0, rlen > 0, string.count > 0 else {
+        guard !left.isEmpty, !right.isEmpty, !string.isEmpty else {
             self.init(string: "")
             return
         }
+        let llen = left.count
+        let rlen = right.count
 
         var mstr = string
         var loc = mstr.startIndex
@@ -433,7 +433,7 @@ struct Segmentor {
             } else {
                 let tail = [UInt8](pinyin[pLen ..< pinyin.count])
                 let rests = retrieve(tail)
-                if rests.count > 0 {
+                if !rests.isEmpty {
                     let rights = split(tail)
                     return [head] + rights
                 }
@@ -452,9 +452,9 @@ struct Segmentor {
 
     private func firstPinyins(of source: String) -> [String] {
         let bytes = source.bytes
-        guard bytes.count > 0 else { return [] }
+        guard !bytes.isEmpty else { return [] }
         let s = String(bytes[0])
-        guard let array = PinYin.shared.pinyins[s], array.count > 0 else {
+        guard let array = PinYin.shared.pinyins[s], !array.isEmpty else {
             return []
         }
         var results: [String] = []
@@ -480,7 +480,7 @@ struct Segmentor {
     private func recursionSplit(_ source: String) -> [[String]] {
         var results: [[String]] = []
         let heads = firstPinyins(of: source)
-        guard heads.count > 0 else { return [] }
+        guard !heads.isEmpty else { return [] }
 
         for head in heads {
             let lower = source.index(source.startIndex, offsetBy: head.count)

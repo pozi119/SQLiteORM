@@ -104,7 +104,7 @@ extension Database {
     /// - Parameters:
     ///   - type: tokenize method
     func registerEnumerators(_ db: OpaquePointer!) throws {
-        guard enumerators.count > 0 else { return }
+        guard !enumerators.isEmpty else { return }
 
         let pApi = UnsafeMutablePointer<fts5_api>(mutating: try get_fts5_api(db))
         for (name, enumerator) in enumerators {

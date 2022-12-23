@@ -50,15 +50,18 @@ public extension Orm {
     /// check if a record exists
     func exist(_ item: T) -> Bool {
         let condition = constraint(for: item, config)
-        guard condition.count > 0 else { return false }
+        guard !condition.isEmpty else { return false }
         return count { condition.toWhere() } > 0
     }
 
     /// check if a record exists
     func exist(_ keyValues: [String: Primitive]) -> Bool {
-        let condition = constraint(of: keyValues, config)
-        guard condition.count > 0 else { return false }
-        return count { condition.toWhere() } > 0
+        return count { keyValues.toWhere() } > 0
+    }
+
+    /// check if a record exists
+    func exist(_ condition: (() -> String)? = nil) -> Bool {
+        return count(condition) > 0
     }
 
     /// get the maximum value of a field

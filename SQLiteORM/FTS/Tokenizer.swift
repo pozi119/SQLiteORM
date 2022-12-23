@@ -92,7 +92,7 @@ public struct TokenMask: OptionSet {
 /// natural languagei tokenizer
 public class NaturalEnumerator: Enumerator {
     public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
-        guard source.count > 0 else { return [] }
+        guard !source.isEmpty else { return [] }
 
         var results: [Token] = []
         if #available(OSX 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
@@ -118,7 +118,7 @@ public class NaturalEnumerator: Enumerator {
 /// CoreFundation tokenizer
 public class AppleEnumerator: Enumerator {
     public class func enumerate(_ source: String, mask: TokenMask) -> [Token] {
-        guard source.count > 0 else { return [] }
+        guard !source.isEmpty else { return [] }
 
         var results: [Token] = []
         let cfText = source as CFString
