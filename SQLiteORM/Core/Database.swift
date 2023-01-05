@@ -419,7 +419,7 @@ public final class Database {
     /// migrating data from old table to new table
     public func migrating(_ columns: [String], from fromTable: String, to toTable: String, drop: Bool = false) throws {
         guard !columns.isEmpty else { return }
-        let fields = columns.joined(separator: ",")
+        let fields = columns.map { $0.quoted }.joined(separator: ",")
         let sql = "INSERT OR IGNORE INTO \(toTable.quoted) (\(fields)) SELECT \(fields) FROM \(fromTable.quoted)"
         try run(sql)
         if drop {
