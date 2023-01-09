@@ -7,21 +7,22 @@
 
 import Foundation
 
-fileprivate extension String {
-    private static let delimiterSet = CharacterSet(charactersIn: ".-_")
+public extension String {
+    func compare(version other: String) -> ComparisonResult {
+        guard self != other else { return .orderedSame }
+        let delimiterSet = CharacterSet(charactersIn: ".-_")
 
-    func compare(version other: String) -> Int {
-        let array1 = components(separatedBy: String.delimiterSet)
-        let array2 = other.components(separatedBy: String.delimiterSet)
+        let array1 = components(separatedBy: delimiterSet)
+        let array2 = other.components(separatedBy: delimiterSet)
         let count = min(array1.count, array2.count)
         for i in 0 ..< count {
-            let str1 = array1[i]
-            let str2 = array2[i]
-            let ret = str1.compare(str2)
-            guard ret == .orderedSame else { return ret.rawValue }
+            let num1 = Int(array1[i]) ?? 0
+            let num2 = Int(array2[i]) ?? 0
+            guard num1 == num2 else {
+                return num1 < num2 ? .orderedAscending : .orderedDescending
+            }
         }
-
-        return array1.count < array2.count ? -1 : array1.count == array2.count ? 0 : 1
+        return array1.count < array2.count ? .orderedAscending : .orderedDescending
     }
 }
 
@@ -67,7 +68,7 @@ public extension Upgrader {
         func compare(_ other: Item) -> Int {
             var result = stage < other.stage ? -1 : (stage == other.stage ? 0 : 1)
             guard result == 0 else { return result }
-            result = version.compare(version: other.version)
+            result = version.compare(version: other.version).rawValue
             guard result == 0 else { return result }
             return priority > other.priority ? -1 : (stage == other.stage ? 0 : 1)
         }
@@ -190,9 +191,9 @@ public class Upgrader: NSObject {
         updateItems.removeAll()
         let defaults = UserDefaults.standard
         let from = defaults.string(forKey: versionKey) ?? ""
-        let to = versions.sorted { $0.compare(version: $1) >= 0 }.first ?? ""
+        let to = versions.sorted { $0.compare(version: $1).rawValue >= 0 }.first ?? ""
 
-        guard !from.isEmpty, !to.isEmpty, from.compare(version: to) < 0 else {
+        guard !from.isEmpty, !to.isEmpty, from.compare(version: to).rawValue < 0 else {
             pretreated = true
             return
         }
@@ -201,7 +202,7 @@ public class Upgrader: NSObject {
         var totalWeight: Float = 0.0
         for (_, items) in stagesItems {
             for item in items {
-                if from.compare(version: item.version) >= 0 { continue }
+                if from.compare(version: item.version).rawValue >= 0 { continue }
                 if item.record {
                     let completed = completedInfo[item.id] ?? false
                     if completed {
