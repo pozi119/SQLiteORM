@@ -198,32 +198,12 @@ extension Cursor: Sequence {
                 } else {
                     sqlite3_bind_blob(handle, index, bytes, Int32(bytes.count), SQLITE_TRANSIENT)
                 }
-            case let newValue as Int:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as Int8:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as Int16:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as Int32:
-                sqlite3_bind_int(handle, index, newValue)
-            case let newValue as Int64:
-                sqlite3_bind_int64(handle, index, newValue)
-            case let newValue as UInt:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as UInt8:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as UInt16:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as UInt32:
-                sqlite3_bind_int(handle, index, Int32(newValue))
-            case let newValue as UInt64:
+            case let newValue as any BinaryInteger:
                 sqlite3_bind_int64(handle, index, Int64(newValue))
-            case let newValue as Float:
+            case let newValue as any BinaryFloatingPoint:
                 sqlite3_bind_double(handle, index, Double(newValue))
-            case let newValue as Double:
-                sqlite3_bind_double(handle, index, newValue)
             case let newValue as Bool:
-                sqlite3_bind_int(handle, index, newValue ? 1 : 0)
+                sqlite3_bind_int64(handle, index, newValue ? 1 : 0)
             case let newValue as String:
                 sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
             default:
