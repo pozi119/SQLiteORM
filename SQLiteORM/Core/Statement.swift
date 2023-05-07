@@ -205,7 +205,8 @@ extension Cursor: Sequence {
             case let newValue as Bool:
                 sqlite3_bind_int64(handle, index, newValue ? 1 : 0)
             case let newValue as String:
-                sqlite3_bind_text(handle, index, newValue, -1, SQLITE_TRANSIENT)
+                let cString = (newValue as NSString).utf8String
+                sqlite3_bind_text(handle, index, cString, -1, SQLITE_TRANSIENT)
             default:
                 assert(false, "tried to bind unexpected value \(newValue ?? "")")
             }
