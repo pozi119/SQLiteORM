@@ -19,6 +19,9 @@ struct Person: Codable, Equatable {
     var sex: Sex
     var intro: String
     var data: Data?
+
+    lazy var lazi: Int = 2
+    var calc: Bool { true }
 }
 
 struct Event {
@@ -49,7 +52,7 @@ class User: NSObject, Codable {
     }
 }
 
-struct TestEnumerator: Enumerator {    
+struct TestEnumerator: Enumerator {
     static func enumerate(_ source: String, mask: TokenMask) -> [Token] {
         let string: NSString = (source as NSString)
         var results: [Token] = []

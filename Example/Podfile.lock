@@ -1,24 +1,24 @@
 PODS:
-  - AnyCoder (0.1.4):
+  - AnyCoder (0.1.5):
     - Runtime
   - Runtime (2.2.2)
-  - SQLCipher (4.4.0):
-    - SQLCipher/standard (= 4.4.0)
-  - SQLCipher/common (4.4.0)
-  - SQLCipher/standard (4.4.0):
+  - SQLCipher (4.5.4):
+    - SQLCipher/standard (= 4.5.4)
+  - SQLCipher/common (4.5.4)
+  - SQLCipher/standard (4.5.4):
     - SQLCipher/common
-  - SQLiteORM (0.1.8):
-    - SQLiteORM/cipher (= 0.1.8)
-  - SQLiteORM/cipher (0.1.8):
+  - SQLiteORM (0.2.1):
+    - SQLiteORM/cipher (= 0.2.1)
+  - SQLiteORM/cipher (0.2.1):
     - SQLCipher
     - SQLiteORM/core
     - SQLiteORM/fts
     - SQLiteORM/util
-  - SQLiteORM/core (0.1.8):
-    - AnyCoder (~> 0.1.4)
-  - SQLiteORM/fts (0.1.8):
+  - SQLiteORM/core (0.2.1):
+    - AnyCoder (~> 0.1.5)
+  - SQLiteORM/fts (0.2.1):
     - SQLiteORM/core
-  - SQLiteORM/util (0.1.8)
+  - SQLiteORM/util (0.2.1)
 
 DEPENDENCIES:
   - AnyCoder (from `../../AnyCoder`)
@@ -36,11 +36,11 @@ EXTERNAL SOURCES:
     :path: "../"
 
 SPEC CHECKSUMS:
-  AnyCoder: 0f3cee6a1ad720907ddc7ea6595f7d12d126a75d
+  AnyCoder: 428277f963d6ed6ddf6a891da3fd5cd17a3cde4e
   Runtime: 67741bd196fb4ad821c4d259ccc527bf734d8806
-  SQLCipher: e434ed542b24f38ea7b36468a13f9765e1b5c072
-  SQLiteORM: fb9868d2b54bb0e0a0d401993bf8e77d8dde5edd
+  SQLCipher: 905b145f65f349f26da9e60a19901ad24adcd381
+  SQLiteORM: 39346da7c3bfbc20b0e3578c11fa6aaf6e9757da
 
 PODFILE CHECKSUM: a0c1d45dffb705c97a929e039f73ec9e27460591
 
-COCOAPODS: 1.11.3
+COCOAPODS: 1.12.1
