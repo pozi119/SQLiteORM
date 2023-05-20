@@ -124,16 +124,27 @@ extension Database {
     func get_fts5_api(_ db: OpaquePointer!) throws -> UnsafePointer<fts5_api> {
         var pApi: UnsafePointer<fts5_api>?
         var stmt: OpaquePointer?
+        let type: StaticString = "fts5_api_ptr"
+
         try check(sqlite3_prepare_v2(db, "SELECT fts5(?1)", -1, &stmt, nil))
+
+        let fts5Supported: Bool
         #if SQLITE_HAS_CODEC
-            sqlite3_bind_pointer(stmt!, 1, &pApi, "fts5_api_ptr", nil)
-            sqlite3_step(stmt!)
+            fts5Supported = true
         #else
             if #available(macOS 10.14, iOS 12.0, watchOS 5.0, tvOS 12.0, *) {
-                sqlite3_bind_pointer(stmt!, 1, &pApi, "fts5_api_ptr", nil)
-                sqlite3_step(stmt!)
+                fts5Supported = true
+            } else {
+                fts5Supported = false
             }
         #endif
+
+        if fts5Supported {
+            type.utf8Start.withMemoryRebound(to: Int8.self, capacity: type.utf8CodeUnitCount) { typePointer in
+                _ = sqlite3_bind_pointer(stmt, 1, &pApi, typePointer, nil)
+            }
+            sqlite3_step(stmt!)
+        }
         sqlite3_finalize(stmt)
         guard let result = pApi else {
             throw Result.error(message: "fts5_api_ptr", code: -1, statement: nil)

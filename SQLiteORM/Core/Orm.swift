@@ -128,12 +128,8 @@ public final class Orm<T> {
                             relative orm: Orm,
                             content_rowid: String) {
         config.treate()
-        if
-            let cfg = orm.config as? PlainConfig,
-            (cfg.primaries.count == 1 && cfg.primaries.first! == content_rowid) || cfg.uniques.contains(content_rowid),
-            Set(config.columns).isSubset(of: Set(cfg.columns)),
-            cfg.columns.contains(content_rowid) {
-        } else {
+        guard let cfg = orm.config as? PlainConfig, cfg.columns.contains(content_rowid)
+        else {
             let message =
                 """
                  The following conditions must be met:
