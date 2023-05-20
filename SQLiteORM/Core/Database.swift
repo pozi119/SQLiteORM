@@ -407,7 +407,7 @@ public final class Database {
 
     @discardableResult
     func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
-        guard let error = Result(errorCode: resultCode, db: self, statement: statement) else {
+        guard let error = DBError(errorCode: resultCode, db: self, statement: statement) else {
             return resultCode
         }
 
@@ -493,13 +493,13 @@ extension Database.Location: CustomStringConvertible {
     }
 }
 
-public enum Result: Error {
+public enum DBError: Error {
     fileprivate static let successCodes: Set = [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]
 
-    case error(message: String, code: Int32, statement: Statement?)
+    case message(_ message: String, code: Int32, statement: Statement?)
 
     init?(errorCode: Int32, db: Database, statement: Statement? = nil) {
-        guard !Result.successCodes.contains(errorCode) else { return nil }
+        guard !DBError.successCodes.contains(errorCode) else { return nil }
 
         let message = String(cString: sqlite3_errmsg(db.handle))
         let sql = statement?.description ?? ""
@@ -514,14 +514,14 @@ public enum Result: Error {
             db.close()
             try? FileManager.default.removeItem(atPath: db.path)
         }
-        self = .error(message: message, code: errorCode, statement: statement)
+        self = .message(message, code: errorCode, statement: statement)
     }
 }
 
-extension Result: CustomStringConvertible {
+extension DBError: CustomStringConvertible {
     public var description: String {
         switch self {
-        case let .error(message, errorCode, statement):
+        case let .message(message, errorCode, statement):
             if let statement = statement {
                 return "\(message) (\(statement)) (code: \(errorCode))"
             } else {

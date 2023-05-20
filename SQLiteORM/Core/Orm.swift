@@ -126,7 +126,7 @@ public final class Orm<T> {
 
     public convenience init(config: FtsConfig,
                             relative orm: Orm,
-                            content_rowid: String) {
+                            content_rowid: String) throws {
         config.treate()
         guard let cfg = orm.config as? PlainConfig, cfg.columns.contains(content_rowid)
         else {
@@ -138,7 +138,7 @@ public final class Orm<T> {
                  3. The relative ORM contains all fields of this ORM
                  4. The relative ORM contains the content_rowid
                 """
-            assert(false, message)
+            throw DBError.message(message, code: -1, statement: nil)
         }
 
         let fts_table = "fts_" + orm.table

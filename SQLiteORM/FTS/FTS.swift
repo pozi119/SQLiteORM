@@ -147,7 +147,7 @@ extension Database {
         }
         sqlite3_finalize(stmt)
         guard let result = pApi else {
-            throw Result.error(message: "fts5_api_ptr", code: -1, statement: nil)
+            throw DBError.message("fts5_api_ptr", code: -1, statement: nil)
         }
         return result
     }
