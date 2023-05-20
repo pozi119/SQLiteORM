@@ -308,7 +308,7 @@ public extension NSAttributedString {
             let tAttrs = sAttrs as NSDictionary
             if tAttrs == attributes {
                 first = range
-                stop.assign(repeating: true, count: 1)
+                stop.update(repeating: true, count: 1)
             }
         }
 
@@ -323,8 +323,6 @@ public extension NSAttributedString {
             self.init(string: "")
             return
         }
-        let llen = left.count
-        let rlen = right.count
 
         var mstr = string
         var loc = mstr.startIndex
