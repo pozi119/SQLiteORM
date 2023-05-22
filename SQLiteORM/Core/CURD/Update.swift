@@ -28,7 +28,7 @@ open class Update<T>: CURD {
     }
 
     private lazy var validKeys: [String] = {
-        var keys = orm.config.columns
+        var keys = fields.isEmpty ? orm.config.columns : fields
         if method == .insert,
            let config = orm.config as? PlainConfig,
            config.primaries.count == 1,
@@ -53,19 +53,14 @@ open class Update<T>: CURD {
 
     private func prepare(_ keyValue: [String: Primitive]) -> (sql: String, values: [Primitive]) {
         var sql = ""
-        var keys: Dictionary<String, any Primitive>.Keys
-        var values: [Primitive]
+        let keys: Dictionary<String, any Primitive>.Keys = keyValue.keys
+        let values: [Primitive] = keys.map { keyValue[$0] } as! [Primitive]
         switch method {
         case .insert, .upsert:
-            keys = keyValue.keys
-            values = keys.map { keyValue[$0] } as! [Primitive]
             let keysString = keys.map { $0.quoted }.joined(separator: ",")
             let marksString = Array(repeating: "?", count: keyValue.count).joined(separator: ",")
             sql = ((method == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keysString)) VALUES (\(marksString))"
         case .update:
-            let kv = fields.isEmpty ? keyValue : keyValue.filter { (fields + [Config.updateAt]).contains($0.key) }
-            keys = kv.keys
-            values = keys.map { kv[$0] } as! [Primitive]
             let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
             let condition = self.where.isEmpty ? constraint(of: keyValue, orm.config).toWhere() : self.where
             let whereClause = condition.isEmpty ? "" : "WHERE \(condition)"
