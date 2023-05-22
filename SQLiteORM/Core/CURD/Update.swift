@@ -28,9 +28,16 @@ open class Update<T>: CURD {
     }
 
     private lazy var validKeys: [String] = {
-        var keys = fields.isEmpty ? orm.config.columns : fields
+        let config = orm.config as? PlainConfig
+        var props = fields
+        // insert or upsert, need constraints
+        if method != .update, !fields.isEmpty, let config = config {
+            props += (config.primaries.isEmpty ? config.uniques : config.primaries)
+        }
+        var keys = props.isEmpty ? orm.config.columns : props
+        // need to delete self increasing primary key
         if method == .insert,
-           let config = orm.config as? PlainConfig,
+           let config = config,
            config.primaries.count == 1,
            config.pkAutoInc {
             keys.removeAll { config.primaries.first! == $0 }
@@ -39,22 +46,21 @@ open class Update<T>: CURD {
     }()
 
     fileprivate func keyValue(of item: Any) throws -> [String: Primitive] {
-        let dic = try encodeToKeyValue(item)
-        var filtered = dic.filter { validKeys.contains($0.key) }
+        var dic = try encodeToKeyValue(item)
         if let config = orm.config as? PlainConfig, config.logAt {
             let now = Date().timeIntervalSinceReferenceDate
             if method != .update {
-                filtered[Config.createAt] = now
+                dic[Config.createAt] = now
             }
-            filtered[Config.updateAt] = now
+            dic[Config.updateAt] = now
         }
-        return filtered
+        return dic
     }
 
     private func prepare(_ keyValue: [String: Primitive]) -> (sql: String, values: [Primitive]) {
         var sql = ""
-        let keys: Dictionary<String, any Primitive>.Keys = keyValue.keys
-        let values: [Primitive] = keys.map { keyValue[$0] } as! [Primitive]
+        let keys = keyValue.keys.filter { validKeys.contains($0) }
+        let values = keys.map { keyValue[$0] } as! [Primitive]
         switch method {
         case .insert, .upsert:
             let keysString = keys.map { $0.quoted }.joined(separator: ",")
