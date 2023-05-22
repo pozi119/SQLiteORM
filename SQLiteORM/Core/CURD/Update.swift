@@ -64,11 +64,11 @@ open class Update<T>: CURD {
         switch method {
         case .insert, .upsert:
             let keysString = keys.map { $0.quoted }.joined(separator: ",")
-            let marksString = Array(repeating: "?", count: keyValue.count).joined(separator: ",")
+            let marksString = Array(repeating: "?", count: keys.count).joined(separator: ",")
             sql = ((method == .upsert) ? "INSERT OR REPLACE" : "INSERT") + " INTO \(table.quoted) (\(keysString)) VALUES (\(marksString))"
         case .update:
-            let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
             let condition = self.where.isEmpty ? constraint(of: keyValue, orm.config).toWhere() : self.where
+            let setsString = keys.map { $0.quoted + "=?" }.joined(separator: ",")
             let whereClause = condition.isEmpty ? "" : "WHERE \(condition)"
             sql = "UPDATE \(table.quoted) SET \(setsString) \(whereClause)"
         }
