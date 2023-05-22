@@ -4,8 +4,10 @@
 [![License](https://img.shields.io/cocoapods/l/SQLiteORM.svg?style=flat)](https://cocoapods.org/pods/SQLiteORM)
 [![Platform](https://img.shields.io/cocoapods/p/SQLiteORM.svg?style=flat)](https://cocoapods.org/pods/SQLiteORM)
 
-## 改动(0.2.1)
-1. 修复64位Int类型绑定导致闪退的问题。
+## 改动(0.2.2)
+1. 修改`fts5_api_ptr`获取。
+2. `updateAt`字段受`fields`限定。
+3. 修复文本可能写入失败的问题。
 
 ## 功能
 * [x] 根据Class/Struct生成数据表
